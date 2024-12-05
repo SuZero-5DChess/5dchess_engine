@@ -8,6 +8,8 @@
 #ifndef board_2d_h
 #define board_2d_h
 
+#include <string>
+
 #define BOARD2D_BITS 3
 #define BOARD2D_LENGTH (1<<BOARD2D_BITS)
 //the cap of length and height of the board <- 8
@@ -45,8 +47,10 @@ private:
     piece_t piece[BOARD2D_SIZE];
 public:
     board2d();
+    board2d(std::string fen, const int x_size = BOARD2D_LENGTH, const int y_size = BOARD2D_LENGTH);
     void set_piece(int x, int y, piece_t p);
     piece_t get_piece(int x, int y) const;
+    std::string to_string();
 };
 
 

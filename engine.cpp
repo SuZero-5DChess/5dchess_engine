@@ -41,6 +41,11 @@ PYBIND11_MODULE(engine, m) {
         .export_values();  // Exports the values for easy access
     py::class_<board2d>(m, "board2d")
         .def(py::init())
+        .def(py::init<std::string, int, int>(), 
+             py::arg("fen"), 
+             py::arg("x_size") = BOARD2D_LENGTH, 
+             py::arg("y_size") = BOARD2D_LENGTH) // Constructor with parameters
         .def("get_piece", &board2d::get_piece)
-        .def("set_piece", &board2d::set_piece);
+        .def("set_piece", &board2d::set_piece)
+        .def("__str__", &board2d::to_string);
 }
