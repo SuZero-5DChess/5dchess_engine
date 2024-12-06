@@ -28,6 +28,8 @@ public:
     map<string, string> metadata;
 
     board5d(const std::string& input);
+    // virtual ~board5d();
+    
     shared_ptr<board2d> get_board(int t, int l, int c) const;
     string to_string() const;
 };

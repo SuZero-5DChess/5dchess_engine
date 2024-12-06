@@ -52,6 +52,6 @@ PYBIND11_MODULE(engine, m) {
         .def(py::init<const std::string&>(), py::arg("input")) // Constructor
         .def("get_board", &board5d::get_board, py::arg("t"), py::arg("l"), py::arg("c"),
              py::return_value_policy::reference) // Return shared_ptr to board2d
-        .def("to_string", &board5d::to_string) // String representation of the board
+        .def("__str__", &board5d::to_string) // String representation of the board
         .def_readwrite("metadata", &board5d::metadata); // Expose `metadata` map directly
 }

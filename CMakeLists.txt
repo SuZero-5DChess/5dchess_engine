@@ -19,11 +19,13 @@ option(TEST "Build tests" OFF) # Default is OFF
 # Include the src directory for header files
 include_directories(${CMAKE_SOURCE_DIR})
 
+message("By default this creates a python library. Run with -DTEST=ON to build the tests.")
+
 if(TEST)
     message(STATUS "Compiling test.cpp...")
-    add_executable(test_exec test.cpp board_2d.cpp)
+    add_executable(test_exec test.cpp board_2d.cpp board_5d.cpp)
 else()
-    message(STATUS "Run with -DTEST=ON to build the tests.")
+    message(STATUS "Building python library...")
     add_subdirectory(extern/pybind11)
     pybind11_add_module(engine bind.cpp board_2d.cpp board_5d.cpp)
 endif()

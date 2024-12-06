@@ -8,6 +8,7 @@
 #ifndef board_2d_h
 #define board_2d_h
 
+#include <iostream>
 #include <string>
 
 #define BOARD2D_BITS 3
@@ -51,6 +52,10 @@ public:
     void set_piece(int x, int y, piece_t p);
     piece_t get_piece(int x, int y) const;
     std::string to_string() const;
+    ~board2d()
+    {
+        std::cerr << "2d Board destroyed." << std::endl;
+    }
 };
 
 

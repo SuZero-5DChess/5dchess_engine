@@ -2,6 +2,10 @@
 #include <regex>
 #include <sstream>
 
+#include <iostream>
+using std::cerr;
+using std::endl;
+
 // use the bijection from integers to non-negative integers:
 // x -> ~(x>>1)
 constexpr int lpos(int l, int color)
@@ -16,7 +20,7 @@ board5d::board5d(const std::string &input)
 {
     const static std::regex comment_pattern(R"(\{.*?\})");
     const static std::regex block_pattern(R"(\[[^\[\]]*\])");
-    const static std::regex metadata_pattern(R"(\[([^:]*):([^:]*)\])");
+    const static std::regex metadata_pattern(R"(\[([^:]*)\s([^:]*)\])");
     const static std::regex board_pattern(R"(\[(.+?):([+-]?\d+):([+-]?\d+):([a-zA-Z])\])");
 
     std::string clean_input = std::regex_replace(input, comment_pattern, "");
@@ -24,13 +28,13 @@ board5d::board5d(const std::string &input)
     while(std::regex_search(clean_input, block_match, block_pattern))
     {
         std::smatch sm;
-        std::string s = block_match.str();
-        if(std::regex_search(s, sm, metadata_pattern))
+        std::string str = block_match.str();
+        if(std::regex_search(str, sm, metadata_pattern))
         {
             this->metadata[sm[1]] = sm[2];
-            //cout << "Key: " << sm[1] << "\tValue: " << sm[2] << endl;
+            cerr << "Key: " << sm[1] << "\tValue: " << sm[2] << endl;
         }
-        else if(std::regex_search(s, sm, board_pattern))
+        else if(std::regex_search(str, sm, board_pattern))
         {
             int l = std::stoi(sm[2]);
             int t = std::stoi(sm[3]);
@@ -46,7 +50,7 @@ board5d::board5d(const std::string &input)
                 c = 1;
                 break;
             default:
-                throw std::runtime_error("Unknown color:" + sm[4].str() + " in " + s);
+                throw std::runtime_error("Unknown color:" + sm[4].str() + " in " + str);
                 break;
             }
             int s = lpos(l, c);
@@ -64,16 +68,30 @@ board5d::board5d(const std::string &input)
             }
             else if(t < 0)
             {
-                throw std::runtime_error("Negative timeline is not supported. " + s);
+                throw std::runtime_error("Negative timeline is not supported. " + str);
             }
             colored_line[t] = std::make_shared<board2d>(sm[1]);
-            //cout << "FEN: " << sm[1] << "\tL" << sm[2] << "T" << sm[3] << sm[4] << endl;
+            cerr << "FEN: " << sm[1] << "\tL" << sm[2] << "T" << sm[3] << sm[4] << endl;
+            cerr << "written to \ts = " << s << "\tt = " << t << endl;
+            cerr << boards[s][t]->to_string();
         }
         clean_input = block_match.suffix();
     }
 }
 
-
+/* 
+board5d::~board5d()
+{
+    cerr << "5d Board destroyed" << endl;
+    for(const auto &colored_line : boards)
+    {
+        for(auto ptr : colored_line)
+        {
+            ptr.reset();
+        }
+    }
+}
+ */
 
 shared_ptr<board2d> board5d::get_board(int t, int l, int c) const
 {
@@ -97,5 +115,5 @@ string board5d::to_string() const
             }
         }
     }
-    return string();
+    return sstm.str();
 }
