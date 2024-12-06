@@ -158,7 +158,7 @@ piece_t board2d::get_piece(int x, int y) const
     return piece[ppos(x,y)];
 }
 
-std::string board2d::to_string()
+std::string board2d::to_string() const
 {
     std::string result = "";
     for (int y = BOARD2D_LENGTH - 1; y >= 0; y--) 

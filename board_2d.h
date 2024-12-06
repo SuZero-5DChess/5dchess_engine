@@ -50,7 +50,7 @@ public:
     board2d(std::string fen, const int x_size = BOARD2D_LENGTH, const int y_size = BOARD2D_LENGTH);
     void set_piece(int x, int y, piece_t p);
     piece_t get_piece(int x, int y) const;
-    std::string to_string();
+    std::string to_string() const;
 };
 
 

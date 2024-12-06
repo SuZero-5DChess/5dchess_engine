@@ -1,5 +1,5 @@
 #include <pybind11/pybind11.h>
-#include "board_2d.h"
+#include "board_5d.h"
 
 namespace py = pybind11;
 
@@ -48,4 +48,10 @@ PYBIND11_MODULE(engine, m) {
         .def("get_piece", &board2d::get_piece)
         .def("set_piece", &board2d::set_piece)
         .def("__str__", &board2d::to_string);
+    py::class_<board5d>(m, "board5d")
+        .def(py::init<const std::string&>(), py::arg("input")) // Constructor
+        .def("get_board", &board5d::get_board, py::arg("t"), py::arg("l"), py::arg("c"),
+             py::return_value_policy::reference) // Return shared_ptr to board2d
+        .def("to_string", &board5d::to_string) // String representation of the board
+        .def_readwrite("metadata", &board5d::metadata); // Expose `metadata` map directly
 }

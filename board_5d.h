@@ -8,19 +8,27 @@
 #ifndef board_5d_h
 #define board_5d_h
 
+#include <string>
 #include <vector>
 #include <deque>
+#include <map>
+#include <memory>
 #include "board_2d.h"
 
 using std::deque;
 using std::vector;
+using std::map;
+using std::string;
+using std::shared_ptr;
 
 class board5d {
 private:
-    deque<vector<board2d>> boardw;
-    deque<vector<board2d>> boardb;
+    vector<vector<shared_ptr<board2d>>> boards;
 public:
-    
-}
+    map<string, string> metadata;
 
+    board5d(const std::string& input);
+    shared_ptr<board2d> get_board(int t, int l, int c) const;
+    string to_string() const;
+};
 #endif
