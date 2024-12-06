@@ -33,4 +33,5 @@ public:
     shared_ptr<board2d> get_board(int t, int l, int c) const;
     string to_string() const;
 };
+
 #endif

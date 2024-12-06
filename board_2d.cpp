@@ -155,7 +155,7 @@ void board2d::set_piece(int x, int y, piece_t p)
 
 piece_t board2d::get_piece(int x, int y) const
 {
-    return piece[ppos(x,y)];
+    return this->piece[ppos(x,y)];
 }
 
 std::string board2d::to_string() const

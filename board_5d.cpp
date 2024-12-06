@@ -6,15 +6,35 @@
 using std::cerr;
 using std::endl;
 
+
 // use the bijection from integers to non-negative integers:
 // x -> ~(x>>1)
-constexpr int lpos(int l, int color)
+constexpr int l_to_u(int l)
 {
-    if(l>=0)
-        return l<<2 | color;
+    if(l >= 0)
+        return l << 1;
     else
-        return (~(l<<1))<<1 | color;
+        return ~(l << 1);
 }
+
+constexpr int tc_to_v(int t, int c)
+{
+    return t << 1 | c;
+}
+
+constexpr int u_to_l(int u)
+{
+    if(u & 1)
+        return ~(u >> 1);
+    else
+        return u >> 1;
+}
+
+constexpr std::tuple<int, int> v_to_tc(int v)
+{
+    return std::tuple<int, int>(v >> 1, v & 1);
+}
+
 
 board5d::board5d(const std::string &input)
 {
@@ -53,29 +73,31 @@ board5d::board5d(const std::string &input)
                 throw std::runtime_error("Unknown color:" + sm[4].str() + " in " + str);
                 break;
             }
-            int s = lpos(l, c);
+            int u = l_to_u(l);
+            int v = tc_to_v(t, c);
 
-            //if s is too large, resize this->board to accommodate new board
-            //and fill any missing row with empty vector
-            if(s >= this->boards.size()) 
+            // if u is too large, resize this->board to accommodate new board
+            // and fill any missing row with empty vector
+            if(u >= this->boards.size()) 
             {
-                this->boards.resize(s+1, vector<shared_ptr<board2d>>());
+                this->boards.resize(u+1, vector<shared_ptr<board2d>>());
             }
-            vector<shared_ptr<board2d>> &colored_line = this->boards[s];
-            if(t >= colored_line.size())
+            vector<shared_ptr<board2d>> &timeline = this->boards[u];
+            // do the same for v
+            if(v >= timeline.size())
             {
-                colored_line.resize(t+1, nullptr);
+                timeline.resize(v+1, nullptr);
             }
-            else if(t < 0)
+            else if(v < 0)
             {
                 throw std::runtime_error("Negative timeline is not supported. " + str);
             }
-            colored_line[t] = std::make_shared<board2d>(sm[1]);
+            timeline[v] = std::make_shared<board2d>(sm[1]);
             cerr << "FEN: " << sm[1] << "\tL" << sm[2] << "T" << sm[3] << sm[4] << endl;
-            cerr << "written to \ts = " << s << "\tt = " << t << endl;
-            cerr << boards[s][t]->to_string();
+            cerr << "written to \tu = " << u << "\tv = " << v << endl;
+            cerr << boards[u][v]->to_string();
         }
-        clean_input = block_match.suffix();
+        clean_input = block_match.suffix(); //all it to search the remaining parts
     }
 }
 
@@ -95,23 +117,23 @@ board5d::~board5d()
 
 shared_ptr<board2d> board5d::get_board(int t, int l, int c) const
 {
-    return this->boards[lpos(l,c)][t];
+    return this->boards[l_to_u(l)][tc_to_v(t,c)];
 }
 
 string board5d::to_string() const
 {
     std::stringstream sstm;
-    for(int s = 0; s < this->boards.size(); s++)
+    for(int u = 0; u < this->boards.size(); u++)
     {
-        const auto& colored_timeline = this->boards[s];
-        int c = s & 0x1;
-        int l = s & 0x2 ? (~(s>>1))>>1 : s >> 2; 
-        for(int t = 0; t < colored_timeline.size(); t++)
+        const auto& timeline = this->boards[u];
+        int l = u_to_l(u);
+        for(int v = 0; v < timeline.size(); v++)
         {
-            if(colored_timeline[t] != nullptr)
+            const auto [t, c] = v_to_tc(v);
+            if(timeline[v] != nullptr)
             {
                 sstm << "L" << l << "T" << t << (c ? 'b' : 'w') << "\n";
-                sstm << colored_timeline[t]->to_string();
+                sstm << timeline[v]->to_string();
             }
         }
     }
