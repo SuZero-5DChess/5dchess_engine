@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
-#include "board_5d.h"
+#include <pybind11/stl.h>
+#include "multiverse.h"
 
 namespace py = pybind11;
 
@@ -39,19 +40,20 @@ PYBIND11_MODULE(engine, m) {
         .value("ROYAL_QUEEN_B", ROYAL_QUEEN_B)
         .value("COMMON_KING_B", COMMON_KING_B)
         .export_values();  // Exports the values for easy access
-    py::class_<board2d>(m, "board2d")
+    py::class_<board>(m, "board")
         .def(py::init())
         .def(py::init<std::string, int, int>(), 
              py::arg("fen"), 
-             py::arg("x_size") = BOARD2D_LENGTH, 
-             py::arg("y_size") = BOARD2D_LENGTH) // Constructor with parameters
-        .def("get_piece", &board2d::get_piece)
-        .def("set_piece", &board2d::set_piece)
-        .def("__str__", &board2d::to_string);
-    py::class_<board5d>(m, "board5d")
+             py::arg("x_size") = BOARD_LENGTH, 
+             py::arg("y_size") = BOARD_LENGTH) // Constructor with parameters
+        .def("get_piece", &board::get_piece)
+        .def("set_piece", &board::set_piece)
+        .def("__str__", &board::to_string);
+    py::class_<multiverse>(m, "multiverse")
         .def(py::init<const std::string&>(), py::arg("input")) // Constructor
-        .def("get_board", &board5d::get_board, py::arg("t"), py::arg("l"), py::arg("c"),
-             py::return_value_policy::reference) // Return shared_ptr to board2d
-        .def("__str__", &board5d::to_string) // String representation of the board
-        .def_readwrite("metadata", &board5d::metadata); // Expose `metadata` map directly
+        .def("get_board", &multiverse::get_board, py::arg("t"), py::arg("l"), py::arg("c"),
+             py::return_value_policy::reference) // Return shared_ptr to board
+        .def("__str__", &multiverse::to_string) // String representation of the board
+        .def("get_boards", &multiverse::get_boards)
+        .def_readwrite("metadata", &multiverse::metadata); // Expose `metadata` map directly
 }

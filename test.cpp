@@ -12,7 +12,9 @@ std::string t0_fen = ""
 
 int main()
 {
-    board5d board(t0_fen);
-    std::cout << board.to_string();
+    multiverse board(t0_fen);
+    //std::cout << (int)KING_UW << " " << (int)'K' << " " <<  std::endl;
+    const auto [l,t,c,s] = board.get_boards()[0];
+    std::cout << l << "T" << t << (c?'b':'w') << ":" << s << std::endl;
     return 0;
 }

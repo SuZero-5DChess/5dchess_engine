@@ -5,26 +5,26 @@
 //  Created by ftxi on 2024/4/24.
 //
 
-#ifndef board_2d_h
-#define board_2d_h
+#ifndef board_h
+#define board_h
 
 #include <iostream>
 #include <string>
 
-#define BOARD2D_BITS 3
-#define BOARD2D_LENGTH (1<<BOARD2D_BITS)
+#define BOARD_BITS 3
+#define BOARD_LENGTH (1<<BOARD_BITS)
 //the cap of length and height of the board <- 8
-#define BOARD2D_SIZE (1<<BOARD2D_BITS<<BOARD2D_BITS)
+#define BOARD_SIZE (1<<BOARD_BITS<<BOARD_BITS)
 //size of the board <- 64 (normal chess board)
 
-typedef enum : char { //syntax of c23. Use lesser memory
+typedef enum : unsigned char { //syntax of c23/c++11. Use lesser memory
     NO_PIECE = 0,
     //empty
     WALL_PIECE = 1,
     //in case this place is not in a active board
-    KING_UW, ROOK_UW, PAWN_UW,
+    KING_UW = 'K'| 0x80, ROOK_UW = 'R'| 0x80, PAWN_UW = 'P' | 0x80,
     //unmoved standard pieces for white
-    KING_UB, ROOK_UB, PAWN_UB,
+    KING_UB = 'k'| 0x80, ROOK_UB = 'r'| 0x80, PAWN_UB = 'p'| 0x80,
     //unmoved standard pieces for black
     
     KING_W = 'K', QUEEN_W = 'Q', BISHOP_W = 'B',
@@ -43,20 +43,27 @@ typedef enum : char { //syntax of c23. Use lesser memory
     //nonstandard pieces for black
 } piece_t; //totally: 30 pieces + 2 non-pieces
 
-class board2d {
+
+constexpr char piece_name(piece_t p)
+{
+    return p & 0x7f;
+}
+
+class board {
 private:
-    piece_t piece[BOARD2D_SIZE];
+    piece_t piece[BOARD_SIZE];
 public:
-    board2d();
-    board2d(std::string fen, const int x_size = BOARD2D_LENGTH, const int y_size = BOARD2D_LENGTH);
+    board();
+    board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
     void set_piece(int x, int y, piece_t p);
     piece_t get_piece(int x, int y) const;
     std::string to_string() const;
-    ~board2d()
+    std::string get_fen() const;
+    ~board()
     {
-        std::cerr << "2d Board destroyed." << std::endl;
+        //std::cerr << "2d Board destroyed." << std::endl;
     }
 };
 
 
-#endif /* board_2d_h */
+#endif /* board_h */

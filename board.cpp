@@ -1,17 +1,17 @@
-#include "board_2d.h"
+#include "board.h"
 #include <algorithm>
 #include <string>
 #include <iostream>
 #include <sstream>
 
-board2d::board2d()
+board::board()
 {
-    std::fill(this->piece, this->piece + BOARD2D_SIZE, NO_PIECE);
+    std::fill(this->piece, this->piece + BOARD_SIZE, NO_PIECE);
 }
 
-board2d::board2d(std::string fen, const int x_size, const int y_size)
+board::board(std::string fen, const int x_size, const int y_size)
 {
-    std::fill(this->piece, this->piece + BOARD2D_SIZE, WALL_PIECE);
+    std::fill(this->piece, this->piece + BOARD_SIZE, WALL_PIECE);
     char c;
     int x = 0, y = y_size - 1;
     for(int i = 0; i < fen.length(); i++)
@@ -145,25 +145,25 @@ board2d::board2d(std::string fen, const int x_size, const int y_size)
  */
 constexpr int ppos(int x, int y)
 {
-    return x|(y<<BOARD2D_BITS);
+    return x|(y<<BOARD_BITS);
 }
 
-void board2d::set_piece(int x, int y, piece_t p)
+void board::set_piece(int x, int y, piece_t p)
 {
     this->piece[ppos(x,y)] = p;
 }
 
-piece_t board2d::get_piece(int x, int y) const
+piece_t board::get_piece(int x, int y) const
 {
     return this->piece[ppos(x,y)];
 }
 
-std::string board2d::to_string() const
+std::string board::to_string() const
 {
     std::string result = "";
-    for (int y = BOARD2D_LENGTH - 1; y >= 0; y--) 
+    for (int y = BOARD_LENGTH - 1; y >= 0; y--) 
     {
-        for (int x = 0; x < BOARD2D_LENGTH; x++) 
+        for (int x = 0; x < BOARD_LENGTH; x++) 
         {
             switch (this->get_piece(x,y)) 
             {
@@ -199,5 +199,37 @@ std::string board2d::to_string() const
         }
         result += "\n";
     }
+    return result;
+}
+
+std::string board::get_fen() const
+{
+    std::string result = "";
+    for (int y = BOARD_LENGTH - 1; y >= 0; y--) 
+    {
+        for (int x = 0; x < BOARD_LENGTH; x++) 
+        {
+            switch(this->get_piece(x,y))
+            {
+                case NO_PIECE:
+                    if(isdigit(result.back()))
+                    {
+                        result.back() += 1;
+                    }
+                    else
+                    {
+                        result += '1';
+                    }
+                    break;
+                case WALL_PIECE:
+                    continue;
+                default:
+                    result += piece_name(this->get_piece(x,y));
+                    break;
+            }
+        }
+        result += "/";
+    }
+    result.pop_back(); // remove the extra '/'
     return result;
 }

@@ -1,11 +1,10 @@
-#include "board_5d.h"
+#include "multiverse.h"
 #include <regex>
 #include <sstream>
 
 #include <iostream>
 using std::cerr;
 using std::endl;
-
 
 // use the bijection from integers to non-negative integers:
 // x -> ~(x>>1)
@@ -36,7 +35,7 @@ constexpr std::tuple<int, int> v_to_tc(int v)
 }
 
 
-board5d::board5d(const std::string &input)
+multiverse::multiverse(const std::string &input)
 {
     const static std::regex comment_pattern(R"(\{.*?\})");
     const static std::regex block_pattern(R"(\[[^\[\]]*\])");
@@ -52,7 +51,7 @@ board5d::board5d(const std::string &input)
         if(std::regex_search(str, sm, metadata_pattern))
         {
             this->metadata[sm[1]] = sm[2];
-            cerr << "Key: " << sm[1] << "\tValue: " << sm[2] << endl;
+            //cerr << "Key: " << sm[1] << "\tValue: " << sm[2] << endl;
         }
         else if(std::regex_search(str, sm, board_pattern))
         {
@@ -80,9 +79,9 @@ board5d::board5d(const std::string &input)
             // and fill any missing row with empty vector
             if(u >= this->boards.size()) 
             {
-                this->boards.resize(u+1, vector<shared_ptr<board2d>>());
+                this->boards.resize(u+1, vector<shared_ptr<board>>());
             }
-            vector<shared_ptr<board2d>> &timeline = this->boards[u];
+            vector<shared_ptr<board>> &timeline = this->boards[u];
             // do the same for v
             if(v >= timeline.size())
             {
@@ -92,10 +91,10 @@ board5d::board5d(const std::string &input)
             {
                 throw std::runtime_error("Negative timeline is not supported. " + str);
             }
-            timeline[v] = std::make_shared<board2d>(sm[1]);
-            cerr << "FEN: " << sm[1] << "\tL" << sm[2] << "T" << sm[3] << sm[4] << endl;
-            cerr << "written to \tu = " << u << "\tv = " << v << endl;
-            cerr << boards[u][v]->to_string();
+            timeline[v] = std::make_shared<board>(sm[1]);
+            //cerr << "FEN: " << sm[1] << "\tL" << sm[2] << "T" << sm[3] << sm[4] << endl;
+            //cerr << "written to \tu = " << u << "\tv = " << v << endl;
+            //cerr << boards[u][v]->to_string();
         }
         clean_input = block_match.suffix(); //all it to search the remaining parts
     }
@@ -115,12 +114,31 @@ board5d::~board5d()
 }
  */
 
-shared_ptr<board2d> board5d::get_board(int t, int l, int c) const
+shared_ptr<board> multiverse::get_board(int t, int l, int c) const
 {
     return this->boards[l_to_u(l)][tc_to_v(t,c)];
 }
 
-string board5d::to_string() const
+vector<tuple<int,int,int,string>> multiverse::get_boards() const
+{
+    vector<tuple<int,int,int,string>> result;
+    for(int u = 0; u < this->boards.size(); u++)
+    {
+        const auto& timeline = this->boards[u];
+        int l = u_to_l(u);
+        for(int v = 0; v < timeline.size(); v++)
+        {
+            const auto [t, c] = v_to_tc(v);
+            if(timeline[v] != nullptr)
+            {
+                result.push_back(tuple<int,int,int,string>(l,t,c,timeline[v]->get_fen()));
+            }
+        }
+    }
+    return result;
+}
+
+string multiverse::to_string() const
 {
     std::stringstream sstm;
     for(int u = 0; u < this->boards.size(); u++)

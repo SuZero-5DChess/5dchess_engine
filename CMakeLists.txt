@@ -5,7 +5,7 @@ project(engine)
 # set(PYTHON_EXECUTABLE "your/python/path")
 # set(PYTHON_INCLUDE_DIRECTORY "your/python/include/path")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -19,14 +19,19 @@ option(TEST "Build tests" OFF) # Default is OFF
 # Include the src directory for header files
 include_directories(${CMAKE_SOURCE_DIR})
 
+set(COMMON_SOURCE_FILES
+    board.cpp
+    multiverse.cpp
+)
+
 message("By default this creates a python library. Run with -DTEST=ON to build the tests.")
 
 if(TEST)
     message(STATUS "Compiling test.cpp...")
-    add_executable(test_exec test.cpp board_2d.cpp board_5d.cpp)
+    add_executable(test_exec test.cpp ${COMMON_SOURCE_FILES})
 else()
     message(STATUS "Building python library...")
     add_subdirectory(extern/pybind11)
-    pybind11_add_module(engine bind.cpp board_2d.cpp board_5d.cpp)
+    pybind11_add_module(engine bind.cpp ${COMMON_SOURCE_FILES})
 endif()
 
