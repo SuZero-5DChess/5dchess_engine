@@ -1,4 +1,5 @@
 from build import engine
+import host
 
 fen = """
 [Size "8x8"]
@@ -15,4 +16,4 @@ def convert_boards_data(boards):
 
 if __name__ == '__main__':
     m = engine.multiverse(fen)
-    print(convert_boards_data(m.get_boards()))
+    host.show(convert_boards_data(m.get_boards()))
