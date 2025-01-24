@@ -148,6 +148,11 @@ constexpr int ppos(int x, int y)
     return x|(y<<BOARD_BITS);
 }
 
+piece_t& board::operator[](int p)
+{
+    return piece[p];
+}
+
 void board::set_piece(int x, int y, piece_t p)
 {
     this->piece[ppos(x,y)] = p;

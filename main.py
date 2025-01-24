@@ -6,6 +6,9 @@ fen = """
 [Board  "custom"]
 [r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:0:b]
 [r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:1:w]
+[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/4P3/P*P*P*P*1P*P*P*/R*NBQK*BNR*:0:1:b]
+[r*nbqk*b1r*/p*p*p*p*p*p*p*p*/8/8/8/4P3/P*P*P*P*1P*P*P*/R*NBQK*BNR*:0:2:w]
+[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/6n1/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:-1:1:w]
 """
 
 def convert_boards_data(boards):
@@ -16,4 +19,16 @@ def convert_boards_data(boards):
 
 if __name__ == '__main__':
     m = engine.multiverse(fen)
-    host.show(convert_boards_data(m.get_boards()))
+    pos = engine.vec4(1, 0, 1, -1)
+    moves = [{'x':p.x()+pos.x(), 'y':p.y()+pos.y(), 't':p.t()+pos.t(), 'l':p.l()+pos.l(), 'c':0} for p in m.gen_piece_move(pos, 0)]
+    boards_data = convert_boards_data(m.get_boards())
+    host.show(boards_data, highlights=[
+        {
+            'color':'#ff8080',
+            'coordinates':[{'x':pos.x(), 'y':pos.y(), 't':pos.t(), 'l':pos.l(), 'c':0}]
+        },
+        {
+            'color': '#80ff80',
+            'coordinates': moves
+        }
+    ])

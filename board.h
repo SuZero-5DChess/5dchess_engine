@@ -49,19 +49,32 @@ constexpr char piece_name(piece_t p)
     return p & 0x7f;
 }
 
+constexpr piece_t to_white(piece_t p)
+{
+    return static_cast<piece_t>(p | 0x20);
+}
+
+constexpr bool get_color(piece_t p)
+{
+    return p & 0x20;
+}
+
+
+
 class board {
 private:
     piece_t piece[BOARD_SIZE];
-public:
     board();
+public:
     board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
     void set_piece(int x, int y, piece_t p);
     piece_t get_piece(int x, int y) const;
+    piece_t& operator[](int p);
     std::string to_string() const;
     std::string get_fen() const;
     ~board()
     {
-        //std::cerr << "2d Board destroyed." << std::endl;
+        std::cerr << "2d Board destroyed." << std::endl;
     }
 };
 

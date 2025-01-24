@@ -29,7 +29,7 @@ def handle_request(data):
 def show(boards, *args, **options):
     options['boards'] = boards
     options.setdefault('focus', {'l':0,'t':1,'c':1})
-
+    
     @socketio.on('request_data')
     def handle_request(data):
         emit('response_data', options)
