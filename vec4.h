@@ -17,15 +17,15 @@
 typedef std::uint32_t vec4_t;
 const vec4_t L_BITS = 8, T_BITS = 8, Y_BITS = 8, X_BITS = 8;
 
+const int m_l = 1U << (L_BITS-1);
+const int m_t = 1U << (T_BITS-1);
+const int m_y = 1U << (Y_BITS-1);
+const int m_x = 1U << (X_BITS-1);
+const vec4_t u_x = 1, u_y = u_x << X_BITS, u_t = u_y << Y_BITS, u_l = u_t << T_BITS;
+const vec4_t L_MASK = 0 - u_l, T_MASK = u_l - u_t, Y_MASK = u_t - u_y, X_MASK = u_y - u_x;
 
 class vec4 {
     vec4_t value;
-    const int m_l = 1U << (L_BITS-1);
-    const int m_t = 1U << (T_BITS-1);
-    const int m_y = 1U << (Y_BITS-1);
-    const int m_x = 1U << (X_BITS-1);
-    const vec4_t u_x = 1, u_y = u_x << X_BITS, u_t = u_y << Y_BITS, u_l = u_t << T_BITS;
-    const vec4_t L_MASK = 0 - u_l, T_MASK = u_l - u_t, Y_MASK = u_t - u_y, X_MASK = u_y - u_x;
 public:
     constexpr vec4(int x, int y, int t, int l)
     {
