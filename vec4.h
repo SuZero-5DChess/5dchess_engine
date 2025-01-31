@@ -59,7 +59,7 @@ public:
         vec4 result = v;
         result.value += value;
         vec4_t x = result.value ^ value ^ v.value;
-        result.value ^= x & (u_l | u_t | u_y | u_x);
+        result.value -= x & (u_l | u_t | u_y | u_x);
         return result;
     }
     constexpr vec4 operator -() const

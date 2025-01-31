@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <tuple>
+#include <utility>
 #include <map>
 #include <memory>
 #include <ranges>
@@ -18,6 +19,7 @@
 #include "vec4.h"
 
 using std::tuple;
+using std::pair;
 using std::vector;
 using std::map;
 using std::string;

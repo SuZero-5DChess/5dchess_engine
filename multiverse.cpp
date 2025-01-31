@@ -1,10 +1,9 @@
 #include "multiverse.h"
-#include "concat.h"
+#include "utils.h"
 #include <regex>
 #include <sstream>
 #include <algorithm>
 #include <limits>
-#include <tuple>
 #include <iostream>
 
 using std::cerr;
@@ -214,6 +213,9 @@ piece_t multiverse::get_piece(vec4 a, int color) const
 
 const vector<vec4> knight_delta = {vec4( 2, 1, 0, 0), vec4( 2, 0, 1, 0), vec4( 2, 0, 0, 1), vec4( 1, 2, 0, 0), vec4( 1, 0, 2, 0), vec4( 1, 0, 0, 2), vec4( 0, 2, 1, 0), vec4( 0, 2, 0, 1), vec4( 0, 1, 2, 0), vec4( 0, 1, 0, 2), vec4( 0, 0, 2, 1), vec4( 0, 0, 1, 2), vec4(-2, 1, 0, 0), vec4(-2, 0, 1, 0), vec4(-2, 0, 0, 1), vec4( 1,-2, 0, 0), vec4( 1, 0,-2, 0), vec4( 1, 0, 0,-2), vec4( 0,-2, 1, 0), vec4( 0,-2, 0, 1), vec4( 0, 1,-2, 0), vec4( 0, 1, 0,-2), vec4( 0, 0,-2, 1), vec4( 0, 0, 1,-2), vec4( 2,-1, 0, 0), vec4( 2, 0,-1, 0), vec4( 2, 0, 0,-1), vec4(-1, 2, 0, 0), vec4(-1, 0, 2, 0), vec4(-1, 0, 0, 2), vec4( 0, 2,-1, 0), vec4( 0, 2, 0,-1), vec4( 0,-1, 2, 0), vec4( 0,-1, 0, 2), vec4( 0, 0, 2,-1), vec4( 0, 0,-1, 2), vec4(-2,-1, 0, 0), vec4(-2, 0,-1, 0), vec4(-2, 0, 0,-1), vec4(-1,-2, 0, 0), vec4(-1, 0,-2, 0), vec4(-1, 0, 0,-2), vec4( 0,-2,-1, 0), vec4( 0,-2, 0,-1), vec4( 0,-1,-2, 0), vec4( 0,-1, 0,-2), vec4( 0, 0,-2,-1), vec4( 0, 0,-1,-2)};
 const vector<vec4> rook_delta = {vec4( 1, 0, 0, 0), vec4(-1, 0, 0, 0), vec4( 0, 1, 0, 0), vec4( 0,-1, 0, 0), vec4( 0, 0, 1, 0), vec4( 0, 0,-1, 0), vec4( 0, 0, 0, 1), vec4( 0, 0, 0,-1)};
+const vector<vec4> bishop_delta = {vec4( 1, 1, 0, 0), vec4(-1, 1, 0, 0), vec4( 1,-1, 0, 0), vec4(-1,-1, 0, 0), vec4( 1, 0, 1, 0), vec4(-1, 0, 1, 0), vec4( 1, 0,-1, 0), vec4(-1, 0,-1, 0), vec4( 1, 0, 0, 1), vec4(-1, 0, 0, 1), vec4( 1, 0, 0,-1), vec4(-1, 0, 0,-1), vec4( 0, 1, 1, 0), vec4( 0,-1, 1, 0), vec4( 0, 1,-1, 0), vec4( 0,-1,-1, 0), vec4( 0, 1, 0, 1), vec4( 0,-1, 0, 1), vec4( 0, 1, 0,-1), vec4( 0,-1, 0,-1), vec4( 0, 0, 1, 1), vec4( 0, 0,-1, 1), vec4( 0, 0, 1,-1), vec4( 0, 0,-1,-1)};
+const vector<vec4> unicorn_delta = {vec4( 1, 1, 1, 0), vec4(-1, 1, 1, 0), vec4( 1,-1, 1, 0), vec4(-1,-1, 1, 0), vec4( 1, 1,-1, 0), vec4(-1, 1,-1, 0), vec4( 1,-1,-1, 0), vec4(-1,-1,-1, 0), vec4( 1, 1, 0, 1), vec4(-1, 1, 0, 1), vec4( 1,-1, 0, 1), vec4(-1,-1, 0, 1), vec4( 1, 1, 0,-1), vec4(-1, 1, 0,-1), vec4( 1,-1, 0,-1), vec4(-1,-1, 0,-1), vec4( 1, 0, 1, 1), vec4(-1, 0, 1, 1), vec4( 1, 0,-1, 1), vec4(-1, 0,-1, 1), vec4( 1, 0, 1,-1), vec4(-1, 0, 1,-1), vec4( 1, 0,-1,-1), vec4(-1, 0,-1,-1), vec4( 0, 1, 1, 1), vec4( 0,-1, 1, 1), vec4( 0, 1,-1, 1), vec4( 0,-1,-1, 1), vec4( 0, 1, 1,-1), vec4( 0,-1, 1,-1), vec4( 0, 1,-1,-1), vec4( 0,-1,-1,-1)};
+const vector<vec4> dragon_delta = {vec4( 1, 1, 1, 1), vec4(-1, 1, 1, 1), vec4( 1,-1, 1, 1), vec4(-1,-1, 1, 1), vec4( 1, 1,-1, 1), vec4(-1, 1,-1, 1), vec4( 1,-1,-1, 1), vec4(-1,-1,-1, 1), vec4( 1, 1, 1,-1), vec4(-1, 1, 1,-1), vec4( 1,-1, 1,-1), vec4(-1,-1, 1,-1), vec4( 1, 1,-1,-1), vec4(-1, 1,-1,-1), vec4( 1,-1,-1,-1), vec4(-1,-1,-1,-1)};
 
 namespace views = std::ranges::views;
 
@@ -237,6 +239,34 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
     {
         return inbound(p+d, board_color);
     };
+    auto multiple_moves = [&](const vector<vec4>& delta)
+    {
+        vector<vec4> res;
+        vector<pair<vec4,vec4>> zipped_delta = std::views::zip(vector<vec4>(delta.size(), vec4(0,0,0,0)), delta) | ranges::to<vector>();
+        while(!zipped_delta.empty())
+        {
+            for(std::tuple<vec4&, vec4> m : zipped_delta)
+            {
+                std::get<0>(m) = std::get<0>(m) + std::get<1>(m);
+            }
+            zipped_delta = zipped_delta | views::filter([&](auto x){
+                vec4 d = std::get<0>(x);
+                return delta_in_range(d);
+            }) | ranges::to<vector>();
+            //print_range("after checking range:", zipped_delta);
+            auto tmp = zipped_delta
+            | views::transform([](auto elem){return std::get<0>(elem);})
+            | views::filter(can_go_to)
+            | ranges::to<vector>();
+            //print_range("tmp:", tmp);
+            append_vectors(res, tmp);
+            zipped_delta = zipped_delta | views::filter([&](auto x){
+                vec4 d = std::get<0>(x);
+                return is_blank(d);
+            }) | ranges::to<vector>();
+        }
+        return res;
+    };
     std::cerr << "---" << p_piece << std::endl;
     switch(p_piece)
     {
@@ -251,31 +281,12 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
         case ROOK_UB:
         case ROOK_W:
         case ROOK_B:
-        {
-            auto zipped_delta = std::views::zip(vector<vec4>(rook_delta.size(), vec4(0,0,0,0)), rook_delta) | ranges::to<vector>();
-            while(!zipped_delta.empty())
-            {
-                for(std::tuple<vec4&, vec4> m : zipped_delta)
-                {
-                    std::get<0>(m) = std::get<0>(m) + std::get<1>(m);
-                }
-                zipped_delta = zipped_delta | views::filter([&](auto x){
-                    vec4 d = std::get<0>(x);
-                    return delta_in_range(d);
-                }) | ranges::to<vector>();
-                auto tmp = zipped_delta
-                | views::transform([](auto elem){return std::get<0>(elem);})
-                | views::filter(can_go_to)
-                | ranges::to<vector>();
-                //print_range("tmp :", tmp);
-                append_vectors(result, tmp);
-                zipped_delta = zipped_delta | views::filter([&](auto x){
-                    vec4 d = std::get<0>(x);
-                    return is_blank(d);
-                }) | ranges::to<vector>();
-            }
+            result = multiple_moves(rook_delta);
             break;
-        }
+        case BISHOP_W:
+        case BISHOP_B:
+            result = multiple_moves(bishop_delta);
+            break;
         default:
             std::cerr << "gen_piece_move:" << p_piece << "not implemented" << std::endl;
     }
