@@ -25,7 +25,7 @@ def convert_boards_data(boards):
 
 if __name__ == '__main__':
     m = engine.multiverse(fen)
-    pos = engine.vec4(2, 3, 3, 0)
+    pos = engine.vec4(4, 2, 3, 0)
     c = 0
     moves = [{'x':p.x()+pos.x(), 'y':p.y()+pos.y(), 't':p.t()+pos.t(), 'l':p.l()+pos.l(), 'c':c} 
              for p in m.gen_piece_move(pos, c)]

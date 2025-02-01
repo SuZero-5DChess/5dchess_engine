@@ -216,14 +216,20 @@ const vector<vec4> rook_delta = {vec4( 1, 0, 0, 0), vec4(-1, 0, 0, 0), vec4( 0, 
 const vector<vec4> bishop_delta = {vec4( 1, 1, 0, 0), vec4(-1, 1, 0, 0), vec4( 1,-1, 0, 0), vec4(-1,-1, 0, 0), vec4( 1, 0, 1, 0), vec4(-1, 0, 1, 0), vec4( 1, 0,-1, 0), vec4(-1, 0,-1, 0), vec4( 1, 0, 0, 1), vec4(-1, 0, 0, 1), vec4( 1, 0, 0,-1), vec4(-1, 0, 0,-1), vec4( 0, 1, 1, 0), vec4( 0,-1, 1, 0), vec4( 0, 1,-1, 0), vec4( 0,-1,-1, 0), vec4( 0, 1, 0, 1), vec4( 0,-1, 0, 1), vec4( 0, 1, 0,-1), vec4( 0,-1, 0,-1), vec4( 0, 0, 1, 1), vec4( 0, 0,-1, 1), vec4( 0, 0, 1,-1), vec4( 0, 0,-1,-1)};
 const vector<vec4> unicorn_delta = {vec4( 1, 1, 1, 0), vec4(-1, 1, 1, 0), vec4( 1,-1, 1, 0), vec4(-1,-1, 1, 0), vec4( 1, 1,-1, 0), vec4(-1, 1,-1, 0), vec4( 1,-1,-1, 0), vec4(-1,-1,-1, 0), vec4( 1, 1, 0, 1), vec4(-1, 1, 0, 1), vec4( 1,-1, 0, 1), vec4(-1,-1, 0, 1), vec4( 1, 1, 0,-1), vec4(-1, 1, 0,-1), vec4( 1,-1, 0,-1), vec4(-1,-1, 0,-1), vec4( 1, 0, 1, 1), vec4(-1, 0, 1, 1), vec4( 1, 0,-1, 1), vec4(-1, 0,-1, 1), vec4( 1, 0, 1,-1), vec4(-1, 0, 1,-1), vec4( 1, 0,-1,-1), vec4(-1, 0,-1,-1), vec4( 0, 1, 1, 1), vec4( 0,-1, 1, 1), vec4( 0, 1,-1, 1), vec4( 0,-1,-1, 1), vec4( 0, 1, 1,-1), vec4( 0,-1, 1,-1), vec4( 0, 1,-1,-1), vec4( 0,-1,-1,-1)};
 const vector<vec4> dragon_delta = {vec4( 1, 1, 1, 1), vec4(-1, 1, 1, 1), vec4( 1,-1, 1, 1), vec4(-1,-1, 1, 1), vec4( 1, 1,-1, 1), vec4(-1, 1,-1, 1), vec4( 1,-1,-1, 1), vec4(-1,-1,-1, 1), vec4( 1, 1, 1,-1), vec4(-1, 1, 1,-1), vec4( 1,-1, 1,-1), vec4(-1,-1, 1,-1), vec4( 1, 1,-1,-1), vec4(-1, 1,-1,-1), vec4( 1,-1,-1,-1), vec4(-1,-1,-1,-1)};
+const vector<vec4> queen_delta = concat_vectors(rook_delta, bishop_delta, unicorn_delta, dragon_delta);
+const vector<vec4> pawn_unmoved_white_delta = {vec4( 0, 2, 0, 0), vec4( 0, 0, 0,-2)};
+const vector<vec4> pawn_white_delta = {vec4( 0, 1, 0, 0), vec4( 0, 0, 0,-1)};
+const vector<vec4> pawn_white_capture_delta = {vec4( 1, 1, 0, 0), vec4(-1, 1, 0, 0), vec4( 0, 0, 1,-1), vec4( 0, 0,-1,-1)};
+const vector<vec4> pawn_unmoved_black_delta = {vec4( 0,-2, 0, 0), vec4( 0, 0, 0, 2)};
+const vector<vec4> pawn_black_delta = {vec4( 0,-1, 0, 0), vec4( 0, 0, 0, 1)};
+const vector<vec4> pawn_black_capture_delta = {vec4( 1,-1, 0, 0), vec4(-1,-1, 0, 0), vec4( 0, 0, 1, 1), vec4( 0, 0,-1, 1)};
 
 namespace views = std::ranges::views;
 
 vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
 {
-    const piece_t pic = get_piece(p, board_color);
-    const bool p_color = get_color(pic);
-    const piece_t p_piece = to_white(pic);
+    const piece_t p_piece = get_piece(p, board_color);
+    const bool p_color = get_color(p_piece);
     vector<vec4> result;
     auto is_blank = [&](vec4 d)
     {
@@ -267,7 +273,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
         }
         return res;
     };
-    std::cerr << "---" << p_piece << std::endl;
+    std::cerr << "---" << piece_name(p_piece) << std::endl;
     switch(p_piece)
     {
         case KNIGHT_W:
@@ -286,6 +292,108 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
         case BISHOP_W:
         case BISHOP_B:
             result = multiple_moves(bishop_delta);
+            break;
+        case QUEEN_W:
+        case QUEEN_B:
+            result = multiple_moves(queen_delta);
+            break;
+        case KING_UW:
+        case KING_UB:
+            //TODO: castling
+        case KING_W:
+        case KING_B:
+            append_vectors(result, queen_delta
+            | views::filter(delta_in_range)
+            | views::filter(can_go_to)
+            | ranges::to<vector>());
+            break;
+        case PAWN_UW:
+            for(int i = 0; i < 2; i++)
+            {
+                if(!inbound(p+pawn_unmoved_white_delta[i], board_color))
+                {
+                    continue;
+                }
+                piece_t q_piece = get_piece(p+pawn_white_delta[i], board_color);
+                piece_t r_piece = get_piece(p+pawn_unmoved_white_delta[i], board_color);
+                if(q_piece == NO_PIECE && r_piece==NO_PIECE)
+                {
+                    result.push_back(pawn_unmoved_white_delta[i]);
+                }
+            }
+        case PAWN_W:
+            for(const vec4& d : pawn_white_delta)
+            {
+                if(inbound(p+d, board_color) && get_piece(p+d, board_color) == NO_PIECE)
+                {
+                    result.push_back(d);
+                }
+            }
+            for(const vec4& d : pawn_white_capture_delta)
+            {
+                if(!inbound(p+d, board_color))
+                {
+                    continue;
+                }
+                piece_t q_name = get_piece(p+d, board_color);
+                // normal capture
+                if(q_name != NO_PIECE && get_color(q_name)!=board_color)
+                {
+                    result.push_back(d);
+                }
+                // en passant
+                else if(q_name == NO_PIECE && get_piece(p+vec4(d.x(),0,0,0), board_color) == PAWN_B
+                    && inbound(p+vec4(d.x(),2,-1,0), board_color)
+                    && get_piece(p+vec4(d.x(),0,-1,0), board_color) == NO_PIECE
+                    && get_piece(p+vec4(d.x(),2,-1,0), board_color) == PAWN_UB)
+                {
+                    result.push_back(d);
+                }
+            }
+            break;
+        case PAWN_UB:
+            for(int i = 0; i < 2; i++)
+            {
+                if(!inbound(p+pawn_unmoved_white_delta[i], board_color))
+                {
+                    continue;
+                }
+                piece_t q_piece = get_piece(p+pawn_black_delta[i], board_color);
+                piece_t r_piece = get_piece(p+pawn_unmoved_black_delta[i], board_color);
+                if(q_piece == NO_PIECE && r_piece==NO_PIECE)
+                {
+                    result.push_back(pawn_unmoved_black_delta[i]);
+                }
+            }
+        case PAWN_B:
+            for(const vec4& d : pawn_black_delta)
+            {
+                if(inbound(p+d, board_color) && get_piece(p+d, board_color) == NO_PIECE)
+                {
+                    result.push_back(d);
+                }
+            }
+            for(const vec4& d : pawn_black_capture_delta)
+            {
+                if(!inbound(p+d, board_color))
+                {
+                    continue;
+                }
+                piece_t q_name = get_piece(p+d, board_color);
+                // normal capture
+                if(q_name != NO_PIECE && get_color(q_name)!=board_color)
+                {
+                    result.push_back(d);
+                }
+                // en passant
+                else if(q_name == NO_PIECE && get_piece(p+vec4(d.x(),0,0,0), board_color) == PAWN_W
+                    && inbound(p+vec4(d.x(),2,-1,0), board_color)
+                    && get_piece(p+vec4(d.x(),0,-1,0), board_color) == NO_PIECE
+                    && get_piece(p+vec4(d.x(),2,-1,0), board_color) == PAWN_UW)
+                {
+                    result.push_back(d);
+                }
+            }
             break;
         default:
             std::cerr << "gen_piece_move:" << p_piece << "not implemented" << std::endl;

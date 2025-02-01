@@ -29,26 +29,27 @@ using namespace std;
 int main()
 {
     multiverse m(t0_fen);
-    vec4 q(1,2,5,0);
-    bool b = m.inbound(q, 0);
-    cout << b << endl;
-    
-    vec4 p(2, 3, 3, 0);
-    
-    for(int i = -2; i < 3; i++)
-    {
-        for(int j = -2; j < 3; j++)
-        {
-            int c = 0;
-            vec4 v(i,j,0,0);
-            cout << v << p+v << (c?'b':'w') << (m.inbound(p+v, c) ? "+" : "") << endl;
-//            if(m.inbound(p+v, c))
-//            {
-//                cout << v << p+v << (c?'b':'w') << endl;
-//            }
-        
-        }
-    }
+//
+//    vec4 q(1,2,5,0);
+//    bool b = m.inbound(q, 0);
+//    cout << b << endl;
+//    
+    vec4 p(1, 1, 3, 0);
+//
+//    for(int i = -2; i < 3; i++)
+//    {
+//        for(int j = -2; j < 3; j++)
+//        {
+//            int c = 0;
+//            vec4 v(i,j,0,0);
+//            cout << v << p+v << (c?'b':'w') << (m.inbound(p+v, c) ? "+" : "") << endl;
+////            if(m.inbound(p+v, c))
+////            {
+////                cout << v << p+v << (c?'b':'w') << endl;
+////            }
+//        
+//        }
+//    }
      
     
     //cout << vec4(1,2,0,0).outbound() << endl;
