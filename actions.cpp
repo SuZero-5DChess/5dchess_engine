@@ -113,9 +113,10 @@ std::ostream& operator<<(std::ostream& os, const actions& a)
     return a.pretty_print(os, "", 0);
 }
 
+const static std::string shapes[] = { "", "", "├── ", "│   ", "└── " , "    " };
+
 std::ostream& actions::pretty_print(std::ostream& os, const std::string& prefix, const int& now) const
 {
-    constexpr static std::string shapes[] = {"", "", "├── ", "│   ", "└── " , "    "};
     if (std::holds_alternative<temp_move>(value))
     {
         os << prefix << shapes[now] << std::get<temp_move>(value) << "\n";

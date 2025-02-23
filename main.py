@@ -1,4 +1,14 @@
-from build import engine
+import sys
+import os
+
+original_sys_path = sys.path.copy()
+
+try:
+    # Add the 'build' directory to sys.path temporarily
+    sys.path.append(os.path.join(os.path.dirname(__file__), 'build'))
+    import engine
+finally:
+    sys.path = original_sys_path
 import host
 
 fen = """
