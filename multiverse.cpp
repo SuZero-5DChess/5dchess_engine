@@ -107,7 +107,10 @@ multiverse::multiverse(const std::string &input)
     }
     int tmp = std::min(-l_min, l_max);
     number_activated = tmp < std::max(-l_min, l_max) ? tmp+1 : tmp;
-    check_multiverse_shape();
+    if(!check_multiverse_shape())
+    {
+        throw std::runtime_error("Cannot determine present time from this board shape");
+    }
 }
 
 bool multiverse::check_multiverse_shape()

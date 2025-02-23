@@ -77,6 +77,10 @@ public:
         return vec4(scalar*x(), scalar*y(), scalar*t(), scalar*l());
     }
     constexpr bool operator ==(const vec4&) const = default;
+    constexpr bool operator <(const vec4& other) const
+    {
+        return value < other.value;
+    }
     friend std::ostream& operator<<(std::ostream& os, const vec4& v)
     {
         os << "0x" << std::hex << std::setw(8) << std::setfill('0') << v.value << std::dec << std::setfill(' ') << std::setw(0);

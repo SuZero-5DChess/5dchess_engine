@@ -22,9 +22,9 @@ typedef enum : unsigned char { //syntax of c23/c++11. Use lesser memory
     //empty
     WALL_PIECE = 1,
     //in case this place is not in a active board
-    KING_UW = 'K'| 0x80, ROOK_UW = 'R'| 0x80, PAWN_UW = 'P' | 0x80,
+    KING_UW = 'K'| 0x80, ROOK_UW = 'R'|0x80, PAWN_UW = 'P'|0x80,
     //unmoved standard pieces for white
-    KING_UB = 'k'| 0x80, ROOK_UB = 'r'| 0x80, PAWN_UB = 'p'| 0x80,
+    KING_UB = 'k'| 0x80, ROOK_UB = 'r'|0x80, PAWN_UB = 'p'|0x80,
     //unmoved standard pieces for black
     
     KING_W = 'K', QUEEN_W = 'Q', BISHOP_W = 'B',
@@ -43,17 +43,19 @@ typedef enum : unsigned char { //syntax of c23/c++11. Use lesser memory
     //nonstandard pieces for black
 } piece_t; //totally: 30 pieces + 2 non-pieces
 
-
+// remove the unmoved signature for pawn/rook/king
 constexpr char piece_name(piece_t p)
 {
     return p & 0x7f;
 }
 
+// convert to white piece by capitalizing letters
 constexpr piece_t to_white(piece_t p)
 {
     return static_cast<piece_t>(p | 0x20);
 }
 
+// detect if the letter is in lower case
 constexpr bool get_color(piece_t p)
 {
     return p & 0x20;

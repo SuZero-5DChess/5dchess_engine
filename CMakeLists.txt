@@ -27,6 +27,7 @@ list(FILTER HEADER_FILES EXCLUDE REGEX ".*/extern/.*")
 set(COMMON_SOURCE_FILES
     board.cpp
     multiverse.cpp
+    actions.cpp
     ${HEADER_FILES}
 )
 
