@@ -58,7 +58,8 @@ The list printer function. (For debugging.)
 */
 void print_range(auto const rem, auto const& range)
 {
-    for (std::cout << rem; auto const& elem : range)
+    std::cout << rem;
+    for(auto const& elem : range)
         std::cout << elem << ' ';
     std::cout << '\n';
 }

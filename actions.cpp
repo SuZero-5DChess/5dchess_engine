@@ -8,8 +8,8 @@ temp_move::temp_move(const vec4& p, const vec4& d) : data(std::make_tuple(p, d))
 temp_move::temp_move(std::string str)
 {
     std::regex pattern1(R"(\((-?\d+)T(-?\d+)\)[A-Z]?([a-h])([1-8])([a-h])([1-8]))");
-    std::regex pattern2(R"(\((-?\d+)T(-?\d+)\)[A-Z]?([a-h])([1-8])>\(T(-?\d+)\)([a-h])([1-8]))");
-    std::regex pattern3(R"(\((-?\d+)T(-?\d+)\)[A-Z]?([a-h])([1-8])>>\((-?\d+)T(-?\d+)\)([a-h])([1-8]))");
+    std::regex pattern2(R"(\((-?\d+)T(-?\d+)\)[A-Z]?([a-h])([1-8])>>?\(T(-?\d+)\)([a-h])([1-8]))");
+    std::regex pattern3(R"(\((-?\d+)T(-?\d+)\)[A-Z]?([a-h])([1-8])>>?\((-?\d+)T(-?\d+)\)([a-h])([1-8]))");
     std::smatch match;
     int l1, t1, x1, y1;
     int l2, t2, x2, y2;
@@ -89,7 +89,7 @@ std::ostream& operator<<(std::ostream& os, const temp_move& m)
             }
             else
             {
-                os << '(' << p.l() << 'T' << p.t() << ')' << (char)(p.x()+'a') << (char)(p.y()+'1') << ">>(" << q.l() << 'T' << q.t() << ')' << (char)(q.x()+'a') << (char)(q.y()+'1');
+                os << '(' << p.l() << 'T' << p.t() << ')' << (char)(p.x()+'a') << (char)(p.y()+'1') << ">(" << q.l() << 'T' << q.t() << ')' << (char)(q.x()+'a') << (char)(q.y()+'1');
             }
             break;
     }
@@ -116,9 +116,12 @@ std::ostream& operator<<(std::ostream& os, const actions& a)
 std::ostream& actions::pretty_print(std::ostream& os, const std::string& prefix, const int& now) const
 {
     constexpr static std::string shapes[] = {"", "", "├── ", "│   ", "└── " , "    "};
-    if (std::holds_alternative<temp_move>(value)) {
+    if (std::holds_alternative<temp_move>(value))
+    {
         os << prefix << shapes[now] << std::get<temp_move>(value) << "\n";
-    } else {
+    }
+    else
+    {
         const auto& [m, set] = std::get<std::tuple<temp_move, std::set<actions>>>(value);
         os << prefix << shapes[now] << m << "\n";
         auto it = set.begin();
