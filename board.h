@@ -69,14 +69,22 @@ private:
     board();
 public:
     board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
-    void set_piece(int x, int y, piece_t p);
+
+    // the getter methods
     piece_t get_piece(int x, int y) const;
     piece_t& operator[](int p);
+    // the setter method, which is deprecated. Use replace_piece or move_piece whenever possible
+    void set_piece(int x, int y, piece_t p);
+
+    // these methods return a new board object so that there is no side effect
+    board replace_piece(int pos, piece_t p) const;
+    board move_piece(int from, int to) const;
+
     std::string to_string() const;
     std::string get_fen() const;
     ~board()
     {
-        std::cerr << "2d Board destroyed." << std::endl;
+        std::cerr << "Board destroyed: " << get_fen() << std::endl;
     }
 };
 

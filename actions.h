@@ -9,23 +9,25 @@
 
 /*
  A move is either moving a piece from coordinate p to coordinate q or the action of submition.
- In this implementation, I use `temp_move` instead of `move` to avoid confusion with `std::move`.
+ In this implementation, I use `full_move` instead of `move` to avoid confusion with `std::move`.
  */
-struct temp_move {
+struct full_move {
     std::variant<std::monostate, std::tuple<vec4, vec4>> data;
 
-    explicit temp_move();
-    explicit temp_move(const vec4& p, const vec4& d);
+    explicit full_move();
+    explicit full_move(const vec4& p, const vec4& d);
 
-    temp_move(std::string);
+    full_move(std::string);
 
-    static temp_move submit();
-    static temp_move move(const vec4& p, const vec4& d);
+    static full_move submit();
+    static full_move move(const vec4& p, const vec4& d);
 
-    bool operator<(const temp_move& other) const;
-    bool operator==(const temp_move& other) const;
+    bool nonempty();
 
-    friend std::ostream& operator<<(std::ostream& os, const temp_move& m);
+    bool operator<(const full_move& other) const;
+    bool operator==(const full_move& other) const;
+
+    friend std::ostream& operator<<(std::ostream& os, const full_move& m);
 };
 
 
@@ -33,13 +35,13 @@ struct temp_move {
  An action (moveset) is a tree-shaped structure. The root is always temp_move::submit(). Each child is either a leaf move or a move followed by set of moves depending on it.
  */
 struct actions {
-    std::variant<temp_move, std::tuple<temp_move, std::set<actions>>> value;
+    std::variant<full_move, std::tuple<full_move, std::set<actions>>> value;
 
-    explicit actions(temp_move m);
-    explicit actions(temp_move m, std::set<actions> s);
+    explicit actions(full_move m);
+    explicit actions(full_move m, std::set<actions> s);
 
-    static actions leaf(temp_move m);
-    static actions branch(temp_move m, std::set<actions> s);
+    static actions leaf(full_move m);
+    static actions branch(full_move m, std::set<actions> s);
 
     bool operator<(const actions& other) const;
     bool operator==(const actions& other) const;

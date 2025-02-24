@@ -9,40 +9,12 @@
 using std::cerr;
 using std::endl;
 
-// use the bijection from integers to non-negative integers:
-// x -> ~(x>>1)
-constexpr int l_to_u(int l)
-{
-    if(l >= 0)
-        return l << 1;
-    else
-        return ~(l << 1);
-}
-
-constexpr int tc_to_v(int t, int c)
-{
-    return t << 1 | c;
-}
-
-constexpr int u_to_l(int u)
-{
-    if(u & 1)
-        return ~(u >> 1);
-    else
-        return u >> 1;
-}
-
-constexpr std::tuple<int, int> v_to_tc(int v)
-{
-    return std::tuple<int, int>(v >> 1, v & 1);
-}
-
 
 multiverse::multiverse(const std::string &input)
 {
     const static std::regex comment_pattern(R"(\{.*?\})");
     const static std::regex block_pattern(R"(\[[^\[\]]*\])");
-    const static std::regex metadata_pattern(R"(\[([^:]*)\s([^:]*)\])");
+    //const static std::regex metadata_pattern(R"(\[([^:]*)\s([^:]*)\])");
     const static std::regex board_pattern(R"(\[(.+?):([+-]?\d+):([+-]?\d+):([a-zA-Z])\])");
 
     std::string clean_input = std::regex_replace(input, comment_pattern, "");
@@ -52,12 +24,12 @@ multiverse::multiverse(const std::string &input)
     {
         std::smatch sm;
         std::string str = block_match.str();
-        if(std::regex_search(str, sm, metadata_pattern))
-        {
-            this->metadata[sm[1]] = sm[2];
-            //cerr << "Key: " << sm[1] << "\tValue: " << sm[2] << endl;
-        }
-        else if(std::regex_search(str, sm, board_pattern))
+        // if(std::regex_search(str, sm, metadata_pattern))
+        // {
+        //     this->metadata[sm[1]] = sm[2];
+        //     //cerr << "Key: " << sm[1] << "\tValue: " << sm[2] << endl;
+        // }
+        if(std::regex_search(str, sm, board_pattern))
         {
             int l = std::stoi(sm[2]);
             int t = std::stoi(sm[3]);
@@ -76,62 +48,36 @@ multiverse::multiverse(const std::string &input)
                 throw std::runtime_error("Unknown color:" + sm[4].str() + " in " + str);
                 break;
             }
-            int u = l_to_u(l);
-            int v = tc_to_v(t, c);
-
-            // if u is too large, resize this->board to accommodate new board
-            // and fill any missing row with empty vector
-            if(u >= this->boards.size()) 
-            {
-                this->boards.resize(u+1, vector<shared_ptr<board>>());
-                this->timeline_start.resize(u+1, std::numeric_limits<int>::max());
-                this->timeline_end.resize(u+1, std::numeric_limits<int>::min());
-            }
-            l_min = std::min(l_min, l);
-            l_max = std::max(l_max, l);
-            vector<shared_ptr<board>> &timeline = this->boards[u];
-            // do the same for v
-            if(v >= timeline.size())
-            {
-                timeline.resize(v+1, nullptr);
-            }
-            else if(v < 0)
-            {
-                throw std::runtime_error("Negative time is not supported. " + str);
-            }
-            timeline[v] = std::make_shared<board>(sm[1]);
-            timeline_start[u] = std::min(timeline_start[u], v);
-            timeline_end[u]   = std::max(timeline_end[u],   v);
+            insert_board(l, t, c, std::make_shared<board>(sm[1]));
         }
         clean_input = block_match.suffix(); //all it to search the remaining parts
     }
-    int tmp = std::min(-l_min, l_max);
-    number_activated = tmp < std::max(-l_min, l_max) ? tmp+1 : tmp;
-    if(!check_multiverse_shape())
-    {
-        throw std::runtime_error("Cannot determine present time from this board shape");
-    }
-}
-
-bool multiverse::check_multiverse_shape()
-{
     for(int l = l_min; l <= l_max; l++)
     {
         int u = l_to_u(l);
         if(boards[u].empty())
-            return false;
+            throw std::runtime_error("Error: There is a gap between timelines.");
         for(int v = timeline_start[u]; v <= timeline_end[u]; v++)
         {
             if(boards[u][v] == nullptr)
-                return false;
+            {
+                throw std::runtime_error("Error: There is a gap between boards on timeline L"
+                    + std::to_string(u_to_l(u)) + ".");
+            }
         }
     }
-    present = std::numeric_limits<int>::max();
+}
+
+std::tuple<int,int,int> multiverse::get_present() const
+{
+    int tmp = std::min(-l_min, l_max);
+    int number_activated = tmp < std::max(-l_min, l_max) ? tmp+1 : tmp;
+    int present_v = std::numeric_limits<int>::max();
     for(int l = std::max(l_min, -number_activated); l <= std::min(l_max, number_activated); l++)
     {
-        present = std::min(present, timeline_end[l_to_u(l)]);
+        present_v = std::min(present_v, timeline_end[l_to_u(l)]);
     }
-    return true;
+    return std::tuple_cat(std::tie(number_activated), v_to_tc(present_v));
 }
 
 /*
@@ -160,6 +106,41 @@ shared_ptr<board> multiverse::get_board(int l, int t, int c) const
     }
 }
 
+vector<shared_ptr<board>> &multiverse::get_timeline(int l)
+{
+    return boards[l_to_u(l)];
+}
+
+void multiverse::insert_board(int l, int t, int c, const shared_ptr<board>& b_ptr)
+{
+    int u = l_to_u(l);
+    int v = tc_to_v(t, c);
+
+    // if u is too large, resize this->board to accommodate new board
+    // and fill any missing row with empty vector
+    if(u >= this->boards.size())
+    {
+        this->boards.resize(u+1, vector<shared_ptr<board>>());
+        this->timeline_start.resize(u+1, std::numeric_limits<int>::max());
+        this->timeline_end.resize(u+1, std::numeric_limits<int>::min());
+    }
+    l_min = std::min(l_min, l);
+    l_max = std::max(l_max, l);
+    vector<shared_ptr<board>> &timeline = this->boards[u];
+    // do the same for v
+    if(v >= timeline.size())
+    {
+        timeline.resize(v+1, nullptr);
+    }
+    else if(v < 0)
+    {
+        throw std::runtime_error("Negative time is not supported.");
+    }
+    timeline[v] = b_ptr;
+    timeline_start[u] = std::min(timeline_start[u], v);
+    timeline_end[u]   = std::max(timeline_end[u],   v);
+}
+
 vector<tuple<int,int,int,string>> multiverse::get_boards() const
 {
     vector<tuple<int,int,int,string>> result;
@@ -182,8 +163,8 @@ vector<tuple<int,int,int,string>> multiverse::get_boards() const
 string multiverse::to_string() const
 {
     std::stringstream sstm;
-    const auto& [t,c] = v_to_tc(present);
-    sstm << "Present: T" << t << (c?'b':'w') << "\n";
+    auto [_, present, player] = get_present();
+    sstm << "Present: T" << present << (player?'b':'w') << "\n";
     for(int u = 0; u < this->boards.size(); u++)
     {
         const auto& timeline = this->boards[u];

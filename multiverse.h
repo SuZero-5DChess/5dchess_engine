@@ -32,23 +32,64 @@ namespace ranges = std::ranges;
 class multiverse {
 private:
     vector<vector<shared_ptr<board>>> boards;
+public:
     // the following data are derivated from boards:
     int l_min, l_max;
     vector<int> timeline_start, timeline_end;
-    int number_activated, present;
     
-    bool check_multiverse_shape();
-public:
-    map<string, string> metadata;
+    //map<string, string> metadata;
 
     multiverse(const std::string& input);
     
     shared_ptr<board> get_board(int l, int t, int c) const;
+    vector<shared_ptr<board>>& get_timeline(int l);
+    void insert_board(int l, int t, int c, const shared_ptr<board>& b);
     vector<tuple<int,int,int,string>> get_boards() const;
     string to_string() const;
     bool inbound(vec4 a, int color) const;
     piece_t get_piece(vec4 a, int color) const;
+
+    // This helper function returns (number_activated, present_t, current_player)
+    // where: number_activated is max(abs(white's activated lines), abs(black's activated lines))
+    //        present_t is the time of present in L,T coordinate
+    //        present_c is either 0 (for white) or 1 (for black)
+    std::tuple<int,int,int> get_present() const;
+
     vector<vec4> gen_piece_move(const vec4& p, int board_color) const;
+    
+    /*
+     The following static functions describe the correspondence between two coordinate systems: L,T and u,v
+     
+    l_to_u make use of the bijection from integers to non-negative integers:
+    x -> ~(x>>1)
+     */
+    constexpr static int l_to_u(int l)
+    {
+        if(l >= 0)
+            return l << 1;
+        else
+            return ~(l << 1);
+    }
+
+    constexpr static int tc_to_v(int t, int c)
+    {
+        return t << 1 | c;
+    }
+
+    constexpr static int u_to_l(int u)
+    {
+        if(u & 1)
+            return ~(u >> 1);
+        else
+            return u >> 1;
+    }
+
+    constexpr static std::tuple<int, int> v_to_tc(int v)
+    {
+        return std::tuple<int, int>(v >> 1, v & 1);
+    }
 };
+
+
 
 #endif /* MULTIVERSE_H */

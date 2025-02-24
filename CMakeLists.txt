@@ -29,6 +29,7 @@ set(COMMON_SOURCE_FILES
     board.cpp
     multiverse.cpp
     actions.cpp
+    state.cpp
     ${HEADER_FILES}
 )
 

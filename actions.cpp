@@ -1,11 +1,12 @@
 #include "actions.h"
 #include <regex>
+#include "utils.h"
 
-temp_move::temp_move() : data(std::monostate()) {}
+full_move::full_move() : data(std::monostate()) {}
 
-temp_move::temp_move(const vec4& p, const vec4& d) : data(std::make_tuple(p, d)) {}
+full_move::full_move(const vec4& p, const vec4& d) : data(std::make_tuple(p, d)) {}
 
-temp_move::temp_move(std::string str)
+full_move::full_move(std::string str)
 {
     std::regex pattern1(R"(\((-?\d+)T(-?\d+)\)[A-Z]?([a-h])([1-8])([a-h])([1-8]))");
     std::regex pattern2(R"(\((-?\d+)T(-?\d+)\)[A-Z]?([a-h])([1-8])>>?\(T(-?\d+)\)([a-h])([1-8]))");
@@ -52,21 +53,26 @@ temp_move::temp_move(std::string str)
     data = std::make_tuple(p, vec4(x2, y2, t2, l2) - p);
 }
 
-temp_move temp_move::submit() { return temp_move(); }
+full_move full_move::submit() { return full_move(); }
 
-temp_move temp_move::move(const vec4& p, const vec4& d) { return temp_move(p, d); }
+full_move full_move::move(const vec4& p, const vec4& d) { return full_move(p, d); }
 
-bool temp_move::operator<(const temp_move& other) const 
+bool full_move::nonempty()
+{
+    return data.index();
+}
+
+bool full_move::operator<(const full_move& other) const 
 {
     return data < other.data;
 }
 
-bool temp_move::operator==(const temp_move& other) const 
+bool full_move::operator==(const full_move& other) const 
 {
     return data == other.data;
 }
 
-std::ostream& operator<<(std::ostream& os, const temp_move& m)
+std::ostream& operator<<(std::ostream& os, const full_move& m)
 {
     switch (m.data.index()) 
     {
@@ -96,13 +102,13 @@ std::ostream& operator<<(std::ostream& os, const temp_move& m)
     return os;
 }
 
-actions::actions(temp_move m) : value(m) {}
+actions::actions(full_move m) : value(m) {}
 
-actions::actions(temp_move m, std::set<actions> s) : value(std::make_tuple(m, std::move(s))) {}
+actions::actions(full_move m, std::set<actions> s) : value(std::make_tuple(m, std::move(s))) {}
 
-actions actions::leaf(temp_move m) { return actions(m); }
+actions actions::leaf(full_move m) { return actions(m); }
 
-actions actions::branch(temp_move m, std::set<actions> s) { return actions(m, std::move(s)); }
+actions actions::branch(full_move m, std::set<actions> s) { return actions(m, std::move(s)); }
 
 bool actions::operator<(const actions& other) const { return value < other.value; }
 
@@ -117,13 +123,13 @@ const static std::string shapes[] = { "", "", "├── ", "│   ", "└──
 
 std::ostream& actions::pretty_print(std::ostream& os, const std::string& prefix, const int& now) const
 {
-    if (std::holds_alternative<temp_move>(value))
+    if (std::holds_alternative<full_move>(value))
     {
-        os << prefix << shapes[now] << std::get<temp_move>(value) << "\n";
+        os << prefix << shapes[now] << std::get<full_move>(value) << "\n";
     }
     else
     {
-        const auto& [m, set] = std::get<std::tuple<temp_move, std::set<actions>>>(value);
+        const auto& [m, set] = std::get<std::tuple<full_move, std::set<actions>>>(value);
         os << prefix << shapes[now] << m << "\n";
         auto it = set.begin();
         while (it != set.end())

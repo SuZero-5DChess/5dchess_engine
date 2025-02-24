@@ -54,19 +54,26 @@ public:
         int x = value & X_MASK;
         return (x ^ m_x) - m_x;
     }
+    /*
     constexpr vec4 operator +(const vec4& v) const
     {
         vec4 result = v;
         result.value += value;
         vec4_t x = result.value ^ value ^ v.value;
-        result.value -= x & (u_l | u_t | u_y | u_x);
+        x &= (u_l | u_t | u_y | u_x);
+        result.value ^= x;
         return result;
+    }
+     */
+    constexpr vec4 operator +(const vec4& v) const
+    {
+        return vec4(x()+v.x(), y()+v.y(), t()+v.t(), l()+v.l());
     }
     constexpr vec4 operator -() const
     {
-        vec4 temp = *this + vec4(-1,-1,-1,-1);
+        vec4 temp = *this;
         temp.value = ~temp.value;
-        return temp;
+        return temp + vec4(1,1,1,1);
     }
     constexpr vec4 operator -(const vec4& v) const
     {

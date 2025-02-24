@@ -70,9 +70,9 @@ PYBIND11_MODULE(engine, m) {
         .def("to_string", &multiverse::to_string)
         .def("inbound", &multiverse::inbound, py::arg("a"), py::arg("color"))
         .def("get_piece", &multiverse::get_piece, py::arg("a"), py::arg("color"))
-        .def("gen_piece_move", &multiverse::gen_piece_move, py::arg("p"), py::arg("board_color"))
-        // Bind public member variables
-        .def_readwrite("metadata", &multiverse::metadata);
+        .def("gen_piece_move", &multiverse::gen_piece_move, py::arg("p"), py::arg("board_color"));
+        // // Bind public member variables
+        // .def_readwrite("metadata", &multiverse::metadata);
     /*
     py::class_<vec4>(m, "vec4")
         .def(py::init<int, int, int, int>(), py::arg("x"), py::arg("y"), py::arg("t"), py::arg("l"))

@@ -65,3 +65,12 @@ void print_range(auto const rem, auto const& range)
 }
 
 #define SHOW(s) std::cout << #s << ": " << (s) << std::endl;
+
+/*
+helper type for the visitor
+See: https://en.cppreference.com/w/cpp/utility/variant/visit
+*/
+
+template<class... Ts>
+struct overloads : Ts... { using Ts::operator()...; };
+ 

@@ -158,6 +158,21 @@ void board::set_piece(int x, int y, piece_t p)
     this->piece[ppos(x,y)] = p;
 }
 
+board board::replace_piece(int pos, piece_t p) const
+{
+    board b = *this;
+    b.piece[pos] = p;
+    return b;
+}
+
+board board::move_piece(int from, int to) const
+{
+    board b = *this;
+    b.piece[to] = static_cast<piece_t>(piece_name(piece[from]));
+    b.piece[from] = NO_PIECE;
+    return b;
+}
+
 piece_t board::get_piece(int x, int y) const
 {
     return this->piece[ppos(x,y)];
