@@ -1,13 +1,13 @@
 5dchess_engine
 ==================
 
-<bold style="color:#ff6347;">**IMPORTANT NOTE**</bold> This module rely on two separate submodules. It is impossible to build the python module without them. Make sure use
+<bold style="color:#ff6347;">**IMPORTANT NOTE**</bold> This module rely on two separate submodules. It is impossible to build the python library without them. Make sure use
 ```sh
 git clone --recurse-submodules <link-to-this-repo>
 ```
 to download both this repository and the necessary submodules.
 
-If interaction with the [graphics interface](https://github.com/SuZero-5DChess/5dchess_client) is prefered, please install `flask` and `flask_socketio` via `pip`.
+If interaction with the [graphics interface](https://github.com/SuZero-5DChess/5dchess_client) is preferred, please install `flask` and `flask_socketio` via `pip`.
 
 ### Usage (MacOS, etc.)
 
@@ -22,7 +22,7 @@ After that, *go to base directory* and run `main.py`. If the server starts smoot
 
 ### Usage (Windows)
 
-The CMake program and a modern C++ complier (C++ 20 or newer) is required. I suggest Visual Studio Community version 2020.
+The CMake program and a modern C++ complier (C++ 20 or newer) is required. I suggest Visual Studio Community version 2022.
 
 ```cmd
 mkdir build

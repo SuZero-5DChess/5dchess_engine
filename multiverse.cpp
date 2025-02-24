@@ -251,7 +251,8 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
     auto multiple_moves = [&](const vector<vec4>& delta)
     {
         vector<vec4> res;
-        vector<tuple<vec4,vec4>> zipped_delta = std::views::zip(vector<vec4>(delta.size(), vec4(0,0,0,0)), delta) | ranges::to<vector>();
+        //I wold prefer to write `vector<tuple<vec4,vec4>>` instead of `auto`, but clang++ and visual studio complain about different type errors
+        auto zipped_delta = std::views::zip(vector<vec4>(delta.size(), vec4(0,0,0,0)), delta) | ranges::to<vector>();
         while(!zipped_delta.empty())
         {
             for(std::tuple<vec4&, vec4> m : zipped_delta)
@@ -259,32 +260,6 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
                 std::get<0>(m) = std::get<0>(m) + std::get<1>(m);
             }
             zipped_delta = zipped_delta | views::filter([&](auto x){
-                auto multiple_moves = [&](const vector<vec4>& delta)
-                {
-                    vector<vec4> res;
-                    vector<tuple<vec4,vec4>> zipped_delta = std::views::zip(vector<vec4>(delta.size(), vec4(0,0,0,0)), delta) | ranges::to<vector<tuple<vec4,vec4>>>();
-                    while(!zipped_delta.empty())
-                    {
-                        for(auto& m : zipped_delta)
-                        {
-                            std::get<0>(m) = std::get<0>(m) + std::get<1>(m);
-                        }
-                        zipped_delta = zipped_delta | views::filter([&](auto x){
-                            vec4 d = std::get<0>(x);
-                            return delta_in_range(d);
-                        }) | ranges::to<vector<tuple<vec4,vec4>>>();
-                        auto tmp = zipped_delta
-                        | views::transform([](auto elem){return std::get<0>(elem);})
-                        | views::filter(can_go_to)
-                        | ranges::to<vector>();
-                        append_vectors(res, tmp);
-                        zipped_delta = zipped_delta | views::filter([&](auto x){
-                            vec4 d = std::get<0>(x);
-                            return is_blank(d);
-                        }) | ranges::to<vector<tuple<vec4,vec4>>>();
-                    }
-                    return res;
-                };
                 vec4 d = std::get<0>(x);
                 return delta_in_range(d);
             }) | ranges::to<vector>();
@@ -321,6 +296,14 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
         case BISHOP_W:
         case BISHOP_B:
             result = multiple_moves(bishop_delta);
+            break;
+        case UNICORN_W:
+        case UNICORN_B:
+            result = multiple_moves(unicorn_delta);
+            break;
+        case DRAGON_W:
+        case DRAGON_B:
+            result = multiple_moves(dragon_delta);
             break;
         case QUEEN_W:
         case QUEEN_B:
