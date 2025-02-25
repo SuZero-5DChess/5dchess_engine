@@ -42,8 +42,8 @@ public:
     multiverse(const std::string& input);
     
     shared_ptr<board> get_board(int l, int t, int c) const;
-    vector<shared_ptr<board>>& get_timeline(int l);
-    void insert_board(int l, int t, int c, const shared_ptr<board>& b);
+    void insert_board(int l, int t, int c, const shared_ptr<board>& b_ptr);
+    void append_board(int l, const shared_ptr<board>& b_ptr);
     vector<tuple<int,int,int,string>> get_boards() const;
     string to_string() const;
     bool inbound(vec4 a, int color) const;

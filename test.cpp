@@ -14,30 +14,51 @@ std::string t0_fen = ""
  {
      multiverse m(t0_fen);
      state st(m);
-     full_move mv("(0T1)Ng1f3");
      
-     cout << mv << endl;
+//     full_move mv("(0T1)Ng1f3");
+//     std :: cout << st.m.get_present() << endl;
+//     st.apply_move(mv);
+//     std :: cout << st.m.get_present() << endl;
+//     std :: cout << st.m.to_string() << endl;
+     
+//     cout << mv << endl;
 //     
-//     SHOW(vec4(-1,-1,-2,-1))
-//     SHOW(vec4(1,1,1,1))
-//     SHOW(vec4(-1,-1,-2,-1)+vec4(1,1,1,1))
-     
-     std::visit(overloads{
-         [](std::monostate){},
-         [&](std::tuple<vec4, vec4> data)
-         {
-             auto [p, d] = data;
-             vector<vec4> deltas = m.gen_piece_move(p, st.player);
-             print_range("deltas:", deltas);
+//     std::visit(overloads{
+//         [](std::monostate){},
+//         [&](std::tuple<vec4, vec4> data)
+//         {
+//             auto [p, d] = data;
+//             vector<vec4> deltas = m.gen_piece_move(p, st.player);
+//             print_range("deltas:", deltas);
 //             SHOW(p)
 //             SHOW(-vec4(5,2,1,0))
 //             SHOW(-p)
 //             SHOW(d)
+//         }
+//     }, mv.data);
+     
+     vector<full_move> mvs = {
+         full_move("(0T1)e2e3"),
+         full_move::submit(),
+         full_move("(0T1)Ng8>>(0T0)g6"),
+         full_move::submit(),
+         full_move("(1T1)e2e4"),
+         full_move::submit(),
+         full_move("(1T1)Ng6e5"),
+         full_move::submit(),
+     };
+     
+     for(full_move mv : mvs)
+     {
+         std::cout << "Applying move: " << mv;
+         bool flag = st.apply_move(mv);
+         if(!flag)
+         {
+             std::cout << " ... failure\n";
+             break;
          }
-     }, mv.data);
-     
-     
-     std::cout << (st.apply_move(mv) ? "true" : "false") << std::endl;
+         cout << " ... success\n";
+     }
      
      std::cout << st.m.to_string();
      

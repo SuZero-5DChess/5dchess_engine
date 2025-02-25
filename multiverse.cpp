@@ -106,9 +106,11 @@ shared_ptr<board> multiverse::get_board(int l, int t, int c) const
     }
 }
 
-vector<shared_ptr<board>> &multiverse::get_timeline(int l)
+void multiverse::append_board(int l, const shared_ptr<board>& b_ptr)
 {
-    return boards[l_to_u(l)];
+    int u = l_to_u(l);
+    boards[u].push_back(b_ptr);
+    timeline_end[u]++;
 }
 
 void multiverse::insert_board(int l, int t, int c, const shared_ptr<board>& b_ptr)
