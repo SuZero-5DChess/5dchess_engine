@@ -143,7 +143,7 @@ board::board(std::string fen, const int x_size, const int y_size)
  * The coordinate system works as follows. PGN position "a1" is the position (0,0).
  * In general, "xy" is the position ('x'-'a', y-1)
  */
-constexpr int ppos(int x, int y)
+constexpr int board::ppos(int x, int y)
 {
     return x|(y<<BOARD_BITS);
 }

@@ -231,6 +231,22 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
     {
         return inbound(p+d, board_color);
     };
+    auto good_castling_direction = [&](vec4 d)
+    {
+        for(vec4 c = d; delta_in_range(d); c = c + d)
+        {
+            piece_t q_piece = get_piece(p+d, board_color);
+            if(q_piece == ROOK_UW || q_piece == ROOK_UB)
+            {
+                return true;
+            }
+            else if(q_piece != NO_PIECE)
+            {
+                return false;
+            }
+        }
+        return false;
+    };
     auto multiple_moves = [&](const vector<vec4>& delta)
     {
         vector<vec4> res;
@@ -260,7 +276,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
         }
         return res;
     };
-    std::cerr << "---" << piece_name(p_piece) << std::endl;
+    //std::cerr << "---" << piece_name(p_piece) << std::endl;
     switch(p_piece)
     {
         case KNIGHT_W:
@@ -293,8 +309,13 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
             result = multiple_moves(queen_delta);
             break;
         case KING_UW:
-        case KING_UB:
-            //TODO: castling
+        case KING_UB:{
+            //TODO: castling passage check
+            result = vector<vec4>{vec4(-1,0,0,0), vec4(1,0,0,0)}
+            | views::filter(good_castling_direction)
+            | views::transform([](vec4 v){return v+v;})
+            | ranges::to<vector>();
+        }
         case KING_W:
         case KING_B:
             append_vectors(result, queen_delta

@@ -69,7 +69,9 @@ private:
     board();
 public:
     board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
-
+    
+    constexpr static int ppos(int x, int y);
+    
     // the getter methods
     piece_t get_piece(int x, int y) const;
     piece_t& operator[](int p);

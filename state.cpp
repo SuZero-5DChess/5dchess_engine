@@ -60,10 +60,29 @@ bool state::apply_move(full_move fm)
             // physical move, no time travel
             if(d.l() == 0 && d.t() == 0)
             {
-                // TODO: detect en passant
-                // TODO: detect castling
                 const shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
-                m.append_board(p.l(), b_ptr->move_piece(p.xy(), q.xy()));
+                piece_t pic = (*b_ptr)[p.xy()];
+                // en passant
+                if(to_white(pic) == PAWN_W && (*b_ptr)[q.xy()] == NO_PIECE)
+                {
+                    m.append_board(p.l(),
+                        b_ptr->replace_piece(board::ppos(q.x(),p.y()), NO_PIECE)
+                             ->move_piece(p.xy(), q.xy()));
+                }
+                // castling
+                else if(to_white(pic) == KING_W && abs(d.x()) > 1)
+                {
+                    int rook_x1 = d.x() < 0 ? 0 : 7;
+                    int rook_x2 = q.x() + (d.x() < 0 ? 1 : -1);
+                    m.append_board(p.l(),b_ptr
+                        ->move_piece(board::ppos(rook_x1, p.y()), board::ppos(rook_x2,q.y()))
+                        ->move_piece(p.xy(), q.xy()));
+                }
+                // normal move
+                else
+                {
+                    m.append_board(p.l(), b_ptr->move_piece(p.xy(), q.xy()));
+                }
             }
             // non-branching superphysical move
             else if(multiverse::tc_to_v(q.t(), player) == m.timeline_end[multiverse::l_to_u(q.l())])
