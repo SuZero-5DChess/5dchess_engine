@@ -42,9 +42,14 @@ std::string t0_fen = ""
          full_move::submit(),
          full_move("(0T1)Ng8>>(0T0)g6"),
          full_move::submit(),
-         full_move("(1T1)e2e4"),
+         full_move("(-1T1)e2e4"),
          full_move::submit(),
-         full_move("(1T1)Ng6e5"),
+         full_move("(-1T1)Ng6e5"),
+         full_move::submit(),
+         full_move("(0T2)Ke1>(-1T2)e2"),
+         full_move::submit(),
+         full_move("(-1T2)e7e6"),
+         full_move("(0T2)e7e6"),
          full_move::submit(),
      };
      

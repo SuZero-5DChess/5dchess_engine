@@ -15,17 +15,20 @@
 #include <iomanip>
 
 typedef std::uint32_t vec4_t;
-const vec4_t L_BITS = 8, T_BITS = 8, Y_BITS = 8, X_BITS = 8;
-
-const int m_l = 1U << (L_BITS-1);
-const int m_t = 1U << (T_BITS-1);
-const int m_y = 1U << (Y_BITS-1);
-const int m_x = 1U << (X_BITS-1);
-const vec4_t u_x = 1, u_y = u_x << X_BITS, u_t = u_y << Y_BITS, u_l = u_t << T_BITS;
-const vec4_t L_MASK = 0 - u_l, T_MASK = u_l - u_t, Y_MASK = u_t - u_y, X_MASK = u_y - u_x;
+constexpr vec4_t L_BITS = 8, T_BITS = 8, Y_BITS = 8, X_BITS = 8;
 
 class vec4 {
     vec4_t value;
+    
+    constexpr vec4(vec4_t v) : value(v) {}
+    constexpr static int m_l = 1U << (L_BITS-1);
+    constexpr static int m_t = 1U << (T_BITS-1);
+    constexpr static int m_y = 1U << (Y_BITS-1);
+    constexpr static int m_x = 1U << (X_BITS-1);
+    constexpr static vec4_t u_x = 1, u_y = u_x << X_BITS, u_t = u_y << Y_BITS, u_l = u_t << T_BITS;
+    constexpr static vec4_t L_MASK = 0 - u_l, T_MASK = u_l - u_t, Y_MASK = u_t - u_y, X_MASK = u_y - u_x;
+    constexpr static vec4_t mask_top = (u_x << (X_BITS-1)) | (u_y << (Y_BITS-1)) | (u_t << (T_BITS-1)) | (u_l << (L_BITS-1));
+    constexpr static vec4_t mask_lower = ~mask_top;
 public:
     constexpr vec4(int x, int y, int t, int l)
     {
@@ -54,20 +57,12 @@ public:
         int x = value & X_MASK;
         return (x ^ m_x) - m_x;
     }
-    /*
     constexpr vec4 operator +(const vec4& v) const
     {
-        vec4 result = v;
-        result.value += value;
-        vec4_t x = result.value ^ value ^ v.value;
-        x &= (u_l | u_t | u_y | u_x);
-        result.value ^= x;
-        return result;
-    }
-     */
-    constexpr vec4 operator +(const vec4& v) const
-    {
-        return vec4(x()+v.x(), y()+v.y(), t()+v.t(), l()+v.l());
+        vec4_t c = (value & mask_lower) + (v.value & mask_lower);
+        vec4_t d = value ^ v.value ^ c;
+        vec4_t sum = (c & mask_lower) | (d & mask_top);
+        return vec4(sum);
     }
     constexpr vec4 operator -() const
     {
@@ -107,7 +102,7 @@ public:
     }
     int xy() const
     {
-        const int mask_x = 0b111, mask_y = 0b111000, y_shift = X_BITS-3;
+        constexpr int mask_x = 0b111, mask_y = 0b111000, y_shift = X_BITS-3;
         return (value & mask_x) | (value >> y_shift & mask_y);
     }
 };

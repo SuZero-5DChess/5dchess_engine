@@ -10,9 +10,9 @@ state::state(multiverse mtv) : m(mtv)
 int state::new_line() const
 {
     if(player == 0)
-        return m.l_min - 1;
-    else
         return m.l_max + 1;
+    else
+        return m.l_min - 1;
 }
 
 bool state::can_submit() const
@@ -62,29 +62,27 @@ bool state::apply_move(full_move fm)
             {
                 // TODO: detect en passant
                 // TODO: detect castling
-                board b = m.get_board(p.l(), p.t(), player)->move_piece(p.xy(), q.xy());
-                m.append_board(p.l(), std::make_shared<board>(std::move(b)));
+                const shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
+                m.append_board(p.l(), b_ptr->move_piece(p.xy(), q.xy()));
             }
             // non-branching superphysical move
             else if(multiverse::tc_to_v(q.t(), player) == m.timeline_end[multiverse::l_to_u(q.l())])
             {
                 const shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
-                const piece_t& pic = (*b_ptr)[p.xy()];
-                board b = b_ptr->replace_piece(p.xy(), NO_PIECE);
-                m.append_board(p.l(), std::make_shared<board>(std::move(b)));
-                board c = m.get_board(q.l(), q.t(), player)->replace_piece(q.xy(), pic);
-                m.append_board(q.l(), std::make_shared<board>(std::move(c)));
+                const piece_t& pic = static_cast<piece_t>(piece_name((*b_ptr)[p.xy()]));
+                m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
+                const shared_ptr<board>& c_ptr = m.get_board(q.l(), q.t(), player);
+                m.append_board(q.l(), c_ptr->replace_piece(q.xy(), pic));
             }
             //branching move
             else
             {
                 const shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
-                const piece_t& pic = (*b_ptr)[p.xy()];
-                board b = b_ptr->replace_piece(p.xy(), NO_PIECE);
-                m.append_board(p.l(), std::make_shared<board>(std::move(b)));
-                board x = m.get_board(q.l(), q.t(), player)->replace_piece(q.xy(), pic);
+                const piece_t& pic = static_cast<piece_t>(piece_name((*b_ptr)[p.xy()]));
+                m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
+                const shared_ptr<board>& x_ptr = m.get_board(q.l(), q.t(), player);
                 auto [t, c] = multiverse::v_to_tc(multiverse::tc_to_v(q.t(), player)+1);
-                m.insert_board(new_line(), t, c, std::make_shared<board>(std::move(x)));
+                m.insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), pic));
             }
             flag = true;
         }
