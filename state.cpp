@@ -47,7 +47,7 @@ bool state::apply_move(full_move fm)
         {
             auto [p, d] = data;
             vec4 q = p+d;
-            vector<vec4> moves = m.gen_piece_move(p, player);
+            std::vector<vec4> moves = m.gen_piece_move(p, player);
             
             // is this a viable move? (not counting checking)
             if(!std::ranges::contains(moves, d))
@@ -60,7 +60,7 @@ bool state::apply_move(full_move fm)
             // physical move, no time travel
             if(d.l() == 0 && d.t() == 0)
             {
-                const shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
+                const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
                 piece_t pic = (*b_ptr)[p.xy()];
                 // en passant
                 if(to_white(pic) == PAWN_W && (*b_ptr)[q.xy()] == NO_PIECE)
@@ -87,19 +87,19 @@ bool state::apply_move(full_move fm)
             // non-branching superphysical move
             else if(multiverse::tc_to_v(q.t(), player) == m.timeline_end[multiverse::l_to_u(q.l())])
             {
-                const shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
+                const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
                 const piece_t& pic = static_cast<piece_t>(piece_name((*b_ptr)[p.xy()]));
                 m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
-                const shared_ptr<board>& c_ptr = m.get_board(q.l(), q.t(), player);
+                const std::shared_ptr<board>& c_ptr = m.get_board(q.l(), q.t(), player);
                 m.append_board(q.l(), c_ptr->replace_piece(q.xy(), pic));
             }
             //branching move
             else
             {
-                const shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
+                const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
                 const piece_t& pic = static_cast<piece_t>(piece_name((*b_ptr)[p.xy()]));
                 m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
-                const shared_ptr<board>& x_ptr = m.get_board(q.l(), q.t(), player);
+                const std::shared_ptr<board>& x_ptr = m.get_board(q.l(), q.t(), player);
                 auto [t, c] = multiverse::v_to_tc(multiverse::tc_to_v(q.t(), player)+1);
                 m.insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), pic));
             }

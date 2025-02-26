@@ -30,6 +30,7 @@ set(COMMON_SOURCE_FILES
     multiverse.cpp
     actions.cpp
     state.cpp
+    game.cpp
     ${HEADER_FILES}
 )
 

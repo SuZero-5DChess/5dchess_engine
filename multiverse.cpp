@@ -6,6 +6,12 @@
 #include <limits>
 #include <iostream>
 
+
+using std::tuple;
+using std::vector;
+using std::string;
+using std::shared_ptr;
+namespace ranges = std::ranges;
 using std::cerr;
 using std::endl;
 
@@ -14,7 +20,6 @@ multiverse::multiverse(const std::string &input)
 {
     const static std::regex comment_pattern(R"(\{.*?\})");
     const static std::regex block_pattern(R"(\[[^\[\]]*\])");
-    //const static std::regex metadata_pattern(R"(\[([^:]*)\s([^:]*)\])");
     const static std::regex board_pattern(R"(\[(.+?):([+-]?\d+):([+-]?\d+):([a-zA-Z])\])");
 
     std::string clean_input = std::regex_replace(input, comment_pattern, "");
@@ -24,11 +29,7 @@ multiverse::multiverse(const std::string &input)
     {
         std::smatch sm;
         std::string str = block_match.str();
-        // if(std::regex_search(str, sm, metadata_pattern))
-        // {
-        //     this->metadata[sm[1]] = sm[2];
-        //     //cerr << "Key: " << sm[1] << "\tValue: " << sm[2] << endl;
-        // }
+        
         if(std::regex_search(str, sm, board_pattern))
         {
             int l = std::stoi(sm[2]);

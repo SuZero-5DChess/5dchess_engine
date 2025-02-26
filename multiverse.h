@@ -18,34 +18,27 @@
 #include "board.h"
 #include "vec4.h"
 
-using std::tuple;
-using std::pair;
-using std::vector;
-using std::map;
-using std::string;
-using std::shared_ptr;
-namespace ranges = std::ranges;
 
 /*
  Behavior of copying a multiverse object is just copy the vector of vectors of pointers to the boards. It does not perform deep-copy of a board object. (Which is expected.)
  */
 class multiverse {
 private:
-    vector<vector<shared_ptr<board>>> boards;
+    std::vector<std::vector<std::shared_ptr<board>>> boards;
 public:
     // the following data are derivated from boards:
     int l_min, l_max;
-    vector<int> timeline_start, timeline_end;
+    std::vector<int> timeline_start, timeline_end;
     
     //map<string, string> metadata;
 
     multiverse(const std::string& input);
     
-    shared_ptr<board> get_board(int l, int t, int c) const;
-    void insert_board(int l, int t, int c, const shared_ptr<board>& b_ptr);
-    void append_board(int l, const shared_ptr<board>& b_ptr);
-    vector<tuple<int,int,int,string>> get_boards() const;
-    string to_string() const;
+    std::shared_ptr<board> get_board(int l, int t, int c) const;
+    void insert_board(int l, int t, int c, const std::shared_ptr<board>& b_ptr);
+    void append_board(int l, const std::shared_ptr<board>& b_ptr);
+    std::vector<std::tuple<int,int,int,std::string>> get_boards() const;
+    std::string to_string() const;
     bool inbound(vec4 a, int color) const;
     piece_t get_piece(vec4 a, int color) const;
 
@@ -55,7 +48,7 @@ public:
     //        present_c is either 0 (for white) or 1 (for black)
     std::tuple<int,int,int> get_present() const;
 
-    vector<vec4> gen_piece_move(const vec4& p, int board_color) const;
+    std::vector<vec4> gen_piece_move(const vec4& p, int board_color) const;
     
     /*
      The following static functions describe the correspondence between two coordinate systems: L,T and u,v

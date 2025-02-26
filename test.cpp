@@ -1,10 +1,11 @@
 #include <iostream>
-#include "state.h"
+#include "game.h"
 #include "utils.h"
 #include <vector>
 #include <variant>
 
 std::string t0_fen = ""
+"[Size 8x8]"
 "[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:0:b]\n"
 "[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:1:w]\n";
 
@@ -12,9 +13,7 @@ std::string t0_fen = ""
 
  int main()
  {
-     multiverse m(t0_fen);
-     state st(m);
-     
+     game g(t0_fen);
 //     full_move mv("(0T1)Ng1f3");
 //     std :: cout << st.m.get_present() << endl;
 //     st.apply_move(mv);
@@ -56,7 +55,7 @@ std::string t0_fen = ""
      for(full_move mv : mvs)
      {
          std::cout << "Applying move: " << mv;
-         bool flag = st.apply_move(mv);
+         bool flag = g.apply_move(mv);
          if(!flag)
          {
              std::cout << " ... failure\n";
@@ -65,7 +64,12 @@ std::string t0_fen = ""
          cout << " ... success\n";
      }
      
-     std::cout << st.m.to_string();
+     g.undo();
+     g.undo();
+     g.undo();
+     g.redo();
+     std::cout << g.apply_move(full_move("(0T2)Rh8g8")) << endl;
+     std::cout << g.get_current_state().m.to_string();
      
      std::cout << "shutting down" << std::endl;
      
