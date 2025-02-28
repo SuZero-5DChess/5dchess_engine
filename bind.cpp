@@ -1,6 +1,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include "multiverse.h"
+#include <pybind11/stl_bind.h>
+#include <pybind11/operators.h>
+#include <ostream>
+#include "game.h"
 
 namespace py = pybind11;
 
@@ -61,7 +64,7 @@ PYBIND11_MODULE(engine, m) {
         .def("gen_piece_move", &multiverse::gen_piece_move)
         .def_readwrite("metadata", &multiverse::metadata); // Expose `metadata` map directly
     */
-       py::class_<multiverse, std::shared_ptr<multiverse>>(m, "multiverse")
+    py::class_<multiverse, std::shared_ptr<multiverse>>(m, "multiverse")
         // Bind the constructor
         .def(py::init<const std::string &>(), py::arg("input"))
         // Bind public methods
@@ -87,8 +90,42 @@ PYBIND11_MODULE(engine, m) {
         .def("t", &vec4::t)
         .def("y", &vec4::y)
         .def("x", &vec4::x)
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def(py::self >= py::self)
+        .def(py::self <= py::self)
+        .def(py::self > py::self)
+        .def(py::self < py::self)
+        .def(py::self + py::self)
+        .def(py::self - py::self)
+        .def(-py::self)
+        .def(py::self * int())
+        //.def(int() * py::self) //this should be a bug
         .def("to_string", &vec4::to_string)
         // Bind the stream operator for string representation
-        .def("__repr__", [](const vec4 &v) { return v.to_string(); })
-        .def("__str__", [](const vec4 &v) { return v.to_string(); });
+        .def("__repr__", [](const vec4 &v) { return v.to_string(); });
+    py::class_<full_move>(m, "full_move")
+        .def(py::init<std::string>())
+        .def_static("submit", &full_move::submit)
+        .def_static("move", &full_move::move)
+        .def("nonempty", &full_move::nonempty)
+        .def("__lt__", &full_move::operator<)
+        .def("__eq__", &full_move::operator==)
+        .def("__repr__", [](const full_move& fm) {
+            std::ostringstream os;
+            os << fm;
+            return os.str();
+        });
+    py::class_<game>(m, "game")
+        .def(py::init<std::string>())
+        .def("get_current_boards", &game::get_current_boards)
+        .def("get_current_present", &game::get_current_present)
+        .def("get_current_timeline_status", &game::get_current_timeline_status)
+        .def("gen_move_if_playable", &game::gen_move_if_playable)
+        .def("can_undo", &game::can_undo)
+        .def("can_redo", &game::can_redo)
+        .def("undo", &game::undo)
+        .def("redo", &game::redo)
+        .def("apply_move", &game::apply_move, py::return_value_policy::reference)
+        .def_readwrite("metadata", &game::metadata);  // Expose metadata map
 }

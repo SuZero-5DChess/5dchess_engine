@@ -1,5 +1,6 @@
 #include "actions.h"
 #include <regex>
+#include <sstream>
 #include "utils.h"
 
 full_move::full_move() : data(std::monostate()) {}
@@ -72,15 +73,16 @@ bool full_move::operator==(const full_move& other) const
     return data == other.data;
 }
 
-std::ostream& operator<<(std::ostream& os, const full_move& m)
+std::string full_move::to_string() const
 {
-    switch (m.data.index()) 
+    std::ostringstream os;
+    switch (data.index())
     {
         case 0:
             os << "Submit";
             break;
         case 1:
-            auto [p, d] = std::get<std::tuple<vec4, vec4>>(m.data);
+            auto [p, d] = std::get<std::tuple<vec4, vec4>>(data);
             vec4 q = p+d;
             if(d.l() == 0)
             {
@@ -99,6 +101,12 @@ std::ostream& operator<<(std::ostream& os, const full_move& m)
             }
             break;
     }
+    return os.str();
+}
+
+std::ostream& operator<<(std::ostream& os, const full_move& m)
+{
+    os << m.to_string();
     return os;
 }
 

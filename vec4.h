@@ -59,9 +59,8 @@ public:
     }
     constexpr vec4 operator +(const vec4& v) const
     {
-        vec4_t c = (value & mask_lower) + (v.value & mask_lower);
-        vec4_t d = value ^ v.value ^ c;
-        vec4_t sum = (c & mask_lower) | (d & mask_top);
+        vec4_t a = value, b = v.value;
+        vec4_t sum = ((a & mask_lower) + (b & mask_lower)) ^ ((a^b) & mask_top);
         return vec4(sum);
     }
     constexpr vec4 operator -() const
@@ -79,9 +78,9 @@ public:
         return vec4(scalar*x(), scalar*y(), scalar*t(), scalar*l());
     }
     constexpr bool operator ==(const vec4&) const = default;
-    constexpr bool operator <(const vec4& other) const
+    constexpr bool operator <=>(const vec4& other) const
     {
-        return value < other.value;
+        return value - other.value;
     }
     friend std::ostream& operator<<(std::ostream& os, const vec4& v)
     {

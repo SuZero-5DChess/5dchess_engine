@@ -25,7 +25,14 @@ struct state {
     {
         return apply_move(full_move(s));
     }
-
+    /*
+     get_timeline_status() returns `std::make_tuple(mandatory_timelines, optional_timelines, unplayable_timelines)`
+     where:
+     mandatory_timelines are the timelines that current player must make a move on it
+     optional_timelines are the timelines that current player can choose to play or not
+     unplayable_timelines are the timelines that current player can't place a move on
+     */
+    std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_timeline_status() const;
 };
 
 #endif //STATE_H

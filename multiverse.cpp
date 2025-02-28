@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <limits>
 #include <iostream>
+#include <utility>
 
 
 using std::tuple;
@@ -79,6 +80,13 @@ std::tuple<int,int,int> multiverse::get_present() const
         present_v = std::min(present_v, timeline_end[l_to_u(l)]);
     }
     return std::tuple_cat(std::tie(number_activated), v_to_tc(present_v));
+}
+
+bool multiverse::is_active(int l) const
+{
+    int number_activated = std::get<0>(get_present());
+    return std::max(l_min, -number_activated) <= l
+        && std::min(l_max, number_activated) >= l;
 }
 
 /*

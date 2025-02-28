@@ -26,7 +26,8 @@ struct full_move {
 
     bool operator<(const full_move& other) const;
     bool operator==(const full_move& other) const;
-
+    
+    std::string to_string() const;
     friend std::ostream& operator<<(std::ostream& os, const full_move& m);
 };
 

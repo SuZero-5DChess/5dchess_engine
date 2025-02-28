@@ -70,8 +70,6 @@ private:
 public:
     board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
     
-    constexpr static int ppos(int x, int y);
-    
     // the getter methods
     piece_t get_piece(int x, int y) const;
     piece_t& operator[](int p);
@@ -87,6 +85,18 @@ public:
     ~board()
     {
         std::cerr << "Board destroyed: " << get_fen() << std::endl;
+    }
+    
+    /**
+     * @param x  coordinate x
+     * @param y  coordinate y
+     * @return the index corresponds to (x,y)
+     * The coordinate system works as follows. PGN position "a1" is the position (0,0).
+     * In general, "xy" is the position ('x'-'a', y-1)
+     */
+    constexpr static int ppos(int x, int y)
+    {
+        return x|(y<<BOARD_BITS);
     }
 };
 

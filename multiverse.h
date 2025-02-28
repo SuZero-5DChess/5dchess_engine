@@ -23,7 +23,7 @@
  Behavior of copying a multiverse object is just copy the vector of vectors of pointers to the boards. It does not perform deep-copy of a board object. (Which is expected.)
  */
 class multiverse {
-private:
+protected:
     std::vector<std::vector<std::shared_ptr<board>>> boards;
 public:
     // the following data are derivated from boards:
@@ -47,6 +47,7 @@ public:
     //        present_t is the time of present in L,T coordinate
     //        present_c is either 0 (for white) or 1 (for black)
     std::tuple<int,int,int> get_present() const;
+    bool is_active(int l) const;
 
     std::vector<vec4> gen_piece_move(const vec4& p, int board_color) const;
     

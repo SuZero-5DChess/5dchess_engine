@@ -1,5 +1,6 @@
 #include "state.h"
 #include <algorithm>
+#include <ranges>
 #include "utils.h"
 
 state::state(multiverse mtv) : m(mtv)
@@ -107,4 +108,33 @@ bool state::apply_move(full_move fm)
         }
     }, fm.data);
     return flag;
+}
+
+std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_timeline_status() const
+{
+    std::vector<int> mandatory_timelines, optional_timelines, unplayable_timelines;
+    int present_v = multiverse::tc_to_v(present, player);
+    for(int l = m.l_min; l <= m.l_max; l++)
+    {
+        int v = m.timeline_end[multiverse::l_to_u(l)];
+        if (std::max(m.l_min, -number_activated) <= l
+            && std::min(m.l_max, number_activated) >= l
+            && v == present_v)
+        {
+            mandatory_timelines.push_back(l);
+        }
+        else
+        {
+            auto [t, c] = multiverse::v_to_tc(v);
+            if(player==c)
+            {
+                optional_timelines.push_back(l);
+            }
+            else
+            {
+                unplayable_timelines.push_back(l);
+            }
+        }
+    }
+    return std::make_tuple(mandatory_timelines, optional_timelines, unplayable_timelines);
 }
