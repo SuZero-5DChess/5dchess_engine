@@ -4,6 +4,7 @@
 #include <ranges>
 #include <algorithm>
 #include <cassert>
+#include <variant>
 
 game::game(std::string input)
 {
@@ -52,6 +53,19 @@ std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> game::get_curre
 
 std::vector<vec4> game::gen_move_if_playable(vec4 p)
 {
+    if(is_playable(p))
+    {
+        const state& cs = get_current_state();
+        return cs.m.gen_piece_move(p, cs.player);
+    }
+    else
+    {
+        return std::vector<vec4>();
+    }
+}
+
+bool game::is_playable(vec4 p)
+{
     auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_current_timeline_status();
     const state& cs = get_current_state();
     if(std::ranges::contains(mandatory_timelines, p.l())
@@ -61,10 +75,14 @@ std::vector<vec4> game::gen_move_if_playable(vec4 p)
         int v2 = cs.m.timeline_end[multiverse::l_to_u(p.l())];
         if(v1 == v2)
         {
-            return cs.m.gen_piece_move(p, cs.player);
+            piece_t p_piece = cs.m.get_piece(p, cs.player);
+            if(p_piece != NO_PIECE)
+            {
+                return cs.player == get_color(p_piece);
+            }
         }
     }
-    return std::vector<vec4>();
+    return false;
 }
 
 bool game::can_undo() const
@@ -97,14 +115,21 @@ void game::redo()
 bool game::apply_move(full_move fm)
 {
     state new_state = *now;
-            
+    if (std::holds_alternative<std::tuple<vec4,vec4>>(fm.data))
+    {
+        auto [p,d] = std::get<std::tuple<vec4,vec4>>(fm.data);
+        if(!is_playable(p))
+        {
+            return false;
+        }
+    }
     bool flag = new_state.apply_move(fm);
     
-    // Remove all future states after `now`
-    cached_states.erase(now + 1, cached_states.end());
-    
-    // Add new state to history
-    cached_states.push_back(new_state);
-    now = cached_states.end() - 1;
+    if(flag)
+    {
+        cached_states.erase(now + 1, cached_states.end());
+        cached_states.push_back(new_state);
+        now = cached_states.end() - 1;
+    }
     return flag;
 }

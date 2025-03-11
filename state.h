@@ -21,10 +21,10 @@ struct state {
     bool can_submit() const;
 
     bool apply_move(full_move fm);
-    bool apply_move(std::string s)
-    {
-        return apply_move(full_move(s));
-    }
+//    bool apply_move(std::string s)
+//    {
+//        return apply_move(full_move(s));
+//    }
     /*
      get_timeline_status() returns `std::make_tuple(mandatory_timelines, optional_timelines, unplayable_timelines)`
      where:

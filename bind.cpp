@@ -116,12 +116,17 @@ PYBIND11_MODULE(engine, m) {
             os << fm;
             return os.str();
         });
+    py::class_<state>(m, "state")
+        .def_readwrite("m", &state::m)
+        .def(py::init<multiverse>())
+        .def("apply_move", &state::apply_move);
     py::class_<game>(m, "game")
         .def(py::init<std::string>())
         .def("get_current_boards", &game::get_current_boards)
         .def("get_current_present", &game::get_current_present)
         .def("get_current_timeline_status", &game::get_current_timeline_status)
         .def("gen_move_if_playable", &game::gen_move_if_playable)
+        .def("is_playable", &game::is_playable)
         .def("can_undo", &game::can_undo)
         .def("can_redo", &game::can_redo)
         .def("undo", &game::undo)

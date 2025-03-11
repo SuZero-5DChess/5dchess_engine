@@ -47,11 +47,12 @@ def handle_click(data):
     global qs, p0, g
     pos = engine.vec4(x,y,t,l)
     present_t, present_c = g.get_current_present()
-    print(pos, qs, pos in qs)
+    #print(pos, qs, pos in qs)
     if pos in qs:
-        fm = engine.full_move.move(p0, pos)
-        g.apply_move(fm)
-        print('applied move ', fm, ' now ', g.get_current_boards())
+        fm = engine.full_move.move(p0, pos-p0)
+        flag = g.apply_move(fm)
+        print('applying move ', fm, ' --success' if flag else ' --failure')
+        #print(' now ', g.get_current_boards())
         display()
     elif c == present_c:
         ds = g.gen_move_if_playable(pos)
@@ -77,16 +78,25 @@ def handle_click(data):
 
 
 @socketio.on('request_undo')
-def handle_undo(data):
-    g.undo()
+def handle_undo():
+    print('attempting undo', end='')
+    flag = g.undo()
+    print(' ---', 'success' if flag else 'failed')
+    display()
 
 @socketio.on('request_redo')
-def handle_redo(data):
-    g.redo()
+def handle_redo():
+    print('attempting redo', end='')
+    flag = g.redo()
+    print(' ---', 'success' if flag else 'failed')
+    display()
 
 @socketio.on('request_submit')
-def handle_submit(data):
-    g.apply_move(engine.full_move.submit())
+def handle_submit():
+    print('received submition request', end='')
+    flag = g.apply_move(engine.full_move.submit())
+    print(' ---', 'success' if flag else 'failed')
+    display()
 
 def convert_boards_data(boards):
     def convert_board(board):
@@ -131,7 +141,7 @@ def display(hl=[]):
         ] + hl
     }
     game_data.update(new_data)
-    print('displaying ', g.get_current_boards())
+    #print('displaying ', g.get_current_boards())
     emit('response_data', game_data)
 
 @socketio.on('request_data')

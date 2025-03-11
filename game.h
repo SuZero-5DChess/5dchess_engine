@@ -20,6 +20,7 @@ public:
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_current_timeline_status() const;
     std::vector<vec4> gen_move_if_playable(vec4 p);
     
+    bool is_playable(vec4 p);
     bool can_undo() const;
     bool can_redo() const;
     bool can_submit() const;

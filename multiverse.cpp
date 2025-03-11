@@ -362,7 +362,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
                 }
                 piece_t q_name = get_piece(p+d, board_color);
                 // normal capture
-                if(q_name != NO_PIECE && get_color(q_name)!=board_color)
+                if(q_name != NO_PIECE && p_color!=get_color(q_name))
                 {
                     result.push_back(d);
                 }
@@ -379,7 +379,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
         case PAWN_UB:
             for(int i = 0; i < 2; i++)
             {
-                if(!inbound(p+pawn_unmoved_white_delta[i], board_color))
+                if(!inbound(p+pawn_unmoved_black_delta[i], board_color))
                 {
                     continue;
                 }
@@ -406,7 +406,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
                 }
                 piece_t q_name = get_piece(p+d, board_color);
                 // normal capture
-                if(q_name != NO_PIECE && get_color(q_name)!=board_color)
+                if(q_name != NO_PIECE && p_color!=get_color(q_name))
                 {
                     result.push_back(d);
                 }
