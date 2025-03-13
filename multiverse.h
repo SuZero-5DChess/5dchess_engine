@@ -41,12 +41,13 @@ public:
     std::string to_string() const;
     bool inbound(vec4 a, int color) const;
     piece_t get_piece(vec4 a, int color) const;
-
+    
+    int number_activated() const;
     // This helper function returns (number_activated, present_t, current_player)
     // where: number_activated is max(abs(white's activated lines), abs(black's activated lines))
     //        present_t is the time of present in L,T coordinate
     //        present_c is either 0 (for white) or 1 (for black)
-    std::tuple<int,int,int> get_present() const;
+    std::tuple<int,int> get_present() const;
     bool is_active(int l) const;
 
     std::vector<vec4> gen_piece_move(const vec4& p, int board_color) const;

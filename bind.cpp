@@ -129,6 +129,7 @@ PYBIND11_MODULE(engine, m) {
         .def("is_playable", &game::is_playable)
         .def("can_undo", &game::can_undo)
         .def("can_redo", &game::can_redo)
+        .def("can_submit", &game::can_submit)
         .def("undo", &game::undo)
         .def("redo", &game::redo)
         .def("apply_move", &game::apply_move, py::return_value_policy::reference)

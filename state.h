@@ -12,7 +12,7 @@ struct state {
      `present` is in L,T coordinate (i.e. not u,v corrdinated).
      These numbers can be inherited from copy-construction; thus they are not necessarily equal to `m.get_present()`.
     */
-    int number_activated, present, player;
+    int present, player;
 
     state(multiverse mtv);
 

@@ -5,7 +5,7 @@
 
 state::state(multiverse mtv) : m(mtv)
 {
-    std::tie(number_activated, present, player) = m.get_present();
+    std::tie(present, player) = m.get_present();
 }
 
 int state::new_line() const
@@ -18,7 +18,7 @@ int state::new_line() const
 
 bool state::can_submit() const
 {
-    auto [_, present_t, present_c] = m.get_present();
+    auto [present_t, present_c] = m.get_present();
 //    std::cout << present_t << " " << present_c << std::endl;
 //    std::cout << present << " " << player << std::endl;
 //    std::cout << (player != present_c) << (present != present_t);
@@ -38,7 +38,7 @@ bool state::apply_move(full_move fm)
             }
             else
             {
-                auto [_, present_t, present_c] = m.get_present();
+                auto [present_t, present_c] = m.get_present();
                 present = present_t;
                 player  = present_c;
                 flag = true;
@@ -117,8 +117,8 @@ std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_time
     for(int l = m.l_min; l <= m.l_max; l++)
     {
         int v = m.timeline_end[multiverse::l_to_u(l)];
-        if (std::max(m.l_min, -number_activated) <= l
-            && std::min(m.l_max, number_activated) >= l
+        if (std::max(m.l_min, -m.number_activated()) <= l
+            && std::min(m.l_max, m.number_activated()) >= l
             && v == present_v)
         {
             mandatory_timelines.push_back(l);

@@ -76,6 +76,10 @@ def handle_click(data):
         game_data['highlights'] = []
         display()
 
+@socketio.on('right_click')
+def handle_click(data):
+    print('canceled click')
+    display()
 
 @socketio.on('request_undo')
 def handle_undo():
@@ -107,8 +111,9 @@ def convert_boards_data(boards):
 def display(hl=[]):
     mandatory, optional, unplayable = g.get_current_timeline_status()
     present_t, present_c = g.get_current_present()
+    emit('response_text', ('white' if present_c==0 else 'black')+"'s move")
     new_data = {
-        'submit-button': 'enabled' if g.can_undo() else 'disabled',
+        'submit-button': 'enabled' if g.can_submit() else 'disabled',
         'undo-button': 'enabled' if g.can_undo() else 'disabled',
         'redo-button': 'enabled' if g.can_redo() else 'disabled',
         'metadata': {
@@ -131,11 +136,11 @@ def display(hl=[]):
                 'timelines': mandatory,
             },
             {
-                'color':'#000000',
+                'color':'#80ff80',
                 'timelines': optional,
             },
             {
-                'color':'#aaaaaa',
+                'color':'#ffaaaa',
                 'timelines': unplayable,
             },
         ] + hl

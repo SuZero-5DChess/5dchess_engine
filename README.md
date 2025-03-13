@@ -44,6 +44,6 @@ On Windows, the last line should be:
 ```cmd
 cmake .. -DTEST=on -G"Visual Studio 17 2022"
 ```
-### Miscanellous
+### Documentation
 
-I try to follow the terminalogy described in <https://github.com/adri326/5dchess-notation>.
+For more detail, please read [this page](docs/index.md).

@@ -77,6 +77,6 @@ std::string t0_fen = ""
      std::cout << fm << endl;
      std::cout << g.apply_move(fm) << endl;
      std::cout << "shutting down" << std::endl;
-     
+     std::cout << sizeof(board) << endl;
      return 0;
  }
