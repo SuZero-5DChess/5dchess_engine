@@ -254,9 +254,9 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
     };
     auto good_castling_direction = [&](vec4 d)
     {
-        for(vec4 c = d; delta_in_range(d); c = c + d)
+        for(vec4 c = d; delta_in_range(c); c = c + d)
         {
-            piece_t q_piece = get_piece(p+d, board_color);
+            piece_t q_piece = get_piece(p+c, board_color);
             if(q_piece == ROOK_UW || q_piece == ROOK_UB)
             {
                 return true;
@@ -379,7 +379,8 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
                     result.push_back(d);
                 }
                 // en passant
-                else if(q_name == NO_PIECE && get_piece(p+vec4(d.x(),0,0,0), board_color) == PAWN_B
+                else if(q_name == NO_PIECE
+                    && get_piece(p+vec4(d.x(),0,0,0), board_color) == PAWN_B
                     && inbound(p+vec4(d.x(),2,-1,0), board_color)
                     && get_piece(p+vec4(d.x(),0,-1,0), board_color) == NO_PIECE
                     && get_piece(p+vec4(d.x(),2,-1,0), board_color) == PAWN_UB)
@@ -424,9 +425,9 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
                 }
                 // en passant
                 else if(q_name == NO_PIECE && get_piece(p+vec4(d.x(),0,0,0), board_color) == PAWN_W
-                    && inbound(p+vec4(d.x(),2,-1,0), board_color)
+                    && inbound(p+vec4(d.x(),-2,-1,0), board_color)
                     && get_piece(p+vec4(d.x(),0,-1,0), board_color) == NO_PIECE
-                    && get_piece(p+vec4(d.x(),2,-1,0), board_color) == PAWN_UW)
+                    && get_piece(p+vec4(d.x(),-2,-1,0), board_color) == PAWN_UW)
                 {
                     result.push_back(d);
                 }

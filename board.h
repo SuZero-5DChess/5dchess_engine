@@ -52,7 +52,17 @@ constexpr char piece_name(piece_t p)
 // convert to white piece by capitalizing letters
 constexpr piece_t to_white(piece_t p)
 {
+    return static_cast<piece_t>(p & ~0x20);
+}
+
+constexpr piece_t to_black(piece_t p)
+{
     return static_cast<piece_t>(p | 0x20);
+}
+
+constexpr piece_t switch_color(piece_t p)
+{
+    return static_cast<piece_t>(p ^ 0x20);
 }
 
 // detect if the letter is in lower case

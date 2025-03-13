@@ -64,15 +64,17 @@ bool state::apply_move(full_move fm)
                 const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
                 piece_t pic = (*b_ptr)[p.xy()];
                 // en passant
-                if(to_white(pic) == PAWN_W && (*b_ptr)[q.xy()] == NO_PIECE)
+                if(to_white(pic) == PAWN_W && d.x()!=0 && (*b_ptr)[q.xy()] == NO_PIECE)
                 {
+                    //std::cout << " ... en passant";
                     m.append_board(p.l(),
                         b_ptr->replace_piece(board::ppos(q.x(),p.y()), NO_PIECE)
                              ->move_piece(p.xy(), q.xy()));
                 }
                 // castling
-                else if(to_white(pic) == KING_W && abs(d.x()) > 1)
+                else if(to_white(pic) == KING_UW && abs(d.x()) > 1)
                 {
+                    //std::cout << " ... castling";
                     int rook_x1 = d.x() < 0 ? 0 : 7;
                     int rook_x2 = q.x() + (d.x() < 0 ? 1 : -1);
                     m.append_board(p.l(),b_ptr
@@ -82,12 +84,14 @@ bool state::apply_move(full_move fm)
                 // normal move
                 else
                 {
+                    //std::cout << " ... normal move/capture";
                     m.append_board(p.l(), b_ptr->move_piece(p.xy(), q.xy()));
                 }
             }
             // non-branching superphysical move
             else if(multiverse::tc_to_v(q.t(), player) == m.timeline_end[multiverse::l_to_u(q.l())])
             {
+                //std::cout << " ... nonbranching move";
                 const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
                 const piece_t& pic = static_cast<piece_t>(piece_name((*b_ptr)[p.xy()]));
                 m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
@@ -97,12 +101,19 @@ bool state::apply_move(full_move fm)
             //branching move
             else
             {
+                //std::cout << " ... branching move";
                 const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
                 const piece_t& pic = static_cast<piece_t>(piece_name((*b_ptr)[p.xy()]));
                 m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
                 const std::shared_ptr<board>& x_ptr = m.get_board(q.l(), q.t(), player);
                 auto [t, c] = multiverse::v_to_tc(multiverse::tc_to_v(q.t(), player)+1);
                 m.insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), pic));
+                auto [new_present, _] = m.get_present();
+                if(new_present < present)
+                {
+                    // if an historical board is activated by this travel, go back
+                    present = new_present;
+                }
             }
             flag = true;
         }
