@@ -53,6 +53,7 @@ def handle_click(data):
         flag = g.apply_move(fm)
         print('applying move ', fm, ' --success' if flag else ' --failure')
         #print(' now ', g.get_current_boards())
+        qs = []
         display()
     elif c == present_c:
         ds = g.gen_move_if_playable(pos)
@@ -73,12 +74,14 @@ def handle_click(data):
         display(hl)
     else:
         print('no piece at click')
-        game_data['highlights'] = []
+        qs = []
         display()
 
 @socketio.on('right_click')
 def handle_click(data):
     print('canceled click')
+    global qs
+    qs = []
     display()
 
 @socketio.on('request_undo')
