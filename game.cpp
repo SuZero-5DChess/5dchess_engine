@@ -64,7 +64,7 @@ std::vector<vec4> game::gen_move_if_playable(vec4 p)
     }
 }
 
-bool game::is_playable(vec4 p)
+bool game::is_playable (vec4 p) const
 {
     auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_current_timeline_status();
     const state& cs = get_current_state();
