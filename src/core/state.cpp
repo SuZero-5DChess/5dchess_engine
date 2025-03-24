@@ -71,6 +71,7 @@ bool state::apply_move(full_move fm)
                         b_ptr->replace_piece(board::ppos(q.x(),p.y()), NO_PIECE)
                              ->move_piece(p.xy(), q.xy()));
                 }
+                // TODO: promotion
                 // castling
                 else if(to_white(pic) == KING_UW && abs(d.x()) > 1)
                 {

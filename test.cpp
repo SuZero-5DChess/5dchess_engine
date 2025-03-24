@@ -3,80 +3,126 @@
 #include "utils.h"
 #include <vector>
 #include <variant>
+#include "bitboard.h"
+#include "magic.h"
 
-std::string t0_fen = ""
-"[Size 8x8]"
-"[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:0:b]\n"
-"[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:1:w]\n";
+#include <random>
+#include <cassert>
+
+std::string standard_fen = ""
+"r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*";
 
  using namespace std;
 
+using uint64 = unsigned long long;
+
+bitboard_t ratt(int xy, bitboard_t blocker)
+{
+    bitboard_t result = 0;
+    int x = xy%BOARD_LENGTH, y = xy/BOARD_LENGTH;
+    for(int nx = x+1; nx<BOARD_LENGTH; nx++)
+    {
+        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, y);
+        result |= pmask;
+        if(pmask & blocker)
+            break;
+    }
+    for(int nx = x-1; nx>=0; nx--)
+    {
+        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, y);
+        result |= pmask;
+        if(pmask & blocker)
+            break;
+    }
+    for(int ny = y+1; ny<BOARD_LENGTH; ny++)
+    {
+        bitboard_t pmask = bitboard_t(1) << board::ppos(x, ny);
+        result |= pmask;
+        if(pmask & blocker)
+            break;
+    }
+    for(int ny = y-1; ny>=0; ny--)
+    {
+        bitboard_t pmask = bitboard_t(1) << board::ppos(x, ny);
+        result |= pmask;
+        if(pmask & blocker)
+            break;
+    }
+    return result;
+}
+
+bitboard_t batt(int xy, bitboard_t blocker)
+{
+    bitboard_t result = 0;
+    int x = xy%BOARD_LENGTH, y = xy/BOARD_LENGTH;
+    for(int nx = x+1, ny=y+1; nx<BOARD_LENGTH && ny<BOARD_LENGTH; nx++, ny++)
+    {
+        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        result |= pmask;
+        if(pmask & blocker)
+            break;
+    }
+    for(int nx = x+1, ny=y-1; nx<BOARD_LENGTH && ny>=0; nx++, ny--)
+    {
+        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        result |= pmask;
+        if(pmask & blocker)
+            break;
+    }
+    for(int nx = x-1, ny=y+1; nx>=0 && ny<BOARD_LENGTH; nx--, ny++)
+    {
+        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        result |= pmask;
+        if(pmask & blocker)
+            break;
+    }
+    for(int nx = x-1, ny=y-1; nx>=0 && ny>=0; nx--, ny--)
+    {
+        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        result |= pmask;
+        if(pmask & blocker)
+            break;
+    }
+    return result;
+}
+
+void ASSERT_EQ(auto lhs, auto rhs)
+{
+    if(lhs != rhs)
+    {
+        std::cout << "assertion failed:\n";
+        std::cout << "lhs = " << lhs << std::endl;
+        std::cout << "rhs = " << rhs << std::endl;
+    }
+    assert(lhs == rhs);
+}
+
+void test_attacks()
+{
+    std::random_device rd;  // Seed source
+    std::mt19937_64 gen(rd()); // 64-bit Mersenne Twister PRNG
+    std::uniform_int_distribution<uint64_t> dist(0, UINT64_MAX); // Uniform distribution
+    
+    for(int i = 0; i < 100000; i++)
+    {
+        uint64_t random_blocker = dist(gen); // Generate 64-bit random number
+        int random_entry = dist(gen) % 64;
+        ASSERT_EQ(rook_attack(random_entry, random_blocker), ratt(random_entry, random_blocker));
+        //ASSERT_EQ(bishop_attack_prototype(random_entry, random_blocker), batt(random_entry, random_blocker));
+    }
+    cerr << "test passed" << endl;
+}
+
  int main()
  {
-     game g(t0_fen);
-//     full_move mv("(0T1)Ng1f3");
-//     std :: cout << st.m.get_present() << endl;
-//     st.apply_move(mv);
-//     std :: cout << st.m.get_present() << endl;
-//     std :: cout << st.m.to_string() << endl;
-     
-//     cout << mv << endl;
-//     
-//     std::visit(overloads{
-//         [](std::monostate){},
-//         [&](std::tuple<vec4, vec4> data)
-//         {
-//             auto [p, d] = data;
-//             vector<vec4> deltas = m.gen_piece_move(p, st.player);
-//             print_range("deltas:", deltas);
-//             SHOW(p)
-//             SHOW(-vec4(5,2,1,0))
-//             SHOW(-p)
-//             SHOW(d)
-//         }
-//     }, mv.data);
-//     
-     vector<full_move> mvs = {
-         full_move("(0T1)e2e3"),
-         full_move::submit(),
-         full_move("(0T1)g8f6"),
-         full_move::submit(),
-         full_move("(0T2)f1c4"),
-         full_move::submit(),
-         full_move("(0T2)g7g5"),
-         full_move::submit(),
-         full_move("(0T3)g1h3"),
-         full_move::submit(),
-         full_move("(0T3)g5g4"),
-         full_move::submit(),
-         full_move("(0T4)e1g1"),
-         full_move::submit(),
-     };
-     
-     for(full_move mv : mvs)
-     {
-         std::cout << "Applying move: " << mv;
-         bool flag = g.apply_move(mv);
-         if(!flag)
-         {
-             std::cout << " ... failure\n";
-             break;
-         }
-         cout << " ... success\n";
-     }
-//     
-//     g.undo();
-//     g.undo();
-//     g.undo();
-//     g.redo();
-//     std::cout << g.apply_move(full_move("(0T2)Rh8g8")) << endl;
-     std::cout << g.get_current_state().m.to_string();
-//     
-//     SHOW(vec4(0,1,0,0))
-//     SHOW(vec4(0,2,0,0))
-//     auto fm = full_move::move(vec4(0,1,0,0),vec4(0,1,0,0));
-//     std::cout << fm << endl;
-//     std::cout << g.apply_move(fm) << endl;
+     test_attacks();
+//     board b(standard_fen);
+//     bb_full_collection bb(b);
+//     print_range("", bishop_shift);
+//     cout << endl;
+//     uint64_t x = uint64_t(1) << 63;
+//     std::cout << sizeof(rook_data) << endl;
+//     std::cout << bitboard_to_string(rook_data[919]) << endl;
      std::cout << "shutting down" << std::endl;
      return 0;
  }

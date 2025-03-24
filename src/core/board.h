@@ -44,9 +44,9 @@ typedef enum : unsigned char { //syntax of c23/c++11. Use lesser memory
 } piece_t; //totally: 30 pieces + 2 non-pieces
 
 // remove the unmoved signature for pawn/rook/king
-constexpr char piece_name(piece_t p)
+constexpr piece_t piece_name(piece_t p)
 {
-    return p & 0x7f;
+    return static_cast<piece_t>(p & 0x7f);
 }
 
 // convert to white piece by capitalizing letters
@@ -83,6 +83,7 @@ public:
     // the getter methods
     piece_t get_piece(int x, int y) const;
     piece_t& operator[](int p);
+    const piece_t& operator[](int p) const;
     // the setter method, which is deprecated. Use replace_piece or move_piece whenever possible
     void set_piece(int x, int y, piece_t p);
 
