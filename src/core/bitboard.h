@@ -2,8 +2,11 @@
 #define BITBOARD_H
 
 #include <cstdint>
-#include <board.h>
 #include <string>
+#include <array>
+#include <memory>
+#include "board.h"
+#include "utils.h"
 
 // because BOARD_LENGTH is set to 3
 // a bitborad should contain 64 bits
@@ -25,21 +28,124 @@ The bitboard layout always looks like this:
 
 std::string bitboard_to_string(bitboard_t);
 
-struct bb_full_collection
+constexpr bitboard_t a_file = 0x0101010101010101;
+constexpr bitboard_t h_file = 0x8080808080808080;
+
+constexpr bitboard_t shift_north(bitboard_t b)
 {
-    bitboard_t white;
-    bitboard_t black;
-    bitboard_t royal;
-    bitboard_t king;
-    bitboard_t rook;
-    bitboard_t bishop;
-    bitboard_t unicorn;
-    bitboard_t dragon;
-    bitboard_t queen;
-    bitboard_t knight;
-    bitboard_t pawn;
-    bb_full_collection(const board& b);
+    return b << BOARD_LENGTH;
+}
+constexpr bitboard_t shift_south(bitboard_t b)
+{
+    return b >> BOARD_LENGTH;
+}
+constexpr bitboard_t shift_west(bitboard_t b)
+{
+    return (b & ~a_file) >> 1;
+}
+constexpr bitboard_t shift_east(bitboard_t b)
+{
+    return (b & ~h_file) << 1;
+}
+constexpr bitboard_t shift_northwest(bitboard_t b)
+{
+    return (b & ~a_file) << (BOARD_LENGTH - 1);
+}
+constexpr bitboard_t shift_northeast(bitboard_t b)
+{
+    return (b & ~a_file) << (BOARD_LENGTH + 1);
+}
+constexpr bitboard_t shift_southwest(bitboard_t b)
+{
+    return (b & ~a_file) >> (BOARD_LENGTH + 1);
+}
+constexpr bitboard_t shift_southeast(bitboard_t b)
+{
+    return (b & ~a_file) >> (BOARD_LENGTH - 1);
+}
+
+/*
+The bitboards collection associated with a board.
+ */
+struct boardbits
+{
+    enum bitboard_indices {
+        WHITE, BLACK, ROYAL, //flags
+        LKING, LKNIGHT, LPAWN, LRAWN, //jumping pieces
+        LROOK, LBISHOP, LUNICORN, LDRAGON, //sliding pieces
+        BBS_INDICES_COUNT
+    };
+    std::array<bitboard_t, BBS_INDICES_COUNT> bbs;
+    boardbits(const board& b);
+    
+    // inline getter functions
+    constexpr bitboard_t king() const
+    {
+        return bbs[LKING] & bbs[ROYAL];
+    }
+    constexpr bitboard_t common_king() const
+    {
+        return bbs[LKING] & ~bbs[ROYAL];
+    }
+    constexpr bitboard_t knight() const
+    {
+        return bbs[LKNIGHT];
+    }
+    constexpr bitboard_t pawn() const
+    {
+        return bbs[LPAWN] & ~bbs[LRAWN];
+    }
+    constexpr bitboard_t brawn() const
+    {
+        return bbs[LPAWN] & bbs[LRAWN];
+    }
+    constexpr bitboard_t rook() const
+    {
+        return bbs[LROOK] & ~bbs[LBISHOP];
+    }
+    constexpr bitboard_t bishop() const
+    {
+        return bbs[LBISHOP] & ~bbs[LROOK];
+    }
+    constexpr bitboard_t unicorn() const
+    {
+        return bbs[LUNICORN] & ~bbs[LDRAGON];
+    }
+    constexpr bitboard_t dragon() const
+    {
+        return bbs[LDRAGON] & ~bbs[LUNICORN];
+    }
+    constexpr bitboard_t princess() const
+    {
+        return bbs[LROOK] & bbs[LBISHOP] & ~bbs[LUNICORN];
+    }
+    constexpr bitboard_t royal_queen() const
+    {
+        return bbs[LROOK] & bbs[LDRAGON] & bbs[ROYAL];
+    }
+    constexpr bitboard_t queen() const
+    {
+        return bbs[LROOK] & bbs[LDRAGON] & ~bbs[ROYAL];
+    }
+    
+    std::shared_ptr<board> to_board() const;
+
+    // the pieces (both white and black) that attacks a given square
+    bitboard_t attacks_to(int pos);
+    bool is_under_attack(int pos, int color);
 };
 
+static inline bitboard_t white_pawn_attack(int pos)
+{
+    bitboard_t z = bitboard_t(1) << pos;
+    return shift_northwest(z) | shift_northeast(z);
+}
+static inline bitboard_t black_pawn_attack(int pos)
+{
+    bitboard_t z = bitboard_t(1) << pos;
+    return shift_southwest(z) | shift_southeast(z);
+}
+bitboard_t knight_attack(int pos);
+bitboard_t king_attack(int pos);
 
 #endif // BITBOARD_H

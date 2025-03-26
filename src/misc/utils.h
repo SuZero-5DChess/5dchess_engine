@@ -1,3 +1,6 @@
+#ifndef UTILS_H
+#define UTILS_H
+
 #include <vector>
 #include <tuple>
 
@@ -74,3 +77,17 @@ See: https://en.cppreference.com/w/cpp/utility/variant/visit
 template<class... Ts>
 struct overloads : Ts... { using Ts::operator()...; };
  
+/*
+ static array generator
+ usage:
+ constexpr std::array<%your_type%,%length%> =
+     generate_array(std::make_index_sequence<%length%>{},fuction size_t -> %your_type%)
+ */
+template <std::size_t... N, typename F>
+constexpr auto generate_array(std::index_sequence<N...>, F f)
+-> std::array<decltype(f(std::declval<size_t>())), sizeof...(N)>
+{
+    return {f(N)...};
+}
+
+#endif // UTILS_H

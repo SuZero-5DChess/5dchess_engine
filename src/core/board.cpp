@@ -227,7 +227,7 @@ std::string board::get_fen() const
             switch(this->get_piece(x,y))
             {
                 case NO_PIECE:
-                    if(isdigit(result.back()))
+                    if(!result.empty() && isdigit(result.back()))
                     {
                         result.back() += 1;
                     }

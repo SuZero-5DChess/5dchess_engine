@@ -76,8 +76,8 @@ constexpr bool get_color(piece_t p)
 class board {
 private:
     piece_t piece[BOARD_SIZE];
-    board();
 public:
+    board();
     board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
     
     // the getter methods

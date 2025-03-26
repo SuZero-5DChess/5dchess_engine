@@ -5,9 +5,10 @@
 #include <variant>
 #include "bitboard.h"
 #include "magic.h"
-
+#include <algorithm>
 #include <random>
 #include <cassert>
+
 
 std::string standard_fen = ""
 "r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*";
@@ -97,6 +98,74 @@ void ASSERT_EQ(auto lhs, auto rhs)
     assert(lhs == rhs);
 }
 
+std::string generate_random_fen(std::mt19937& gen)
+{
+    // All possible chess pieces (excluding empty squares)
+    const std::vector<unsigned char> pieces = {
+        KING_W, QUEEN_W, BISHOP_W,
+        KNIGHT_W, ROOK_W, PAWN_W,
+        //standard pieces for white
+
+        UNICORN_W, DRAGON_W, BRAWN_W,
+        PRINCESS_W, ROYAL_QUEEN_W, COMMON_KING_W,
+        //nonstandard pieces for white
+        KING_B, QUEEN_B, BISHOP_B,
+        KNIGHT_B, ROOK_B, PAWN_B,
+        //standard pieces for black
+
+        UNICORN_B, DRAGON_B, BRAWN_B,
+        PRINCESS_B, ROYAL_QUEEN_B, COMMON_KING_B};
+    
+    // Distributions
+    std::uniform_int_distribution<> empty_dist(0, 99);  // For empty squares
+    std::uniform_int_distribution<> piece_dist(0, pieces.size() - 1);  // For piece selection
+    std::bernoulli_distribution empty_prob(0.6);  // 60% chance of empty square
+    
+    std::string fen;
+    
+    for (int rank = 0; rank < 8; ++rank) {
+        int emptyCount = 0;
+        std::string rankStr;
+        
+        for (int file = 0; file < 8; ++file) {
+            // Randomly decide if the square should be empty
+            bool isEmpty = empty_prob(gen);
+            
+            if (isEmpty) {
+                emptyCount++;
+            } else {
+                if (emptyCount > 0) {
+                    rankStr += std::to_string(emptyCount);
+                    emptyCount = 0;
+                }
+                // Choose a random piece
+                char piece = pieces[piece_dist(gen)];
+                
+                // Ensure kings are present (basic check)
+                if ((rank == 0 && file == 4 && piece != 'K') ||
+                    (rank == 7 && file == 4 && piece != 'k')) {
+                    piece = (rank == 0) ? 'K' : 'k';
+                }
+                
+                rankStr += piece;
+            }
+        }
+        
+        // Add remaining empty squares at the end of the rank
+        if (emptyCount > 0) {
+            rankStr += std::to_string(emptyCount);
+        }
+        
+        fen += rankStr;
+        if (rank < 7) {
+            fen += '/';
+        }
+    }
+    
+    return fen;
+}
+
+
 void test_attacks()
 {
     std::random_device rd;  // Seed source
@@ -108,21 +177,33 @@ void test_attacks()
         uint64_t random_blocker = dist(gen); // Generate 64-bit random number
         int random_entry = dist(gen) % 64;
         ASSERT_EQ(rook_attack(random_entry, random_blocker), ratt(random_entry, random_blocker));
+        ASSERT_EQ(bishop_attack(random_entry, random_blocker), batt(random_entry, random_blocker));
         //ASSERT_EQ(bishop_attack_prototype(random_entry, random_blocker), batt(random_entry, random_blocker));
     }
     cerr << "test passed" << endl;
 }
 
+void test_bb_conversion()
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    string rfen = standard_fen;
+    for(int i = 0; i < 5; i++)
+    {
+        cout << endl;
+        cout << rfen << endl;
+        board b(rfen);
+        cout << b.get_fen() << endl;
+        boardbits bx(b);
+        cout << bx.to_board()->get_fen() << endl;
+        rfen = generate_random_fen(gen);
+    }
+}
+
  int main()
  {
      test_attacks();
-//     board b(standard_fen);
-//     bb_full_collection bb(b);
-//     print_range("", bishop_shift);
-//     cout << endl;
-//     uint64_t x = uint64_t(1) << 63;
-//     std::cout << sizeof(rook_data) << endl;
-//     std::cout << bitboard_to_string(rook_data[919]) << endl;
+     test_bb_conversion();
      std::cout << "shutting down" << std::endl;
      return 0;
  }
