@@ -93,11 +93,12 @@ public:
 
     std::string to_string() const;
     std::string get_fen() const;
+#ifdef SHOW_BOARD_DESTRUCTION
     ~board()
     {
         std::cerr << "Board destroyed: " << get_fen() << std::endl;
     }
-    
+#endif
     /**
      * @param x  coordinate x
      * @param y  coordinate y

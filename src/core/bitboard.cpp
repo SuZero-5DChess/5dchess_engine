@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "magic.h"
 
-std::string bitboard_to_string(bitboard_t bb)
+std::string bb_to_string(bitboard_t bb)
 {
     std::ostringstream ss;
     ss << "0x" << std::hex << std::setw(16) << std::setfill('0') << bb << std::endl;
@@ -18,6 +18,19 @@ std::string bitboard_to_string(bitboard_t bb)
         ss << "\n";
     }
     return ss.str();
+}
+
+
+std::vector<int> marked_pos(bitboard_t b)
+{
+    std::vector<int> result;
+    while(b)
+    {
+        int n = bb_get_pos(b);
+        result.push_back(n);
+        b &= ~(bitboard_t(1) << n);
+    }
+    return result;
 }
 
 boardbits::boardbits(const board& b) : bbs{}

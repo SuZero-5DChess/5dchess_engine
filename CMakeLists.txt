@@ -43,6 +43,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
         message(STATUS ">>> Compiling test.cpp...")
         add_executable(test_exec "test.cpp")
         target_link_libraries(test_exec PRIVATE 5dchess_engine_core)
+        add_subdirectory(test)  # Add test directory
     else()
         message(STATUS ">>> Building python library...")
         # Add pybind11 for Python bindings

@@ -3,14 +3,17 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 #include <array>
 #include <memory>
+#include <bit>
 #include "board.h"
 #include "utils.h"
 
 // because BOARD_LENGTH is set to 3
 // a bitborad should contain 64 bits
 using bitboard_t = uint64_t;
+#define BB_BITS 64
 
 /*
 The bitboard layout always looks like this:
@@ -26,7 +29,7 @@ The bitboard layout always looks like this:
     a. b. c. d. e. f. g. h.
  */
 
-std::string bitboard_to_string(bitboard_t);
+std::string bb_to_string(bitboard_t);
 
 constexpr bitboard_t a_file = 0x0101010101010101;
 constexpr bitboard_t h_file = 0x8080808080808080;
@@ -63,6 +66,13 @@ constexpr bitboard_t shift_southeast(bitboard_t b)
 {
     return (b & ~a_file) >> (BOARD_LENGTH - 1);
 }
+
+constexpr int bb_get_pos(bitboard_t b)
+{
+    int n = std::countl_zero(b);
+    return std::numeric_limits<bitboard_t>::digits - 1 - n;
+}
+std::vector<int> marked_pos(bitboard_t b);
 
 /*
 The bitboards collection associated with a board.
