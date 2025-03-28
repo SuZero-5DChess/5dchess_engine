@@ -4,14 +4,9 @@
 #include <iostream>
 #include <sstream>
 
-board::board()
-{
-    std::fill(this->piece, this->piece + BOARD_SIZE, NO_PIECE);
-}
-
 board::board(std::string fen, const int x_size, const int y_size)
 {
-    std::fill(this->piece, this->piece + BOARD_SIZE, WALL_PIECE);
+    piece.fill(WALL_PIECE);
     char c;
     int x = 0, y = y_size - 1;
     for(int i = 0; i < fen.length(); i++)
@@ -134,20 +129,21 @@ board::board(std::string fen, const int x_size, const int y_size)
             }
         }
     }
+    bits = boardbits(this->piece);
 }
 
 
 
-piece_t& board::operator[](int p)
+piece_t board::get_piece(int p) const
 {
     return piece[p];
 }
 
-const piece_t& board::operator[](int p) const
-{
-    return piece[p];
-}
-
+//const piece_t& board::operator[](int p) const
+//{
+//    return piece[p];
+//}
+//
 void board::set_piece(int x, int y, piece_t p)
 {
     this->piece[ppos(x,y)] = p;
@@ -167,11 +163,11 @@ std::shared_ptr<board> board::move_piece(int from, int to) const
     b_ptr->piece[from] = NO_PIECE;
     return b_ptr;
 }
-
-piece_t board::get_piece(int x, int y) const
-{
-    return this->piece[ppos(x,y)];
-}
+//
+//piece_t board::get_piece(int x, int y) const
+//{
+//    return this->piece[ppos(x,y)];
+//}
 
 std::string board::to_string() const
 {
@@ -180,7 +176,7 @@ std::string board::to_string() const
     {
         for (int x = 0; x < BOARD_LENGTH; x++) 
         {
-            switch (this->get_piece(x,y)) 
+            switch (this->get_piece(ppos(x, y)))
             {
                 case NO_PIECE:
                     result += ". ";
@@ -207,7 +203,7 @@ std::string board::to_string() const
                     result += "p'";
                     break;
                 default:
-                    result += this->get_piece(x,y);
+                    result += this->get_piece(ppos(x,y));
                     result += " ";
                     break;
             }
@@ -224,7 +220,7 @@ std::string board::get_fen() const
     {
         for (int x = 0; x < BOARD_LENGTH; x++) 
         {
-            switch(this->get_piece(x,y))
+            switch(this->get_piece(ppos(x,y)))
             {
                 case NO_PIECE:
                     if(!result.empty() && isdigit(result.back()))
@@ -239,7 +235,7 @@ std::string board::get_fen() const
                 case WALL_PIECE:
                     continue;
                 default:
-                    result += piece_name(this->get_piece(x,y));
+                    result += piece_name(this->get_piece(ppos(x,y)));
                     break;
             }
         }

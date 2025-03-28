@@ -62,13 +62,13 @@ bool state::apply_move(full_move fm)
             if(d.l() == 0 && d.t() == 0)
             {
                 const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
-                piece_t pic = (*b_ptr)[p.xy()];
+                piece_t pic = b_ptr->get_piece(p.xy());
                 // en passant
-                if(to_white(pic) == PAWN_W && d.x()!=0 && (*b_ptr)[q.xy()] == NO_PIECE)
+                if(to_white(pic) == PAWN_W && d.x()!=0 && b_ptr->get_piece(q.xy()) == NO_PIECE)
                 {
                     //std::cout << " ... en passant";
                     m.append_board(p.l(),
-                        b_ptr->replace_piece(board::ppos(q.x(),p.y()), NO_PIECE)
+                                   b_ptr->replace_piece(ppos(q.x(),p.y()), NO_PIECE)
                              ->move_piece(p.xy(), q.xy()));
                 }
                 // TODO: promotion
@@ -79,7 +79,7 @@ bool state::apply_move(full_move fm)
                     int rook_x1 = d.x() < 0 ? 0 : 7;
                     int rook_x2 = q.x() + (d.x() < 0 ? 1 : -1);
                     m.append_board(p.l(),b_ptr
-                        ->move_piece(board::ppos(rook_x1, p.y()), board::ppos(rook_x2,q.y()))
+                                   ->move_piece(ppos(rook_x1, p.y()), ppos(rook_x2,q.y()))
                         ->move_piece(p.xy(), q.xy()));
                 }
                 // normal move
@@ -94,7 +94,7 @@ bool state::apply_move(full_move fm)
             {
                 //std::cout << " ... nonbranching move";
                 const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
-                const piece_t& pic = static_cast<piece_t>(piece_name((*b_ptr)[p.xy()]));
+                const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
                 m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
                 const std::shared_ptr<board>& c_ptr = m.get_board(q.l(), q.t(), player);
                 m.append_board(q.l(), c_ptr->replace_piece(q.xy(), pic));
@@ -104,7 +104,7 @@ bool state::apply_move(full_move fm)
             {
                 //std::cout << " ... branching move";
                 const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
-                const piece_t& pic = static_cast<piece_t>(piece_name((*b_ptr)[p.xy()]));
+                const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
                 m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
                 const std::shared_ptr<board>& x_ptr = m.get_board(q.l(), q.t(), player);
                 auto [t, c] = multiverse::v_to_tc(multiverse::tc_to_v(q.t(), player)+1);

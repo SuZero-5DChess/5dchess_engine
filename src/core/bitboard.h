@@ -7,7 +7,7 @@
 #include <array>
 #include <memory>
 #include <bit>
-#include "board.h"
+#include "piece.h"
 #include "utils.h"
 
 // because BOARD_LENGTH is set to 3
@@ -86,9 +86,14 @@ struct boardbits
         BBS_INDICES_COUNT
     };
     std::array<bitboard_t, BBS_INDICES_COUNT> bbs;
-    boardbits(const board& b);
+    boardbits() = default;
+    boardbits(std::array<piece_t, BOARD_SIZE> b);
     
     // inline getter functions
+    constexpr bitboard_t occupied() const
+    {
+        return bbs[WHITE] | bbs[BLACK];
+    }
     constexpr bitboard_t king() const
     {
         return bbs[LKING] & bbs[ROYAL];
@@ -137,8 +142,13 @@ struct boardbits
     {
         return bbs[LROOK] & bbs[LDRAGON] & ~bbs[ROYAL];
     }
-    
-    std::shared_ptr<board> to_board() const;
+    constexpr static bitboard_t pmask(int pos)
+    {
+        return bitboard_t(1) << bitboard_t(pos);
+    }
+    piece_t get_piece(int pos) const;
+    void set_piece(int pos, piece_t p);
+    std::array<piece_t, BOARD_SIZE> to_array_board() const;
 
     // the pieces (both white and black) that attacks a given square
     bitboard_t attacks_to(int pos);

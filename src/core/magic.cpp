@@ -7,22 +7,22 @@ constexpr std::array<bitboard_t, BOARD_SIZE> rook_mask = generate_array(std::mak
     int x = xy%BOARD_LENGTH, y = xy/BOARD_LENGTH;
     for(int nx = x+1; nx<BOARD_LENGTH-1; nx++)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, y);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, y);
         result |= pmask;
     }
     for(int nx = x-1; nx>=1; nx--)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, y);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, y);
         result |= pmask;
     }
     for(int ny = y+1; ny<BOARD_LENGTH-1; ny++)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(x, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(x, ny);
         result |= pmask;
     }
     for(int ny = y-1; ny>=1; ny--)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(x, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(x, ny);
         result |= pmask;
     }
     return result;
@@ -33,22 +33,22 @@ constexpr std::array<bitboard_t, BOARD_SIZE> bishop_mask = generate_array(std::m
     int x = xy%BOARD_LENGTH, y = xy/BOARD_LENGTH;
     for(int nx = x+1, ny=y+1; nx<BOARD_LENGTH-1 && ny<BOARD_LENGTH-1; nx++, ny++)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, ny);
         result |= pmask;
     }
     for(int nx = x+1, ny=y-1; nx<BOARD_LENGTH-1 && ny>=1; nx++, ny--)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, ny);
         result |= pmask;
     }
     for(int nx = x-1, ny=y+1; nx>=1 && ny<BOARD_LENGTH-1; nx--, ny++)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, ny);
         result |= pmask;
     }
     for(int nx = x-1, ny=y-1; nx>=1 && ny>=1; nx--, ny--)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, ny);
         result |= pmask;
     }
     return result;
@@ -60,28 +60,28 @@ consteval bitboard_t rook_attack_prototype(int xy, bitboard_t blocker)
     int x = xy%BOARD_LENGTH, y = xy/BOARD_LENGTH;
     for(int nx = x+1; nx<BOARD_LENGTH; nx++)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, y);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, y);
         result |= pmask;
         if(pmask & blocker)
             break;
     }
     for(int nx = x-1; nx>=0; nx--)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, y);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, y);
         result |= pmask;
         if(pmask & blocker)
             break;
     }
     for(int ny = y+1; ny<BOARD_LENGTH; ny++)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(x, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(x, ny);
         result |= pmask;
         if(pmask & blocker)
             break;
     }
     for(int ny = y-1; ny>=0; ny--)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(x, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(x, ny);
         result |= pmask;
         if(pmask & blocker)
             break;
@@ -95,28 +95,28 @@ consteval bitboard_t bishop_attack_prototype(int xy, bitboard_t blocker)
     int x = xy%BOARD_LENGTH, y = xy/BOARD_LENGTH;
     for(int nx = x+1, ny=y+1; nx<BOARD_LENGTH && ny<BOARD_LENGTH; nx++, ny++)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, ny);
         result |= pmask;
         if(pmask & blocker)
             break;
     }
     for(int nx = x+1, ny=y-1; nx<BOARD_LENGTH && ny>=0; nx++, ny--)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, ny);
         result |= pmask;
         if(pmask & blocker)
             break;
     }
     for(int nx = x-1, ny=y+1; nx>=0 && ny<BOARD_LENGTH; nx--, ny++)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, ny);
         result |= pmask;
         if(pmask & blocker)
             break;
     }
     for(int nx = x-1, ny=y-1; nx>=0 && ny>=0; nx--, ny--)
     {
-        bitboard_t pmask = bitboard_t(1) << board::ppos(nx, ny);
+        bitboard_t pmask = bitboard_t(1) << ppos(nx, ny);
         result |= pmask;
         if(pmask & blocker)
             break;

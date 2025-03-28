@@ -13,7 +13,7 @@ std::string bb_to_string(bitboard_t bb)
     {
         for (int x = 0; x < BOARD_LENGTH; x++)
         {
-            ss << ((bb & (static_cast<bitboard_t>(1)<<board::ppos(x, y))) ? "1 " : ". ");
+            ss << ((bb & (static_cast<bitboard_t>(1)<<ppos(x, y))) ? "1 " : ". ");
         }
         ss << "\n";
     }
@@ -33,134 +33,145 @@ std::vector<int> marked_pos(bitboard_t b)
     return result;
 }
 
-boardbits::boardbits(const board& b) : bbs{}
+boardbits::boardbits(std::array<piece_t, BOARD_SIZE> b) : bbs{}
 {
     for(int i = 0; i < BOARD_SIZE; i++)
     {
         piece_t p = piece_name(b[i]);
-        bitboard_t z = 1;
-        z <<= i;
-        if(p != NO_PIECE)
+        set_piece(i, p);
+    }
+}
+
+piece_t boardbits::get_piece(int pos) const
+{
+    piece_t piece;
+    bitboard_t z = pmask(pos);
+    if(z & bbs[WHITE])
+    {
+        if(z & king())
+            piece = KING_W;
+        else if(z & common_king())
+            piece = COMMON_KING_W;
+        else if(z & queen())
+            piece = QUEEN_W;
+        else if(z & royal_queen())
+            piece = ROYAL_QUEEN_W;
+        else if(z & bishop())
+            piece = BISHOP_W;
+        else if(z & knight())
+            piece = KNIGHT_W;
+        else if(z & rook())
+            piece = ROOK_W;
+        else if(z & pawn())
+            piece = PAWN_W;
+        else if(z & unicorn())
+            piece = UNICORN_W;
+        else if(z & dragon())
+            piece = DRAGON_W;
+        else if(z & brawn())
+            piece = BRAWN_W;
+        else if(z & princess())
+            piece = PRINCESS_W;
+    }
+    else if(z & bbs[BLACK])
+    {
+        if(z & king())
+            piece = KING_B;
+        else if(z & common_king())
+            piece = COMMON_KING_B;
+        else if(z & queen())
+            piece = QUEEN_B;
+        else if(z & royal_queen())
+            piece = ROYAL_QUEEN_B;
+        else if(z & bishop())
+            piece = BISHOP_B;
+        else if(z & knight())
+            piece = KNIGHT_B;
+        else if(z & rook())
+            piece = ROOK_B;
+        else if(z & pawn())
+            piece = PAWN_B;
+        else if(z & unicorn())
+            piece = UNICORN_B;
+        else if(z & dragon())
+            piece = DRAGON_B;
+        else if(z & brawn())
+            piece = BRAWN_B;
+        else if(z & princess())
+            piece = PRINCESS_B;
+    }
+    else
+    {
+        piece = NO_PIECE;
+    }
+    return piece;
+}
+
+void boardbits::set_piece(int pos, piece_t p)
+{
+    bitboard_t z = pmask(pos);
+    if(p != NO_PIECE)
+    {
+        if(get_color(p)==0)
         {
-            if(get_color(p)==0)
-            {
-                bbs[boardbits::WHITE] |= z;
-            }
-            else
-            {
-                bbs[boardbits::BLACK] |= z;
-            }
-            switch(to_white(piece_name(p)))
-            {
-                case KING_W:
-                    bbs[boardbits::ROYAL] |= z;
-                case COMMON_KING_W:
-                    bbs[boardbits::LKING] |= z;
-                    break;
-                case ROOK_W:
-                    bbs[boardbits::LROOK] |= z;
-                    break;
-                case BISHOP_W:
-                    bbs[boardbits::LBISHOP] |= z;
-                    break;
-                case UNICORN_W:
-                    bbs[boardbits::LUNICORN] |= z;
-                    break;
-                case DRAGON_W:
-                    bbs[boardbits::LDRAGON] |= z;
-                    break;
-                case ROYAL_QUEEN_W:
-                    bbs[boardbits::ROYAL] |= z;
-                case QUEEN_W:
-                    bbs[boardbits::LROOK] |= z;
-                    bbs[boardbits::LBISHOP] |= z;
-                    bbs[boardbits::LUNICORN] |= z;
-                    bbs[boardbits::LDRAGON] |= z;
-                    break;
-                case PRINCESS_W:
-                    bbs[boardbits::LROOK] |= z;
-                    bbs[boardbits::LBISHOP] |= z;
-                    break;
-                case KNIGHT_W:
-                    bbs[boardbits::LKNIGHT] |= z;
-                    break;
-                case BRAWN_W:
-                    bbs[boardbits::LRAWN] |= z;
-                case PAWN_W:
-                    bbs[boardbits::LPAWN] |= z;
-                    break;
-                default:
-                    std::cerr << "bb_full_collection initializer:" << p << "not implemented" << std::endl;
-                    break;
-            }
+            bbs[boardbits::WHITE] |= z;
+        }
+        else
+        {
+            bbs[boardbits::BLACK] |= z;
+        }
+        switch(to_white(piece_name(p)))
+        {
+            case KING_W:
+                bbs[boardbits::ROYAL] |= z;
+            case COMMON_KING_W:
+                bbs[boardbits::LKING] |= z;
+                break;
+            case ROOK_W:
+                bbs[boardbits::LROOK] |= z;
+                break;
+            case BISHOP_W:
+                bbs[boardbits::LBISHOP] |= z;
+                break;
+            case UNICORN_W:
+                bbs[boardbits::LUNICORN] |= z;
+                break;
+            case DRAGON_W:
+                bbs[boardbits::LDRAGON] |= z;
+                break;
+            case ROYAL_QUEEN_W:
+                bbs[boardbits::ROYAL] |= z;
+            case QUEEN_W:
+                bbs[boardbits::LROOK] |= z;
+                bbs[boardbits::LBISHOP] |= z;
+                bbs[boardbits::LUNICORN] |= z;
+                bbs[boardbits::LDRAGON] |= z;
+                break;
+            case PRINCESS_W:
+                bbs[boardbits::LROOK] |= z;
+                bbs[boardbits::LBISHOP] |= z;
+                break;
+            case KNIGHT_W:
+                bbs[boardbits::LKNIGHT] |= z;
+                break;
+            case BRAWN_W:
+                bbs[boardbits::LRAWN] |= z;
+            case PAWN_W:
+                bbs[boardbits::LPAWN] |= z;
+                break;
+            default:
+                std::cerr << "bb_full_collection initializer:" << p << "not implemented" << std::endl;
+                break;
         }
     }
 }
 
-std::shared_ptr<board> boardbits::to_board() const
+std::array<piece_t, BOARD_SIZE> boardbits::to_array_board() const
 {
-    std::shared_ptr<board> b = std::make_shared<board>();
+    std::array<piece_t, BOARD_SIZE> b;
     for(int i = 0; i < BOARD_SIZE; i++)
     {
-        bitboard_t z = bitboard_t(1) << bitboard_t(i);
-        if(z & bbs[WHITE])
-        {
-            if(z & king())
-                (*b)[i] = KING_W;
-            else if(z & common_king())
-                (*b)[i] = COMMON_KING_W;
-            else if(z & queen())
-                (*b)[i] = QUEEN_W;
-            else if(z & royal_queen())
-                (*b)[i] = ROYAL_QUEEN_W;
-            else if(z & bishop())
-                (*b)[i] = BISHOP_W;
-            else if(z & knight())
-                (*b)[i] = KNIGHT_W;
-            else if(z & rook())
-                (*b)[i] = ROOK_W;
-            else if(z & pawn())
-                (*b)[i] = PAWN_W;
-            else if(z & unicorn())
-                (*b)[i] = UNICORN_W;
-            else if(z & dragon())
-                (*b)[i] = DRAGON_W;
-            else if(z & brawn())
-                (*b)[i] = BRAWN_W;
-            else if(z & princess())
-                (*b)[i] = PRINCESS_W;
-        }
-        else if(z & bbs[BLACK])
-        {
-            if(z & king())
-                (*b)[i] = KING_B;
-            else if(z & common_king())
-                (*b)[i] = COMMON_KING_B;
-            else if(z & queen())
-                (*b)[i] = QUEEN_B;
-            else if(z & royal_queen())
-                (*b)[i] = ROYAL_QUEEN_B;
-            else if(z & bishop())
-                (*b)[i] = BISHOP_B;
-            else if(z & knight())
-                (*b)[i] = KNIGHT_B;
-            else if(z & rook())
-                (*b)[i] = ROOK_B;
-            else if(z & pawn())
-                (*b)[i] = PAWN_B;
-            else if(z & unicorn())
-                (*b)[i] = UNICORN_B;
-            else if(z & dragon())
-                (*b)[i] = DRAGON_B;
-            else if(z & brawn())
-                (*b)[i] = BRAWN_B;
-            else if(z & princess())
-                (*b)[i] = PRINCESS_B;
-        }
-        else
-        {
-            (*b)[i] = NO_PIECE;
-        }
+        b[i] = get_piece(i);
     }
     return b;
 }

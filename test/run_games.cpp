@@ -178,10 +178,42 @@ int main()
 18.(0T18)Ng5>>(0T17)g7 / (1T17)Ke8d7 
 19.(1T18)Bd3b5 / (1T18)Ra8c8 (0T18)Qe7f8 
 20.(1T19)Bb5a6 (0T19)Bd3b5 / (0T19)Nf6d7 (1T19)b7a6
+)", R"(
+1.(0T1)Ng1f3/(0T1)Ng8f6
+2.(0T2)d2d4/(0T2)d7d5
+3.(0T3)Bc1d2/(0T3)c7c6
+4.(0T4)e2e3/(0T4)Bc8g4
+5.(0T5)c2c4/(0T5)e7e6
+6.(0T6)c4d5/(0T6)Qd8d5
+7.(0T7)Nb1c3/(0T7)Qd5d7
+8.(0T8)g2g3/(0T8)Nb8a6
+9.(0T9)Ra1c1/(0T9)Ra8c8
+10.(0T10)Bf1g2/(0T10)Bf8d6
+11.(0T11)Qd1e2/(0T11)b7b5
+12.(0T12)Ke1g1/(0T12)b5b4
+13.(0T13)Nc3a4/(0T13)c6c5
+14.(0T14)Na4b6/(0T14)a7b6
+15.(0T15)Qe2a6/(0T15)Bg4f3
+16.(0T16)Bg2f3/(0T16)h7h5
+17.(0T17)Bf3b7/(0T17)Rc8b8
+18.(0T18)Bb7>>(0T16)d7/(1T16)Nf6d7
+19.(1T17)Qa6c8/(0T18)Qd7>(1T17)c8
+20.(1T18)Bd2b4/(1T18)Bf3g2
+21.(1T19)Kg1g2 (0T19)Qa6b5/(0T19)Nf6d7 (1T19)Qc8c6
+22.(0T20)Qb5>(1T20)c6/(0T20)Bd6>(1T20)c6
+23.(1T21)f2f3 (0T21)d4c5/(0T21)b6c5 (1T21)c5b4
+24.(1T22)Rc1c6 (0T22)b2b3/(1T22)Bd6e7 (0T22)Nd7f6
+25.(1T23)Rc6c8 (0T23)Rc1c5/(0T23)Nf6g4 (1T23)Be7d8
+26.(1T24)Kg2g1 (0T24)Rc5c4/(0T24)Ng4>>(0T23)g2
+27.(-1T24)Kg1g2/(-1T24)Nf6g4 (1T24)Ke8e7
+28.(0T25)Bd2>>(0T20)d7/(2T20)Ke8f8
+29.(2T21)Bd7e6/(2T21)f7e6
+30.(2T22)Qb5d7
 )"
     };
     for(auto pgn : pgns)
         run_game(pgn);
+    test1();
     std::cout << "---= run_games.cpp: all tests passed =---" <<std::endl;
     return 0;
 }
