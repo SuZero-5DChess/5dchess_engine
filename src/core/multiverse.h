@@ -41,6 +41,7 @@ public:
     std::string to_string() const;
     bool inbound(vec4 a, int color) const;
     piece_t get_piece(vec4 a, int color) const;
+    bool get_umove_flag(vec4 a, int color) const;
     
     int number_activated() const;
     // This helper function returns (number_activated, present_t, current_player)

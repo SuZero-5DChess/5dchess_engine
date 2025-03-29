@@ -127,9 +127,22 @@ void run_game(std::string pgn)
         if(!flag)
         {
             std::cerr << "In run_game with this pgn:\n" << pgn << "\n";
-            std::cerr << "failed to apply: " << mv << "\n";
             std::cerr << "current boards:\n";
             std::cerr << s.m.to_string() << std::endl;
+            std::cerr << "failed to apply: " << mv << "\n";
+            std::visit(overloads {
+                [&](std::monostate){},
+                [&](std::tuple<vec4, vec4> data)
+                {
+                    auto [p, _] = data;
+                    std::cerr << "The allowed moves are: ";
+                    for(vec4 d : s.m.gen_piece_move(p, s.player))
+                    {
+                        std::cerr << full_move::move(p, d) << " ";
+                    }
+                    std::cerr << std::endl;
+                }
+            }, mv.data);
             throw std::runtime_error("");
             break;
         }

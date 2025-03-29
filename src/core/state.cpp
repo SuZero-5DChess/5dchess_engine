@@ -73,7 +73,7 @@ bool state::apply_move(full_move fm)
                 }
                 // TODO: promotion
                 // castling
-                else if(to_white(pic) == KING_UW && abs(d.x()) > 1)
+                else if(to_white(pic) == KING_W && abs(d.x()) > 1)
                 {
                     //std::cout << " ... castling";
                     int rook_x1 = d.x() < 0 ? 0 : 7;

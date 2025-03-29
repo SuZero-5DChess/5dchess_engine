@@ -4,7 +4,226 @@
 #include <iostream>
 #include <sstream>
 
-board::board(std::string fen, const int x_size, const int y_size)
+#include "magic.h"
+
+board::board(std::string fen, const int x_size, const int y_size) : bbs{}, umove_mask{0}
+{
+    array_board arrb(fen, x_size, y_size);
+    for(int i = 0; i < BOARD_SIZE; i++)
+    {
+        piece_t p0 = arrb.get_piece(i);
+        piece_t p = piece_name(p0);
+        set_piece(i, p);
+        if(piece_umove_flag(p0))
+        {
+            umove_mask |= pmask(i);
+        }
+    }
+}
+
+piece_t board::get_piece(int pos) const
+{
+    piece_t piece;
+    bitboard_t z = pmask(pos);
+    if(z & bbs[WHITE])
+    {
+        if(z & king())
+            piece = KING_W;
+        else if(z & common_king())
+            piece = COMMON_KING_W;
+        else if(z & queen())
+            piece = QUEEN_W;
+        else if(z & royal_queen())
+            piece = ROYAL_QUEEN_W;
+        else if(z & bishop())
+            piece = BISHOP_W;
+        else if(z & knight())
+            piece = KNIGHT_W;
+        else if(z & rook())
+            piece = ROOK_W;
+        else if(z & pawn())
+            piece = PAWN_W;
+        else if(z & unicorn())
+            piece = UNICORN_W;
+        else if(z & dragon())
+            piece = DRAGON_W;
+        else if(z & brawn())
+            piece = BRAWN_W;
+        else if(z & princess())
+            piece = PRINCESS_W;
+    }
+    else if(z & bbs[BLACK])
+    {
+        if(z & king())
+            piece = KING_B;
+        else if(z & common_king())
+            piece = COMMON_KING_B;
+        else if(z & queen())
+            piece = QUEEN_B;
+        else if(z & royal_queen())
+            piece = ROYAL_QUEEN_B;
+        else if(z & bishop())
+            piece = BISHOP_B;
+        else if(z & knight())
+            piece = KNIGHT_B;
+        else if(z & rook())
+            piece = ROOK_B;
+        else if(z & pawn())
+            piece = PAWN_B;
+        else if(z & unicorn())
+            piece = UNICORN_B;
+        else if(z & dragon())
+            piece = DRAGON_B;
+        else if(z & brawn())
+            piece = BRAWN_B;
+        else if(z & princess())
+            piece = PRINCESS_B;
+    }
+    else
+    {
+        piece = NO_PIECE;
+    }
+    return piece;
+}
+
+void board::set_piece(int pos, piece_t p)
+{
+    bitboard_t z = pmask(pos);
+    umove_mask &= ~z;
+    for(int i = 0; i < BBS_INDICES_COUNT; i++)
+    {
+        bbs[i] &= ~z;
+    }
+    if(p != NO_PIECE)
+    {
+        if(piece_color(p)==0)
+        {
+            bbs[board::WHITE] |= z;
+        }
+        else
+        {
+            bbs[board::BLACK] |= z;
+        }
+        switch(to_white(piece_name(p)))
+        {
+            case KING_W:
+                bbs[board::ROYAL] |= z;
+            case COMMON_KING_W:
+                bbs[board::LKING] |= z;
+                break;
+            case ROOK_W:
+                bbs[board::LROOK] |= z;
+                break;
+            case BISHOP_W:
+                bbs[board::LBISHOP] |= z;
+                break;
+            case UNICORN_W:
+                bbs[board::LUNICORN] |= z;
+                break;
+            case DRAGON_W:
+                bbs[board::LDRAGON] |= z;
+                break;
+            case ROYAL_QUEEN_W:
+                bbs[board::ROYAL] |= z;
+            case QUEEN_W:
+                bbs[board::LROOK] |= z;
+                bbs[board::LBISHOP] |= z;
+                bbs[board::LUNICORN] |= z;
+                bbs[board::LDRAGON] |= z;
+                break;
+            case PRINCESS_W:
+                bbs[board::LROOK] |= z;
+                bbs[board::LBISHOP] |= z;
+                break;
+            case KNIGHT_W:
+                bbs[board::LKNIGHT] |= z;
+                break;
+            case BRAWN_W:
+                bbs[board::LRAWN] |= z;
+            case PAWN_W:
+                bbs[board::LPAWN] |= z;
+                break;
+            default:
+                std::cerr << "bb_full_collection initializer:" << p << "not implemented" << std::endl;
+                break;
+        }
+    }
+}
+
+std::shared_ptr<board> board::replace_piece(int pos, piece_t p) const
+{
+    std::shared_ptr<board> b_ptr = std::make_shared<board>(*this);
+    b_ptr->set_piece(pos, p);
+    return b_ptr;
+}
+
+std::shared_ptr<board> board::move_piece(int from, int to) const
+{
+    std::shared_ptr<board> b_ptr = std::make_shared<board>(*this);
+    b_ptr->set_piece(to, get_piece(from));
+    b_ptr->set_piece(from, NO_PIECE);
+    return b_ptr;
+}
+
+array_board board::to_array_board() const
+{
+    array_board arrb;
+    for(int i = 0; i < BOARD_SIZE; i++)
+    {
+        arrb.set_piece(i, get_piece(i));
+    }
+    return arrb;
+}
+
+std::string board::to_string() const
+{
+    return to_array_board().to_string();
+}
+
+std::string board::get_fen() const
+{
+    return to_array_board().get_fen();
+}
+
+bitboard_t board::attacks_to(int pos)
+{
+    bitboard_t w = white(), b = black();
+    bitboard_t pawns = lpawn(), all = w | b;
+    bitboard_t white_pawns = pawns & w;
+    bitboard_t black_pawns = pawns & b;
+    return (white_pawn_attack(pos) & black_pawns)
+        |  (black_pawn_attack(pos) & white_pawns)
+        |  (king_attack(pos)       & lking())
+        |  (knight_attack(pos)     & lknight())
+        |  (rook_attack(pos, all)  & lrook())
+        |  (bishop_attack(pos, all)& lbishop());
+}
+
+bool board::is_under_attack(int pos, int color)
+{
+    bitboard_t hostile = color ? white() : black();
+    bitboard_t pawns = lpawn();
+    bitboard_t white_pawns = pawns & white();
+    if(color == 0 && white_pawn_attack(pos) & pawns & hostile)
+        return true;
+    if(color != 0 && black_pawn_attack(pos) & pawns & hostile)
+        return true;
+    if(king_attack(pos) & lking() & hostile)
+        return true;
+    if(knight_attack(pos) & lknight() & hostile)
+        return true;
+    bitboard_t all = white() | black();
+    if(bishop_attack(pos, all) & lbishop() & hostile)
+        return true;
+    if(rook_attack(pos, all) & lrook() & hostile)
+        return true;
+    return false;
+}
+
+
+/***************************************************** */
+
+array_board::array_board(std::string fen, const int x_size, const int y_size)
 {
     piece.fill(WALL_PIECE);
     char c;
@@ -23,22 +242,22 @@ board::board(std::string fen, const int x_size, const int y_size)
             switch(c)
             {
                 case 'K':
-                    this->set_piece(x, y, KING_UW);
+                    this->set_piece(ppos(x,y), KING_UW);
                     break;
                 case 'R':
-                    this->set_piece(x, y, ROOK_UW);
+                    this->set_piece(ppos(x,y), ROOK_UW);
                     break;
                 case 'P':
-                    this->set_piece(x, y, PAWN_UW);
+                    this->set_piece(ppos(x,y), PAWN_UW);
                     break;
                 case 'k':
-                    this->set_piece(x, y, KING_UB);
+                    this->set_piece(ppos(x,y), KING_UB);
                     break;
                 case 'r':
-                    this->set_piece(x, y, ROOK_UB);
+                    this->set_piece(ppos(x,y), ROOK_UB);
                     break;
                 case 'p':
-                    this->set_piece(x, y, PAWN_UB);
+                    this->set_piece(ppos(x,y), PAWN_UB);
                     break;
                 default:
                     std::stringstream sstm;
@@ -77,23 +296,23 @@ board::board(std::string fen, const int x_size, const int y_size)
             switch(c)
             {
                 case '9':
-                    this->set_piece(x, y, NO_PIECE); x++;
+                    this->set_piece(ppos(x,y), NO_PIECE); x++;
                 case '8':
-                    this->set_piece(x, y, NO_PIECE); x++;
+                    this->set_piece(ppos(x,y), NO_PIECE); x++;
                 case '7':
-                    this->set_piece(x, y, NO_PIECE); x++;
+                    this->set_piece(ppos(x,y), NO_PIECE); x++;
                 case '6':
-                    this->set_piece(x, y, NO_PIECE); x++;
+                    this->set_piece(ppos(x,y), NO_PIECE); x++;
                 case '5':
-                    this->set_piece(x, y, NO_PIECE); x++;
+                    this->set_piece(ppos(x,y), NO_PIECE); x++;
                 case '4':
-                    this->set_piece(x, y, NO_PIECE); x++;
+                    this->set_piece(ppos(x,y), NO_PIECE); x++;
                 case '3':
-                    this->set_piece(x, y, NO_PIECE); x++;
+                    this->set_piece(ppos(x,y), NO_PIECE); x++;
                 case '2':
-                    this->set_piece(x, y, NO_PIECE); x++;
+                    this->set_piece(ppos(x,y), NO_PIECE); x++;
                 case '1':
-                    this->set_piece(x, y, NO_PIECE); x++;
+                    this->set_piece(ppos(x,y), NO_PIECE); x++;
                 case '0':
                     break;
                 case 'K':
@@ -120,7 +339,7 @@ board::board(std::string fen, const int x_size, const int y_size)
                 case 's':
                 case 'y':
                 case 'c':
-                    this->set_piece(x, y, (piece_t)c); x++;
+                    this->set_piece(ppos(x,y), (piece_t)c); x++;
                     break;
                 default:
                     std::stringstream sstm;
@@ -129,12 +348,11 @@ board::board(std::string fen, const int x_size, const int y_size)
             }
         }
     }
-    bits = boardbits(this->piece);
 }
 
 
 
-piece_t board::get_piece(int p) const
+piece_t array_board::get_piece(int p) const
 {
     return piece[p];
 }
@@ -144,21 +362,21 @@ piece_t board::get_piece(int p) const
 //    return piece[p];
 //}
 //
-void board::set_piece(int x, int y, piece_t p)
+void array_board::set_piece(int pos, piece_t p)
 {
-    this->piece[ppos(x,y)] = p;
+    this->piece[pos] = p;
 }
 
-std::shared_ptr<board> board::replace_piece(int pos, piece_t p) const
+std::shared_ptr<array_board> array_board::replace_piece(int pos, piece_t p) const
 {
-    std::shared_ptr<board> b_ptr = std::make_shared<board>(*this);
+    std::shared_ptr<array_board> b_ptr = std::make_shared<array_board>(*this);
     b_ptr->piece[pos] = p;
     return b_ptr;
 }
 
-std::shared_ptr<board> board::move_piece(int from, int to) const
+std::shared_ptr<array_board> array_board::move_piece(int from, int to) const
 {
-    std::shared_ptr<board> b_ptr = std::make_shared<board>(*this);
+    std::shared_ptr<array_board> b_ptr = std::make_shared<array_board>(*this);
     b_ptr->piece[to] = static_cast<piece_t>(piece_name(piece[from]));
     b_ptr->piece[from] = NO_PIECE;
     return b_ptr;
@@ -169,7 +387,7 @@ std::shared_ptr<board> board::move_piece(int from, int to) const
 //    return this->piece[ppos(x,y)];
 //}
 
-std::string board::to_string() const
+std::string array_board::to_string() const
 {
     std::string result = "";
     for (int y = BOARD_LENGTH - 1; y >= 0; y--) 
@@ -213,7 +431,7 @@ std::string board::to_string() const
     return result;
 }
 
-std::string board::get_fen() const
+std::string array_board::get_fen() const
 {
     std::string result = "";
     for (int y = BOARD_LENGTH - 1; y >= 0; y--) 

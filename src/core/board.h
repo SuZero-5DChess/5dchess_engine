@@ -14,23 +14,85 @@
 #include "piece.h"
 #include "bitboard.h"
 
-class board {
+class array_board;
+
+/*
+The bitboards collection associated with a board.
+ */
+class board
+{
+public:
+    enum bitboard_indices {
+        WHITE, BLACK, ROYAL, //flags
+        LKING, LKNIGHT, LPAWN, LRAWN, //jumping pieces
+        LROOK, LBISHOP, LUNICORN, LDRAGON, //sliding pieces
+        BBS_INDICES_COUNT
+    };
+    std::array<bitboard_t, BBS_INDICES_COUNT> bbs;
+    bitboard_t umove_mask;
+    board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
+    
+    // inline getter functions
+    constexpr bitboard_t umove() const { return umove_mask; }
+
+    constexpr bitboard_t white() const { return bbs[WHITE]; }
+    constexpr bitboard_t black() const { return bbs[BLACK]; }
+    constexpr bitboard_t royal() const { return bbs[ROYAL]; }
+
+    constexpr bitboard_t lking() const { return bbs[LKING]; }
+    constexpr bitboard_t lknight() const { return bbs[LKNIGHT]; }
+    constexpr bitboard_t lpawn() const { return bbs[LPAWN]; }
+    constexpr bitboard_t lrawn() const { return bbs[LRAWN]; }
+
+    constexpr bitboard_t lrook() const { return bbs[LROOK]; }
+    constexpr bitboard_t lbishop() const { return bbs[LBISHOP]; }
+    constexpr bitboard_t lunicorn() const { return bbs[LUNICORN]; }
+    constexpr bitboard_t ldragon() const { return bbs[LDRAGON]; }
+
+    constexpr bitboard_t occupied() const { return bbs[WHITE] | bbs[BLACK]; }
+    constexpr bitboard_t king() const { return bbs[LKING] & bbs[ROYAL]; }
+    constexpr bitboard_t common_king() const { return bbs[LKING] & ~bbs[ROYAL]; }
+    constexpr bitboard_t knight() const { return bbs[LKNIGHT]; }
+    constexpr bitboard_t pawn() const { return bbs[LPAWN] & ~bbs[LRAWN]; }
+    constexpr bitboard_t brawn() const { return bbs[LPAWN] & bbs[LRAWN]; }
+    constexpr bitboard_t rook() const { return bbs[LROOK] & ~bbs[LBISHOP]; }
+    constexpr bitboard_t bishop() const { return bbs[LBISHOP] & ~bbs[LROOK]; }
+    constexpr bitboard_t unicorn() const { return bbs[LUNICORN] & ~bbs[LDRAGON]; }
+    constexpr bitboard_t dragon() const { return bbs[LDRAGON] & ~bbs[LUNICORN]; }
+    constexpr bitboard_t princess() const { return bbs[LROOK] & bbs[LBISHOP] & ~bbs[LUNICORN]; }
+    constexpr bitboard_t royal_queen() const { return bbs[LROOK] & bbs[LDRAGON] & bbs[ROYAL]; }
+    constexpr bitboard_t queen() const { return bbs[LROOK] & bbs[LDRAGON] & ~bbs[ROYAL]; }
+    
+    piece_t get_piece(int pos) const;
+    void set_piece(int pos, piece_t p);
+    std::shared_ptr<board> replace_piece(int pos, piece_t p) const;
+    std::shared_ptr<board> move_piece(int from, int to) const;
+    array_board to_array_board() const;
+    std::string to_string() const;
+    std::string get_fen() const;
+
+    // the pieces (both white and black) that attacks a given square
+    bitboard_t attacks_to(int pos);
+    bool is_under_attack(int pos, int color);
+};
+
+
+class array_board {
 private:
     std::array<piece_t, BOARD_SIZE> piece;
-    boardbits bits;
 public:
-    board(): piece{}{}
-    board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
+    array_board(): piece{}{}
+    array_board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
     
     // the getter method
     piece_t get_piece(int p) const;
     //const piece_t& operator[](int p) const;
     // the setter method, which is deprecated. Use replace_piece or move_piece whenever possible
-    void set_piece(int x, int y, piece_t p);
+    void set_piece(int pos, piece_t p);
 
     // these methods return the pointer to a new board object so that there is no side effect
-    std::shared_ptr<board> replace_piece(int pos, piece_t p) const;
-    std::shared_ptr<board> move_piece(int from, int to) const;
+    std::shared_ptr<array_board> replace_piece(int pos, piece_t p) const;
+    std::shared_ptr<array_board> move_piece(int from, int to) const;
 
     std::string to_string() const;
     std::string get_fen() const;

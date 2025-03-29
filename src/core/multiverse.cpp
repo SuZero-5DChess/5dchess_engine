@@ -218,6 +218,11 @@ piece_t multiverse::get_piece(vec4 a, int color) const
     return boards[l_to_u(a.l())][tc_to_v(a.t(), color)]->get_piece(a.xy());
 }
 
+bool multiverse::get_umove_flag(vec4 a, int color) const
+{
+    return boards[l_to_u(a.l())][tc_to_v(a.t(), color)]->umove() & pmask(ppos(a.x(),a.y()));
+}
+
 const vector<vec4> knight_delta = {vec4( 2, 1, 0, 0), vec4( 2, 0, 1, 0), vec4( 2, 0, 0, 1), vec4( 1, 2, 0, 0), vec4( 1, 0, 2, 0), vec4( 1, 0, 0, 2), vec4( 0, 2, 1, 0), vec4( 0, 2, 0, 1), vec4( 0, 1, 2, 0), vec4( 0, 1, 0, 2), vec4( 0, 0, 2, 1), vec4( 0, 0, 1, 2), vec4(-2, 1, 0, 0), vec4(-2, 0, 1, 0), vec4(-2, 0, 0, 1), vec4( 1,-2, 0, 0), vec4( 1, 0,-2, 0), vec4( 1, 0, 0,-2), vec4( 0,-2, 1, 0), vec4( 0,-2, 0, 1), vec4( 0, 1,-2, 0), vec4( 0, 1, 0,-2), vec4( 0, 0,-2, 1), vec4( 0, 0, 1,-2), vec4( 2,-1, 0, 0), vec4( 2, 0,-1, 0), vec4( 2, 0, 0,-1), vec4(-1, 2, 0, 0), vec4(-1, 0, 2, 0), vec4(-1, 0, 0, 2), vec4( 0, 2,-1, 0), vec4( 0, 2, 0,-1), vec4( 0,-1, 2, 0), vec4( 0,-1, 0, 2), vec4( 0, 0, 2,-1), vec4( 0, 0,-1, 2), vec4(-2,-1, 0, 0), vec4(-2, 0,-1, 0), vec4(-2, 0, 0,-1), vec4(-1,-2, 0, 0), vec4(-1, 0,-2, 0), vec4(-1, 0, 0,-2), vec4( 0,-2,-1, 0), vec4( 0,-2, 0,-1), vec4( 0,-1,-2, 0), vec4( 0,-1, 0,-2), vec4( 0, 0,-2,-1), vec4( 0, 0,-1,-2)};
 const vector<vec4> rook_delta = {vec4( 1, 0, 0, 0), vec4(-1, 0, 0, 0), vec4( 0, 1, 0, 0), vec4( 0,-1, 0, 0), vec4( 0, 0, 1, 0), vec4( 0, 0,-1, 0), vec4( 0, 0, 0, 1), vec4( 0, 0, 0,-1)};
 const vector<vec4> bishop_delta = {vec4( 1, 1, 0, 0), vec4(-1, 1, 0, 0), vec4( 1,-1, 0, 0), vec4(-1,-1, 0, 0), vec4( 1, 0, 1, 0), vec4(-1, 0, 1, 0), vec4( 1, 0,-1, 0), vec4(-1, 0,-1, 0), vec4( 1, 0, 0, 1), vec4(-1, 0, 0, 1), vec4( 1, 0, 0,-1), vec4(-1, 0, 0,-1), vec4( 0, 1, 1, 0), vec4( 0,-1, 1, 0), vec4( 0, 1,-1, 0), vec4( 0,-1,-1, 0), vec4( 0, 1, 0, 1), vec4( 0,-1, 0, 1), vec4( 0, 1, 0,-1), vec4( 0,-1, 0,-1), vec4( 0, 0, 1, 1), vec4( 0, 0,-1, 1), vec4( 0, 0, 1,-1), vec4( 0, 0,-1,-1)};
@@ -236,8 +241,13 @@ namespace views = std::ranges::views;
 
 vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
 {
-    const piece_t p_piece = get_piece(p, board_color);
-    const bool p_color = get_color(p_piece);
+    std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), board_color);
+    piece_t p_piece = get_piece(p, board_color);
+    const bool p_color = piece_color(p_piece);
+    if(get_umove_flag(p, board_color))
+    {
+        p_piece = static_cast<piece_t>(p_piece | 0x80);
+    }
     vector<vec4> result;
     auto is_blank = [&](vec4 d)
     {
@@ -247,7 +257,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
     auto can_go_to = [&](vec4 d)
     {
         piece_t q_piece = get_piece(p+d, board_color);
-        return q_piece == NO_PIECE || p_color != get_color(q_piece);
+        return q_piece == NO_PIECE || p_color != piece_color(q_piece);
     };
     auto delta_in_range = [&](vec4 d)
     {
@@ -255,10 +265,20 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
     };
     auto good_castling_direction = [&](vec4 d)
     {
+        int i = 0;
         for(vec4 c = d; delta_in_range(c); c = c + d)
         {
-            piece_t q_piece = get_piece(p+c, board_color);
-            if(q_piece == ROOK_UW || q_piece == ROOK_UB)
+            vec4 q = p+c;
+            piece_t q_piece = get_piece(q, board_color);
+            if(get_umove_flag(q, board_color))
+            {
+                q_piece = static_cast<piece_t>(q_piece | 0x80);
+            }
+            if(i < 2 && b_ptr->is_under_attack(q.xy(), board_color))
+            {
+                return false;
+            }
+            else if(q_piece == ROOK_UW || q_piece == ROOK_UB)
             {
                 return true;
             }
@@ -266,6 +286,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
             {
                 return false;
             }
+            i++;
         }
         return false;
     };
@@ -331,19 +352,26 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
             result = multiple_moves(princess_delta);
         case ROYAL_QUEEN_W:
         case ROYAL_QUEEN_B:
-        // TODO: Royal queen castling
+            if(!b_ptr->is_under_attack(p.xy(), board_color))
+            {
+                result = vector<vec4>{vec4(-1,0,0,0), vec4(1,0,0,0)}
+                | views::filter(good_castling_direction)
+                | views::transform([](vec4 v){return v+v;})
+                | ranges::to<vector>();
+            }
         case QUEEN_W:
         case QUEEN_B:
-            result = multiple_moves(queen_delta);
+            append_vectors(result, multiple_moves(queen_delta));
             break;
         case KING_UW:
-        case KING_UB:{
-            //TODO: castling passage check
-            result = vector<vec4>{vec4(-1,0,0,0), vec4(1,0,0,0)}
-            | views::filter(good_castling_direction)
-            | views::transform([](vec4 v){return v+v;})
-            | ranges::to<vector>();
-        }
+        case KING_UB:
+            if(!b_ptr->is_under_attack(p.xy(), board_color))
+            {
+                result = vector<vec4>{vec4(-1,0,0,0), vec4(1,0,0,0)}
+                | views::filter(good_castling_direction)
+                | views::transform([](vec4 v){return v+v;})
+                | ranges::to<vector>();
+            }
         case COMMON_KING_W:
         case COMMON_KING_B:
         case KING_W:
@@ -383,7 +411,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
                 }
                 piece_t q_name = get_piece(p+d, board_color);
                 // normal capture
-                if(q_name != NO_PIECE && p_color!=get_color(q_name))
+                if(q_name != NO_PIECE && p_color!=piece_color(q_name))
                 {
                     result.push_back(d);
                 }
@@ -392,7 +420,8 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
                     && get_piece(p+vec4(d.x(),0,0,0), board_color) == PAWN_B
                     && inbound(p+vec4(d.x(),2,-1,0), board_color)
                     && get_piece(p+vec4(d.x(),0,-1,0), board_color) == NO_PIECE
-                    && get_piece(p+vec4(d.x(),2,-1,0), board_color) == PAWN_UB)
+                    && get_piece(p+vec4(d.x(),2,-1,0), board_color) == PAWN_B
+                    && get_umove_flag(p+vec4(d.x(),2,-1,0), board_color))
                 {
                     result.push_back(d);
                 }
@@ -428,7 +457,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
                 }
                 piece_t q_name = get_piece(p+d, board_color);
                 // normal capture
-                if(q_name != NO_PIECE && p_color!=get_color(q_name))
+                if(q_name != NO_PIECE && p_color!=piece_color(q_name))
                 {
                     result.push_back(d);
                 }

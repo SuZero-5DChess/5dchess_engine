@@ -33,6 +33,11 @@ typedef enum : unsigned char { //syntax of c23/c++11. Use lesser memory
     //nonstandard pieces for black
 } piece_t; //totally: 30 pieces + 2 non-pieces
 
+constexpr bool piece_umove_flag(piece_t p)
+{
+    return p & 0x80;
+}
+
 // remove the unmoved signature for pawn/rook/king
 constexpr piece_t piece_name(piece_t p)
 {
@@ -56,7 +61,7 @@ constexpr piece_t switch_color(piece_t p)
 }
 
 // detect if the letter is in lower case
-constexpr bool get_color(piece_t p)
+constexpr bool piece_color(piece_t p)
 {
     return p & 0x20;
 }
@@ -72,5 +77,7 @@ constexpr static int ppos(int x, int y)
 {
     return x|(y<<BOARD_BITS);
 }
+
+
 
 #endif //PIECE_H
