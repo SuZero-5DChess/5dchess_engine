@@ -12,9 +12,9 @@ typedef enum : unsigned char { //syntax of c23/c++11. Use lesser memory
     //empty
     WALL_PIECE = 1,
     //in case this place is not in a active board
-    KING_UW = 'K'| 0x80, ROOK_UW = 'R'|0x80, PAWN_UW = 'P'|0x80,
+    KING_UW = 'K'| 0x80, ROOK_UW = 'R'|0x80, PAWN_UW = 'P'|0x80, BRAWN_UW = 'W'|0x80,
     //unmoved standard pieces for white
-    KING_UB = 'k'| 0x80, ROOK_UB = 'r'|0x80, PAWN_UB = 'p'|0x80,
+    KING_UB = 'k'| 0x80, ROOK_UB = 'r'|0x80, PAWN_UB = 'p'|0x80, BRAWN_UB = 'w'|0x80,
     //unmoved standard pieces for black
     
     KING_W = 'K', QUEEN_W = 'Q', BISHOP_W = 'B',

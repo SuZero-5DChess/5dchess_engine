@@ -95,3 +95,18 @@ const std::array<bitboard_t, BOARD_SIZE*BOARD_LENGTH> queen_copy_mask_data = gen
     return rook_copy_mask_data[key] | bishop_copy_mask_data[key];
 });
 
+const std::array<bitboard_t, BOARD_SIZE> king_jump_attack_data = generate_array(std::make_index_sequence<BOARD_SIZE>{}, [](size_t pos) -> bitboard_t
+{
+    return king_attack_data[pos] | pmask(static_cast<int>(pos));
+});
+
+
+const std::array<bitboard_t, BOARD_SIZE> knight_jump1_attack_data = generate_array(std::make_index_sequence<BOARD_SIZE>{}, [](size_t pos) -> bitboard_t
+{
+    return rook_copy_mask(pos, 2);
+});
+
+const std::array<bitboard_t, BOARD_SIZE> knight_jump2_attack_data = generate_array(std::make_index_sequence<BOARD_SIZE>{}, [](size_t pos) -> bitboard_t
+{
+    return rook_copy_mask(pos, 1);
+});

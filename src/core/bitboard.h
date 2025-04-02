@@ -97,6 +97,10 @@ inline bitboard_t rook_copy_mask(int pos, int n);
 inline bitboard_t bishop_copy_mask(int pos, int n);
 inline bitboard_t queen_copy_mask(int pos, int n);
 
+inline bitboard_t king_jump_attack(int pos);
+inline bitboard_t knight_jump1_attack(int pos);
+inline bitboard_t knight_jump2_attack(int pos);
+
 #include "bitboard.inl"
 
 #endif // BITBOARD_H

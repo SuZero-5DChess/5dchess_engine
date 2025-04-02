@@ -25,7 +25,14 @@
 class multiverse {
 protected:
     std::vector<std::vector<std::shared_ptr<board>>> boards;
+    
+private:
+    using tagged_bb = std::tuple<vec4,bitboard_t>;
+    enum class axesmode {ORTHOGONAL, DIAGONAL, BOTH};
+    template<bool C, axesmode TL, axesmode XY>
+    void gen_compound_moves(vec4 p, std::vector<tagged_bb>& result);
 public:
+    
     // the following data are derivated from boards:
     int l_min, l_max;
     std::vector<int> timeline_start, timeline_end;
@@ -53,11 +60,21 @@ public:
 
     std::vector<vec4> gen_piece_move(const vec4& p, int board_color) const;
     
-    template<piece_t P>
-    bitboard_t gen_physical_move(const vec4&p, int board_color) const;
     
-    template<piece_t P>
-    std::vector<bitboard_t> gen_superphysical_move(const vec4&p, int board_color) const;
+    template<piece_t P, bool C>
+    bitboard_t gen_physical_move(vec4 p) const;
+    
+    template<piece_t P, bool C>
+    std::vector<tagged_bb> gen_superphysical_move(vec4 p) const;
+    
+    template<bool C>
+    std::vector<tagged_bb> gen_purely_sp_rook_move(vec4 p);
+    
+    template<bool C>
+    std::vector<multiverse::tagged_bb> gen_purely_sp_bishop_move(vec4 p0);
+    
+    template<bool C>
+    std::vector<multiverse::tagged_bb> gen_purely_sp_knight_move(vec4 p0);
     
     /*
      The following static functions describe the correspondence between two coordinate systems: L,T and u,v

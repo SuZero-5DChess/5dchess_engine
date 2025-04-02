@@ -466,7 +466,8 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
                 else if(q_name == NO_PIECE && get_piece(p+vec4(d.x(),0,0,0), board_color) == PAWN_W
                     && inbound(p+vec4(d.x(),-2,-1,0), board_color)
                     && get_piece(p+vec4(d.x(),0,-1,0), board_color) == NO_PIECE
-                    && get_piece(p+vec4(d.x(),-2,-1,0), board_color) == PAWN_UW)
+                    && get_piece(p+vec4(d.x(),-2,-1,0), board_color) == PAWN_UW
+                    && get_umove_flag(p+vec4(d.x(),-2,-1,0), board_color))
                 {
                     result.push_back(d);
                 }
@@ -478,16 +479,184 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
     return result;
 }
 
-template<piece_t P>
-bitboard_t multiverse::gen_physical_move(const vec4& p, int board_color) const
+template<bool C>
+std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move(vec4 p0)
+{
+    std::vector<tagged_bb> result;
+    std::shared_ptr<board> b0_ptr = get_board(p0.l(), p0.t(), C);
+    bitboard_t lrook;
+    if constexpr(C)
+    {
+        lrook = b0_ptr->lrook() & b0_ptr->black();
+    }
+    else
+    {
+        lrook = b0_ptr->lrook() & b0_ptr->white();
+    }
+    for(auto delta : {vec4(0,1,0,0), vec4(1,0,0,0), vec4(-1,0,0,0)})
+    {
+        bitboard_t remaining = lrook;
+        for(vec4 p1 = p0; remaining && inbound(p1, C); p1=p1+delta)
+        {
+            std::shared_ptr<board> b1_ptr = get_board(p1.l(), p1.t(), C);
+            bitboard_t friendly, hostile;
+            if constexpr(C)
+            {
+                friendly = b1_ptr->black();
+                hostile = b1_ptr->white();
+            }
+            else
+            {
+                friendly = b1_ptr->white();
+                hostile = b1_ptr->black();
+            }
+            remaining &= ~friendly;
+            if(remaining)
+            {
+                result.push_back(std::make_tuple(p1, remaining));
+                remaining &= ~hostile;
+            }
+        }
+    }
+    return result;
+}
+
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move<0>(vec4 p0);
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move<1>(vec4 p0);
+
+
+template<bool C>
+std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move(vec4 p0)
+{
+    std::vector<tagged_bb> result;
+    std::shared_ptr<board> b0_ptr = get_board(p0.l(), p0.t(), C);
+    bitboard_t lbishop;
+    if constexpr(C)
+    {
+        lbishop = b0_ptr->lbishop() & b0_ptr->black();
+    }
+    else
+    {
+        lbishop = b0_ptr->lbishop() & b0_ptr->white();
+    }
+    for(auto delta : {vec4(1,1,0,0), vec4(1,-1,0,0), vec4(-1,1,0,0), vec4(-1,-1,0,0)})
+    {
+        bitboard_t remaining = lbishop;
+        for(vec4 p1 = p0; remaining && inbound(p1, C); p1=p1+delta)
+        {
+            std::shared_ptr<board> b1_ptr = get_board(p1.l(), p1.t(), C);
+            bitboard_t friendly, hostile;
+            if constexpr(C)
+            {
+                friendly = b1_ptr->black();
+                hostile = b1_ptr->white();
+            }
+            else
+            {
+                friendly = b1_ptr->white();
+                hostile = b1_ptr->black();
+            }
+            remaining &= ~friendly;
+            if(remaining)
+            {
+                result.push_back(std::make_tuple(p1, remaining));
+                remaining &= ~hostile;
+            }
+        }
+    }
+    return result;
+}
+
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<0>(vec4 p0);
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<1>(vec4 p0);
+
+
+template<bool C>
+std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_knight_move(vec4 p0)
+{
+    std::vector<tagged_bb> result;
+    std::shared_ptr<board> b0_ptr = get_board(p0.l(), p0.t(), C);
+    bitboard_t lknight;
+    if constexpr(C)
+    {
+        lknight = b0_ptr->lknight() & b0_ptr->black();
+    }
+    else
+    {
+        lknight = b0_ptr->lknight() & b0_ptr->white();
+    }
+    const static vector<vec4> knight_pure_sp_delta = {vec4(2, 1, 0, 0), vec4(1, 2, 0, 0), vec4(-2, 1, 0, 0), vec4(1, -2, 0, 0), vec4(2, -1, 0, 0), vec4(-1, 2, 0, 0), vec4(-2, -1, 0, 0), vec4(-1, -2, 0, 0)};
+    for(vec4 delta : knight_pure_sp_delta)
+    {
+        vec4 p1 = p0 + delta;
+        std::shared_ptr<board> b1_ptr = get_board(p1.l(), p1.t(), C);
+        bitboard_t remaining = lknight;
+        bitboard_t friendly;
+        if constexpr(C)
+        {
+            friendly = b1_ptr->black();
+        }
+        else
+        {
+            friendly = b1_ptr->white();
+        }
+        remaining &= ~friendly;
+        if(remaining)
+        {
+            result.push_back(std::make_tuple(p1, remaining));
+        }
+    }
+    return result;
+}
+
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<0>(vec4 p0);
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<1>(vec4 p0);
+
+
+template<piece_t P, bool C>
+bitboard_t multiverse::gen_physical_move(vec4 p) const
 {
 	//int u = l_to_u(p.l()), v = tc_to_v(p.t(), board_color);
-	std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), board_color);
-	bitboard_t friendly = board_color ? b_ptr->black() : b_ptr->white();
+	std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), C);
+    bitboard_t friendly = b_ptr->friendly<C>();
+    bitboard_t hostile = b_ptr->hostile<C>();
     bitboard_t a;
+    int pos = p.xy();
+    bitboard_t z = pmask(pos);
+    bitboard_t empty = ~(friendly | hostile);
     if constexpr (P == KING_W | P == KING_B | P == COMMON_KING_W | P == COMMON_KING_B)
     {
         a = king_attack(p.xy()) & ~friendly;
+    }
+    else if (P == KING_UW | P == KING_UB)
+    {
+        a = king_attack(p.xy()) & ~friendly;
+        bitboard_t urook = b_ptr->umove() & b_ptr->rook() & friendly;
+        if(!b_ptr->is_under_attack(p.xy(), C))
+        {
+            for(vec4 d : {vec4(0,0,1,0), vec4(0,0,-1,0)})
+            {
+                int i = 0;
+                for(vec4 c = d; !c.outbound(); c = c + d)
+                {
+                    vec4 q = p+c;
+                    bitboard_t w = pmask(q.xy());
+                    if(i < 2 && b_ptr->is_under_attack(q.xy(), C))
+                    {
+                        return false;
+                    }
+                    else if(w & b_ptr->umove() & b_ptr->rook() & friendly)
+                    {
+                        return true;
+                    }
+                    else if(w & b_ptr->occupied())
+                    {
+                        return false;
+                    }
+                    i++;
+                }
+            }
+        }
     }
     else if (P == ROOK_W | P == ROOK_B)
     {
@@ -501,14 +670,54 @@ bitboard_t multiverse::gen_physical_move(const vec4& p, int board_color) const
     {
         a = queen_attack(p.xy(), b_ptr->occupied()) & ~friendly;
 	}
-    else if (P == PAWN_W | P == BRAWN_W)
+    else if (P == PAWN_W | P == BRAWN_W | P == PAWN_UW | P == BRAWN_UW)
     {
-		a = white_pawn_attack(p.xy()) & ~friendly;
+        bitboard_t patt = white_pawn_attack(pos);
+        // normal move and capture
+		a = (patt & hostile) | (shift_north(z) & empty);
+        // en passant
+        bitboard_t r = (shift_west(z) | shift_east(z)) & hostile & b_ptr->pawn();
+        bitboard_t s = shift_north(shift_north(r)) & empty;
+        if(s)
+        {
+            vec4 q = p+vec4(0, 2, -1, 0);
+            if(inbound(q, C))
+            {
+                std::shared_ptr<board> b1_ptr = get_board(q.l(), q.t(), C);
+                bitboard_t j = s & b1_ptr->umove() & ~friendly & b1_ptr->pawn();
+                a |= shift_south(j);
+            }
+        }
+        // additional move for unmoved pawns
+        if constexpr (P == PAWN_UW | P == BRAWN_UW)
+        {
+            a |= shift_north(shift_north(z) & empty);
+        }
     }
-	else if (P == PAWN_B | P == BRAWN_B)
-	{  
-		a = black_pawn_attack(p.xy()) & ~friendly;
-	}
+    else if (P == PAWN_B | P == BRAWN_B | P == PAWN_UB | P == BRAWN_UB)
+    {
+        bitboard_t patt = black_pawn_attack(pos);
+        // normal move and capture
+        a = (patt & hostile) | (shift_south(z) & empty);
+        // en passant
+        bitboard_t r = (shift_west(z) | shift_east(z)) & hostile & b_ptr->pawn();
+        bitboard_t s = shift_south(shift_south(r)) & empty;
+        if(s)
+        {
+            vec4 q = p+vec4(0, 2, -1, 0);
+            if(inbound(q, C))
+            {
+                std::shared_ptr<board> b1_ptr = get_board(q.l(), q.t(), C);
+                bitboard_t j = s & b1_ptr->umove() & ~friendly & b1_ptr->pawn();
+                a |= shift_north(j);
+            }
+        }
+        // additional move for unmoved pawns
+        if constexpr (P == PAWN_UB | P == BRAWN_UB)
+        {
+            a |= shift_south(shift_south(z) & empty);
+        }
+    }
 	else if (P == KNIGHT_W | P == KNIGHT_B)
 	{
 		a = knight_attack(p.xy()) & ~friendly;
@@ -524,26 +733,170 @@ bitboard_t multiverse::gen_physical_move(const vec4& p, int board_color) const
 	return a;
 }
 
-template<> bitboard_t multiverse::gen_physical_move<KING_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<KING_B>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<COMMON_KING_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<COMMON_KING_B>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<ROOK_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<ROOK_B>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<BISHOP_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<BISHOP_B>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<QUEEN_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<QUEEN_B>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<PRINCESS_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<PRINCESS_B>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<PAWN_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<BRAWN_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<PAWN_B>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<BRAWN_B>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<KNIGHT_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<KNIGHT_B>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<UNICORN_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<UNICORN_B>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<DRAGON_W>(const vec4& p, int board_color) const;
-template<> bitboard_t multiverse::gen_physical_move<DRAGON_B>(const vec4& p, int board_color) const;
+#define GEN_MOVE(piece) \
+template<> bitboard_t multiverse::gen_physical_move<piece,0>(vec4) const; \
+template<> bitboard_t multiverse::gen_physical_move<piece,1>(vec4) const;
 
+GEN_MOVE(KING_W)
+GEN_MOVE(KING_B)
+GEN_MOVE(COMMON_KING_W)
+GEN_MOVE(COMMON_KING_B)
+GEN_MOVE(ROOK_W)
+GEN_MOVE(ROOK_B)
+GEN_MOVE(BISHOP_W)
+GEN_MOVE(BISHOP_B)
+GEN_MOVE(QUEEN_W)
+GEN_MOVE(QUEEN_B)
+GEN_MOVE(PRINCESS_W)
+GEN_MOVE(PRINCESS_B)
+GEN_MOVE(PAWN_W)
+GEN_MOVE(BRAWN_W)
+GEN_MOVE(PAWN_B)
+GEN_MOVE(BRAWN_B)
+GEN_MOVE(KNIGHT_W)
+GEN_MOVE(KNIGHT_B)
+GEN_MOVE(UNICORN_W)
+GEN_MOVE(UNICORN_B)
+GEN_MOVE(DRAGON_W)
+GEN_MOVE(DRAGON_B)
+
+#undef GEN_MOVE
+
+const std::vector<vec4> orthogonal_dtls = {vec4(1,0,0,0), vec4(0,1,0,0), vec4(0,-1,0,0)};
+const std::vector<vec4> diagonal_dtls = {vec4(1,1,0,0), vec4(1,-1,0,0), vec4(-1,1,0,0), vec4(-1,-1,0,0)};
+const std::vector<vec4> both_dtls = concat_vectors(orthogonal_dtls, diagonal_dtls);
+
+template<bool C, multiverse::axesmode TL, multiverse::axesmode XY>
+void multiverse::gen_compound_moves(vec4 p, std::vector<multiverse::tagged_bb>& result)
+{
+    int pos = p.xy();
+    bitboard_t occ = 0;
+    bitboard_t fri = 0;
+    bitboard_t copy_mask;
+    
+    constexpr std::vector<vec4> deltas = (TL==multiverse::axesmode::ORTHOGONAL) ? orthogonal_dtls : (TL==multiverse::axesmode::DIAGONAL) ? diagonal_dtls : both_dtls;
+
+    for(vec4 d : deltas)
+    {
+        vec4 q = p;
+        for (int n = 1; (copy_mask = bishop_copy_mask(pos, 1)); n++) 
+        {
+            q = q + d;
+            std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
+            occ |= copy_mask & b_ptr->occupied();
+            fri |= copy_mask & b_ptr->friendly<C>();
+        }
+        bitboard_t loc = ~fri;
+        if constexpr (XY == multiverse::axesmode::ORTHOGONAL)
+        {
+            loc &= rook_attack(pos, occ);
+        }
+        else if (XY == multiverse::axesmode::DIAGONAL)
+        {
+            loc &= bishop_attack(pos, occ);
+        }
+        else
+        {
+            static_assert(false, "Are you sure with this option?\n");
+        }
+        q = p;
+        for (int n = 1; (copy_mask = bishop_copy_mask(pos, 1)); n++) 
+        {
+            q = q + d;
+            bitboard_t c = loc & copy_mask;
+            if(c) 
+            {
+                result.push_back(std::make_tuple(q, c));
+            } 
+            else 
+            {
+                break;
+            }
+        }
+    }
+}
+
+template<piece_t P, bool C>
+std::vector<multiverse::tagged_bb> multiverse::gen_superphysical_move(vec4 p) const
+{
+    std::vector<multiverse::tagged_bb> result;
+    int l = p.l(), t = p.t(), pos = p.xy();
+    if constexpr (P == KING_W | P == KING_B | P == COMMON_KING_W | P == COMMON_KING_B)
+    {
+        const static vector<vec4> ds = {vec4(1,0,0,0), vec4(1,1,0,0), vec4(0,1,0,0), vec4(-1,1,0,0), vec4(-1,0,0,0), vec4(-1,-1,0,0), vec4(0,-1,0,0), vec4(1,-1,0,0)};
+        for(auto d : ds)
+        {
+            vec4 q = p+d;
+            if(inbound(q, C))
+            {
+                std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
+                bitboard_t friendly;
+                if constexpr(C)
+                {
+                    friendly = b_ptr->black();
+                }
+                else
+                {
+                    friendly = b_ptr->white();
+                }
+                result.push_back(std::make_tuple(q, king_jump_attack(pos) & ~friendly));
+            }
+        }
+    }
+    else if (P == ROOK_W | P == ROOK_B)
+    {
+        bitboard_t z = pmask(p.xy());
+        for(auto [index, bb] : gen_purely_sp_rook_move<C>(p))
+        {
+            bitboard_t bb1 = bb & z;
+            if(bb1)
+            {
+                result.push_back(std::make_tuple(index, bb1));
+            }
+        }
+    }
+    else if (P == BISHOP_W | P == BISHOP_B)
+    {
+        bitboard_t z = pmask(p.xy());
+        for(auto [index, bb] : gen_purely_sp_rook_move<C>(p))
+        {
+            bitboard_t bb1 = bb & z;
+            if(bb1)
+            {
+                result.push_back(std::make_tuple(index, bb1));
+            }
+        }
+        gen_compound_moves<C, multiverse::axesmode::ORTHOGONAL, multiverse::axesmode::ORTHOGONAL>(p, result);
+    }
+    else if (P == PRINCESS_W | P == PRINCESS_B)
+    {
+        result = concat_vectors(gen_superphysical_move<ROOK_W,C>(p),
+                                gen_superphysical_move<BISHOP_W,C>(p));
+    }
+    else if (P == QUEEN_W | P == QUEEN_B)
+    {
+    }
+    else if (P == PAWN_B | P == BRAWN_B)
+    {
+    }
+    else if (P == PAWN_W | P == BRAWN_W)
+    {
+    }
+    else if (P == KNIGHT_W | P == KNIGHT_B)
+    {
+    }
+    else if (P == UNICORN_W | P == UNICORN_B)
+    {
+        gen_compound_moves<C, multiverse::axesmode::ORTHOGONAL, multiverse::axesmode::DIAGONAL>(p, result);
+        gen_compound_moves<C, multiverse::axesmode::DIAGONAL, multiverse::axesmode::ORTHOGONAL>(p, result);
+    }
+    else if (P == DRAGON_W | P == DRAGON_B)
+    {
+        gen_compound_moves<C, multiverse::axesmode::DIAGONAL, multiverse::axesmode::DIAGONAL>(p, result);
+    }
+    else
+    {
+        std::cerr << "gen_physical_move:" << P << "not implemented" << std::endl;
+    }
+    return result;
+}

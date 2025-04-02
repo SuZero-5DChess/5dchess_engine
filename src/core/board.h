@@ -21,7 +21,6 @@ The bitboards collection associated with a board.
  */
 class board
 {
-public:
     enum bitboard_indices {
         WHITE, BLACK, ROYAL, //flags
         LKING, LKNIGHT, LPAWN, LRAWN, //jumping pieces
@@ -30,13 +29,16 @@ public:
     };
     std::array<bitboard_t, BBS_INDICES_COUNT> bbs;
     bitboard_t umove_mask;
+
+public:
     board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
-    
     // inline getter functions
     constexpr bitboard_t umove() const { return umove_mask; }
 
     constexpr bitboard_t white() const { return bbs[WHITE]; }
     constexpr bitboard_t black() const { return bbs[BLACK]; }
+    
+    
     constexpr bitboard_t royal() const { return bbs[ROYAL]; }
 
     constexpr bitboard_t lking() const { return bbs[LKING]; }
@@ -49,7 +51,6 @@ public:
     constexpr bitboard_t lunicorn() const { return bbs[LUNICORN]; }
     constexpr bitboard_t ldragon() const { return bbs[LDRAGON]; }
 
-    constexpr bitboard_t occupied() const { return bbs[WHITE] | bbs[BLACK]; }
     constexpr bitboard_t king() const { return bbs[LKING] & bbs[ROYAL]; }
     constexpr bitboard_t common_king() const { return bbs[LKING] & ~bbs[ROYAL]; }
     constexpr bitboard_t knight() const { return bbs[LKNIGHT]; }
@@ -63,6 +64,36 @@ public:
     constexpr bitboard_t royal_queen() const { return bbs[LROOK] & bbs[LDRAGON] & bbs[ROYAL]; }
     constexpr bitboard_t queen() const { return bbs[LROOK] & bbs[LDRAGON] & ~bbs[ROYAL]; }
     
+    // indirect getter functions
+    constexpr bitboard_t occupied() const { return bbs[WHITE] | bbs[BLACK]; }
+    
+    template<bool C>
+    constexpr bitboard_t friendly() const
+    {
+        if constexpr (C)
+        {
+            return bbs[BLACK];
+        }
+        else
+        {
+            return bbs[WHITE];
+        }
+    }
+    
+    template<bool C>
+    constexpr bitboard_t hostile() const
+    {
+        if constexpr (C)
+        {
+            return bbs[WHITE];
+        }
+        else
+        {
+            return bbs[BLACK];
+        }
+    }
+    
+    // modifications
     piece_t get_piece(int pos) const;
     void set_piece(int pos, piece_t p);
     std::shared_ptr<board> replace_piece(int pos, piece_t p) const;
