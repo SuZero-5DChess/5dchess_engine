@@ -30,7 +30,7 @@ private:
     using tagged_bb = std::tuple<vec4,bitboard_t>;
     enum class axesmode {ORTHOGONAL, DIAGONAL, BOTH};
     template<bool C, axesmode TL, axesmode XY>
-    void gen_compound_moves(vec4 p, std::vector<tagged_bb>& result);
+    void gen_compound_moves(vec4 p, std::vector<tagged_bb>& result) const;
 public:
     
     // the following data are derivated from boards:
@@ -68,13 +68,13 @@ public:
     std::vector<tagged_bb> gen_superphysical_move(vec4 p) const;
     
     template<bool C>
-    std::vector<tagged_bb> gen_purely_sp_rook_move(vec4 p);
+    std::vector<tagged_bb> gen_purely_sp_rook_move(vec4 p) const;
     
     template<bool C>
-    std::vector<multiverse::tagged_bb> gen_purely_sp_bishop_move(vec4 p0);
+    std::vector<multiverse::tagged_bb> gen_purely_sp_bishop_move(vec4 p0) const;
     
     template<bool C>
-    std::vector<multiverse::tagged_bb> gen_purely_sp_knight_move(vec4 p0);
+    std::vector<multiverse::tagged_bb> gen_purely_sp_knight_move(vec4 p0) const;
     
     /*
      The following static functions describe the correspondence between two coordinate systems: L,T and u,v

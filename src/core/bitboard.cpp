@@ -103,10 +103,10 @@ const std::array<bitboard_t, BOARD_SIZE> king_jump_attack_data = generate_array(
 
 const std::array<bitboard_t, BOARD_SIZE> knight_jump1_attack_data = generate_array(std::make_index_sequence<BOARD_SIZE>{}, [](size_t pos) -> bitboard_t
 {
-    return rook_copy_mask(pos, 2);
+    return rook_copy_mask(static_cast<int>(pos), 2);
 });
 
 const std::array<bitboard_t, BOARD_SIZE> knight_jump2_attack_data = generate_array(std::make_index_sequence<BOARD_SIZE>{}, [](size_t pos) -> bitboard_t
 {
-    return rook_copy_mask(pos, 1);
+    return rook_copy_mask(static_cast<int>(pos), 1);
 });

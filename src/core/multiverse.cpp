@@ -7,15 +7,7 @@
 #include <limits>
 #include <iostream>
 #include <utility>
-
-
-using std::tuple;
-using std::vector;
-using std::string;
-using std::shared_ptr;
-namespace ranges = std::ranges;
-using std::cerr;
-using std::endl;
+#include <initializer_list>
 
 
 multiverse::multiverse(const std::string &input)
@@ -116,7 +108,7 @@ board5d::~board5d()
 }
  */
 
-shared_ptr<board> multiverse::get_board(int l, int t, int c) const
+std::shared_ptr<board> multiverse::get_board(int l, int t, int c) const
 {
     try
     {
@@ -128,14 +120,14 @@ shared_ptr<board> multiverse::get_board(int l, int t, int c) const
     }
 }
 
-void multiverse::append_board(int l, const shared_ptr<board>& b_ptr)
+void multiverse::append_board(int l, const std::shared_ptr<board>& b_ptr)
 {
     int u = l_to_u(l);
     boards[u].push_back(b_ptr);
     timeline_end[u]++;
 }
 
-void multiverse::insert_board(int l, int t, int c, const shared_ptr<board>& b_ptr)
+void multiverse::insert_board(int l, int t, int c, const std::shared_ptr<board>& b_ptr)
 {
     int u = l_to_u(l);
     int v = tc_to_v(t, c);
@@ -144,13 +136,13 @@ void multiverse::insert_board(int l, int t, int c, const shared_ptr<board>& b_pt
     // and fill any missing row with empty vector
     if(u >= this->boards.size())
     {
-        this->boards.resize(u+1, vector<shared_ptr<board>>());
+        this->boards.resize(u+1, std::vector<std::shared_ptr<board>>());
         this->timeline_start.resize(u+1, std::numeric_limits<int>::max());
         this->timeline_end.resize(u+1, std::numeric_limits<int>::min());
     }
     l_min = std::min(l_min, l);
     l_max = std::max(l_max, l);
-    vector<shared_ptr<board>> &timeline = this->boards[u];
+    std::vector<std::shared_ptr<board>> &timeline = this->boards[u];
     // do the same for v
     if(v >= timeline.size())
     {
@@ -165,9 +157,9 @@ void multiverse::insert_board(int l, int t, int c, const shared_ptr<board>& b_pt
     timeline_end[u]   = std::max(timeline_end[u],   v);
 }
 
-vector<tuple<int,int,int,string>> multiverse::get_boards() const
+std::vector<std::tuple<int,int,int,std::string>> multiverse::get_boards() const
 {
-    vector<tuple<int,int,int,string>> result;
+    std::vector<std::tuple<int,int,int,std::string>> result;
     for(int u = 0; u < this->boards.size(); u++)
     {
         const auto& timeline = this->boards[u];
@@ -177,14 +169,14 @@ vector<tuple<int,int,int,string>> multiverse::get_boards() const
             const auto [t, c] = v_to_tc(v);
             if(timeline[v] != nullptr)
             {
-                result.push_back(tuple<int,int,int,string>(l,t,c,timeline[v]->get_fen()));
+                result.push_back(std::make_tuple(l,t,c,timeline[v]->get_fen()));
             }
         }
     }
     return result;
 }
 
-string multiverse::to_string() const
+std::string multiverse::to_string() const
 {
     std::stringstream sstm;
     auto [present, player] = get_present();
@@ -224,23 +216,25 @@ bool multiverse::get_umove_flag(vec4 a, int color) const
     return boards[l_to_u(a.l())][tc_to_v(a.t(), color)]->umove() & pmask(ppos(a.x(),a.y()));
 }
 
-const vector<vec4> knight_delta = {vec4( 2, 1, 0, 0), vec4( 2, 0, 1, 0), vec4( 2, 0, 0, 1), vec4( 1, 2, 0, 0), vec4( 1, 0, 2, 0), vec4( 1, 0, 0, 2), vec4( 0, 2, 1, 0), vec4( 0, 2, 0, 1), vec4( 0, 1, 2, 0), vec4( 0, 1, 0, 2), vec4( 0, 0, 2, 1), vec4( 0, 0, 1, 2), vec4(-2, 1, 0, 0), vec4(-2, 0, 1, 0), vec4(-2, 0, 0, 1), vec4( 1,-2, 0, 0), vec4( 1, 0,-2, 0), vec4( 1, 0, 0,-2), vec4( 0,-2, 1, 0), vec4( 0,-2, 0, 1), vec4( 0, 1,-2, 0), vec4( 0, 1, 0,-2), vec4( 0, 0,-2, 1), vec4( 0, 0, 1,-2), vec4( 2,-1, 0, 0), vec4( 2, 0,-1, 0), vec4( 2, 0, 0,-1), vec4(-1, 2, 0, 0), vec4(-1, 0, 2, 0), vec4(-1, 0, 0, 2), vec4( 0, 2,-1, 0), vec4( 0, 2, 0,-1), vec4( 0,-1, 2, 0), vec4( 0,-1, 0, 2), vec4( 0, 0, 2,-1), vec4( 0, 0,-1, 2), vec4(-2,-1, 0, 0), vec4(-2, 0,-1, 0), vec4(-2, 0, 0,-1), vec4(-1,-2, 0, 0), vec4(-1, 0,-2, 0), vec4(-1, 0, 0,-2), vec4( 0,-2,-1, 0), vec4( 0,-2, 0,-1), vec4( 0,-1,-2, 0), vec4( 0,-1, 0,-2), vec4( 0, 0,-2,-1), vec4( 0, 0,-1,-2)};
-const vector<vec4> rook_delta = {vec4( 1, 0, 0, 0), vec4(-1, 0, 0, 0), vec4( 0, 1, 0, 0), vec4( 0,-1, 0, 0), vec4( 0, 0, 1, 0), vec4( 0, 0,-1, 0), vec4( 0, 0, 0, 1), vec4( 0, 0, 0,-1)};
-const vector<vec4> bishop_delta = {vec4( 1, 1, 0, 0), vec4(-1, 1, 0, 0), vec4( 1,-1, 0, 0), vec4(-1,-1, 0, 0), vec4( 1, 0, 1, 0), vec4(-1, 0, 1, 0), vec4( 1, 0,-1, 0), vec4(-1, 0,-1, 0), vec4( 1, 0, 0, 1), vec4(-1, 0, 0, 1), vec4( 1, 0, 0,-1), vec4(-1, 0, 0,-1), vec4( 0, 1, 1, 0), vec4( 0,-1, 1, 0), vec4( 0, 1,-1, 0), vec4( 0,-1,-1, 0), vec4( 0, 1, 0, 1), vec4( 0,-1, 0, 1), vec4( 0, 1, 0,-1), vec4( 0,-1, 0,-1), vec4( 0, 0, 1, 1), vec4( 0, 0,-1, 1), vec4( 0, 0, 1,-1), vec4( 0, 0,-1,-1)};
-const vector<vec4> unicorn_delta = {vec4( 1, 1, 1, 0), vec4(-1, 1, 1, 0), vec4( 1,-1, 1, 0), vec4(-1,-1, 1, 0), vec4( 1, 1,-1, 0), vec4(-1, 1,-1, 0), vec4( 1,-1,-1, 0), vec4(-1,-1,-1, 0), vec4( 1, 1, 0, 1), vec4(-1, 1, 0, 1), vec4( 1,-1, 0, 1), vec4(-1,-1, 0, 1), vec4( 1, 1, 0,-1), vec4(-1, 1, 0,-1), vec4( 1,-1, 0,-1), vec4(-1,-1, 0,-1), vec4( 1, 0, 1, 1), vec4(-1, 0, 1, 1), vec4( 1, 0,-1, 1), vec4(-1, 0,-1, 1), vec4( 1, 0, 1,-1), vec4(-1, 0, 1,-1), vec4( 1, 0,-1,-1), vec4(-1, 0,-1,-1), vec4( 0, 1, 1, 1), vec4( 0,-1, 1, 1), vec4( 0, 1,-1, 1), vec4( 0,-1,-1, 1), vec4( 0, 1, 1,-1), vec4( 0,-1, 1,-1), vec4( 0, 1,-1,-1), vec4( 0,-1,-1,-1)};
-const vector<vec4> dragon_delta = {vec4( 1, 1, 1, 1), vec4(-1, 1, 1, 1), vec4( 1,-1, 1, 1), vec4(-1,-1, 1, 1), vec4( 1, 1,-1, 1), vec4(-1, 1,-1, 1), vec4( 1,-1,-1, 1), vec4(-1,-1,-1, 1), vec4( 1, 1, 1,-1), vec4(-1, 1, 1,-1), vec4( 1,-1, 1,-1), vec4(-1,-1, 1,-1), vec4( 1, 1,-1,-1), vec4(-1, 1,-1,-1), vec4( 1,-1,-1,-1), vec4(-1,-1,-1,-1)};
-const vector<vec4> princess_delta = concat_vectors(rook_delta, bishop_delta);
-const vector<vec4> queen_delta = concat_vectors(rook_delta, bishop_delta, unicorn_delta, dragon_delta);
-const vector<vec4> pawn_unmoved_white_delta = {vec4( 0, 2, 0, 0), vec4( 0, 0, 0,-2)};
-const vector<vec4> pawn_white_delta = {vec4( 0, 1, 0, 0), vec4( 0, 0, 0,-1)};
-const vector<vec4> pawn_white_capture_delta = {vec4( 1, 1, 0, 0), vec4(-1, 1, 0, 0), vec4( 0, 0, 1,-1), vec4( 0, 0,-1,-1)};
-const vector<vec4> pawn_unmoved_black_delta = {vec4( 0,-2, 0, 0), vec4( 0, 0, 0, 2)};
-const vector<vec4> pawn_black_delta = {vec4( 0,-1, 0, 0), vec4( 0, 0, 0, 1)};
-const vector<vec4> pawn_black_capture_delta = {vec4( 1,-1, 0, 0), vec4(-1,-1, 0, 0), vec4( 0, 0, 1, 1), vec4( 0, 0,-1, 1)};
+#ifdef USE_LEAGACY_GENMOVE
+
+const std::vector<vec4> knight_delta = {vec4( 2, 1, 0, 0), vec4( 2, 0, 1, 0), vec4( 2, 0, 0, 1), vec4( 1, 2, 0, 0), vec4( 1, 0, 2, 0), vec4( 1, 0, 0, 2), vec4( 0, 2, 1, 0), vec4( 0, 2, 0, 1), vec4( 0, 1, 2, 0), vec4( 0, 1, 0, 2), vec4( 0, 0, 2, 1), vec4( 0, 0, 1, 2), vec4(-2, 1, 0, 0), vec4(-2, 0, 1, 0), vec4(-2, 0, 0, 1), vec4( 1,-2, 0, 0), vec4( 1, 0,-2, 0), vec4( 1, 0, 0,-2), vec4( 0,-2, 1, 0), vec4( 0,-2, 0, 1), vec4( 0, 1,-2, 0), vec4( 0, 1, 0,-2), vec4( 0, 0,-2, 1), vec4( 0, 0, 1,-2), vec4( 2,-1, 0, 0), vec4( 2, 0,-1, 0), vec4( 2, 0, 0,-1), vec4(-1, 2, 0, 0), vec4(-1, 0, 2, 0), vec4(-1, 0, 0, 2), vec4( 0, 2,-1, 0), vec4( 0, 2, 0,-1), vec4( 0,-1, 2, 0), vec4( 0,-1, 0, 2), vec4( 0, 0, 2,-1), vec4( 0, 0,-1, 2), vec4(-2,-1, 0, 0), vec4(-2, 0,-1, 0), vec4(-2, 0, 0,-1), vec4(-1,-2, 0, 0), vec4(-1, 0,-2, 0), vec4(-1, 0, 0,-2), vec4( 0,-2,-1, 0), vec4( 0,-2, 0,-1), vec4( 0,-1,-2, 0), vec4( 0,-1, 0,-2), vec4( 0, 0,-2,-1), vec4( 0, 0,-1,-2)};
+const std::vector<vec4> rook_delta = {vec4( 1, 0, 0, 0), vec4(-1, 0, 0, 0), vec4( 0, 1, 0, 0), vec4( 0,-1, 0, 0), vec4( 0, 0, 1, 0), vec4( 0, 0,-1, 0), vec4( 0, 0, 0, 1), vec4( 0, 0, 0,-1)};
+const std::vector<vec4> bishop_delta = {vec4( 1, 1, 0, 0), vec4(-1, 1, 0, 0), vec4( 1,-1, 0, 0), vec4(-1,-1, 0, 0), vec4( 1, 0, 1, 0), vec4(-1, 0, 1, 0), vec4( 1, 0,-1, 0), vec4(-1, 0,-1, 0), vec4( 1, 0, 0, 1), vec4(-1, 0, 0, 1), vec4( 1, 0, 0,-1), vec4(-1, 0, 0,-1), vec4( 0, 1, 1, 0), vec4( 0,-1, 1, 0), vec4( 0, 1,-1, 0), vec4( 0,-1,-1, 0), vec4( 0, 1, 0, 1), vec4( 0,-1, 0, 1), vec4( 0, 1, 0,-1), vec4( 0,-1, 0,-1), vec4( 0, 0, 1, 1), vec4( 0, 0,-1, 1), vec4( 0, 0, 1,-1), vec4( 0, 0,-1,-1)};
+const std::vector<vec4> unicorn_delta = {vec4( 1, 1, 1, 0), vec4(-1, 1, 1, 0), vec4( 1,-1, 1, 0), vec4(-1,-1, 1, 0), vec4( 1, 1,-1, 0), vec4(-1, 1,-1, 0), vec4( 1,-1,-1, 0), vec4(-1,-1,-1, 0), vec4( 1, 1, 0, 1), vec4(-1, 1, 0, 1), vec4( 1,-1, 0, 1), vec4(-1,-1, 0, 1), vec4( 1, 1, 0,-1), vec4(-1, 1, 0,-1), vec4( 1,-1, 0,-1), vec4(-1,-1, 0,-1), vec4( 1, 0, 1, 1), vec4(-1, 0, 1, 1), vec4( 1, 0,-1, 1), vec4(-1, 0,-1, 1), vec4( 1, 0, 1,-1), vec4(-1, 0, 1,-1), vec4( 1, 0,-1,-1), vec4(-1, 0,-1,-1), vec4( 0, 1, 1, 1), vec4( 0,-1, 1, 1), vec4( 0, 1,-1, 1), vec4( 0,-1,-1, 1), vec4( 0, 1, 1,-1), vec4( 0,-1, 1,-1), vec4( 0, 1,-1,-1), vec4( 0,-1,-1,-1)};
+const std::vector<vec4> dragon_delta = {vec4( 1, 1, 1, 1), vec4(-1, 1, 1, 1), vec4( 1,-1, 1, 1), vec4(-1,-1, 1, 1), vec4( 1, 1,-1, 1), vec4(-1, 1,-1, 1), vec4( 1,-1,-1, 1), vec4(-1,-1,-1, 1), vec4( 1, 1, 1,-1), vec4(-1, 1, 1,-1), vec4( 1,-1, 1,-1), vec4(-1,-1, 1,-1), vec4( 1, 1,-1,-1), vec4(-1, 1,-1,-1), vec4( 1,-1,-1,-1), vec4(-1,-1,-1,-1)};
+const std::vector<vec4> princess_delta = concat_vectors(rook_delta, bishop_delta);
+const std::vector<vec4> queen_delta = concat_vectors(rook_delta, bishop_delta, unicorn_delta, dragon_delta);
+const std::vector<vec4> pawn_unmoved_white_delta = {vec4( 0, 2, 0, 0), vec4( 0, 0, 0,-2)};
+const std::vector<vec4> pawn_white_delta = {vec4( 0, 1, 0, 0), vec4( 0, 0, 0,-1)};
+const std::vector<vec4> pawn_white_capture_delta = {vec4( 1, 1, 0, 0), vec4(-1, 1, 0, 0), vec4( 0, 0, 1,-1), vec4( 0, 0,-1,-1)};
+const std::vector<vec4> pawn_unmoved_black_delta = {vec4( 0,-2, 0, 0), vec4( 0, 0, 0, 2)};
+const std::vector<vec4> pawn_black_delta = {vec4( 0,-1, 0, 0), vec4( 0, 0, 0, 1)};
+const std::vector<vec4> pawn_black_capture_delta = {vec4( 1,-1, 0, 0), vec4(-1,-1, 0, 0), vec4( 0, 0, 1, 1), vec4( 0, 0,-1, 1)};
 
 namespace views = std::ranges::views;
 
-vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
+std::vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color)
 {
     std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), board_color);
     piece_t p_piece = get_piece(p, board_color);
@@ -249,7 +243,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
     {
         p_piece = static_cast<piece_t>(p_piece | 0x80);
     }
-    vector<vec4> result;
+    std::vector<vec4> result;
     auto is_blank = [&](vec4 d)
     {
         piece_t q_piece = get_piece(p+d, board_color);
@@ -291,11 +285,11 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
         }
         return false;
     };
-    auto multiple_moves = [&](const vector<vec4>& delta)
+    auto multiple_moves = [&](const std::vector<vec4>& delta)
     {
-        vector<vec4> res;
+        std::vector<vec4> res;
         //I wold prefer to write `vector<tuple<vec4,vec4>>` instead of `auto`, but clang++ and visual studio complain about different type errors
-        auto zipped_delta = std::views::zip(vector<vec4>(delta.size(), vec4(0,0,0,0)), delta) | ranges::to<vector>();
+        auto zipped_delta = std::views::zip(std::vector<vec4>(delta.size(), vec4(0,0,0,0)), delta) | std::ranges::to<std::vector>();
         while(!zipped_delta.empty())
         {
             for(std::tuple<vec4&, vec4> m : zipped_delta)
@@ -305,18 +299,18 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
             zipped_delta = zipped_delta | views::filter([&](auto x){
                 vec4 d = std::get<0>(x);
                 return delta_in_range(d);
-            }) | ranges::to<vector>();
+            }) | std::ranges::to<std::vector>();
             //print_range("after checking range:", zipped_delta);
             auto tmp = zipped_delta
             | views::transform([](auto elem){return std::get<0>(elem);})
             | views::filter(can_go_to)
-            | ranges::to<vector>();
+            | std::ranges::to<std::vector>();
             //print_range("tmp:", tmp);
             append_vectors(res, tmp);
             zipped_delta = zipped_delta | views::filter([&](auto x){
                 vec4 d = std::get<0>(x);
                 return is_blank(d);
-            }) | ranges::to<vector>();
+            }) | std::ranges::to<std::vector>();
         }
         return res;
     };
@@ -328,7 +322,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
             result = knight_delta
             | views::filter(delta_in_range)
             | views::filter(can_go_to)
-            | ranges::to<vector>();
+            | std::ranges::to<std::vector>();
             break;
         case ROOK_UW:
         case ROOK_UB:
@@ -355,10 +349,10 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
         case ROYAL_QUEEN_B:
             if(!b_ptr->is_under_attack(p.xy(), board_color))
             {
-                result = vector<vec4>{vec4(-1,0,0,0), vec4(1,0,0,0)}
+                result = std::vector<vec4>{vec4(-1,0,0,0), vec4(1,0,0,0)}
                 | views::filter(good_castling_direction)
                 | views::transform([](vec4 v){return v+v;})
-                | ranges::to<vector>();
+                | std::ranges::to<std::vector>();
             }
         case QUEEN_W:
         case QUEEN_B:
@@ -368,10 +362,10 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
         case KING_UB:
             if(!b_ptr->is_under_attack(p.xy(), board_color))
             {
-                result = vector<vec4>{vec4(-1,0,0,0), vec4(1,0,0,0)}
+                result = std::vector<vec4>{vec4(-1,0,0,0), vec4(1,0,0,0)}
                 | views::filter(good_castling_direction)
                 | views::transform([](vec4 v){return v+v;})
-                | ranges::to<vector>();
+                | std::ranges::to<std::vector>();
             }
         case COMMON_KING_W:
         case COMMON_KING_B:
@@ -380,7 +374,7 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
             append_vectors(result, queen_delta
             | views::filter(delta_in_range)
             | views::filter(can_go_to)
-            | ranges::to<vector>());
+            | std::ranges::to<std::vector>());
             break;
         case PAWN_UW:
             for(int i = 0; i < 2; i++)
@@ -479,8 +473,225 @@ vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
     return result;
 }
 
+#else //USE_LEAGACY_GENMOVE
+
+
+//#define GEN_MOVE(piece) \
+//template<> bitboard_t multiverse::gen_physical_move<piece,false>(vec4) const; \
+//template<> bitboard_t multiverse::gen_physical_move<piece,true>(vec4) const; \
+//template<> std::vector<multiverse::tagged_bb> multiverse::gen_superphysical_move<piece,false>(vec4) const; \
+//template<> std::vector<multiverse::tagged_bb> multiverse::gen_superphysical_move<piece,true>(vec4) const;
+//
+//GEN_MOVE(KING_W)
+//GEN_MOVE(KING_B)
+//GEN_MOVE(COMMON_KING_W)
+//GEN_MOVE(COMMON_KING_B)
+//GEN_MOVE(ROOK_W)
+//GEN_MOVE(ROOK_B)
+//GEN_MOVE(BISHOP_W)
+//GEN_MOVE(BISHOP_B)
+//GEN_MOVE(QUEEN_W)
+//GEN_MOVE(QUEEN_B)
+//GEN_MOVE(PRINCESS_W)
+//GEN_MOVE(PRINCESS_B)
+//GEN_MOVE(PAWN_W)
+//GEN_MOVE(BRAWN_W)
+//GEN_MOVE(PAWN_B)
+//GEN_MOVE(BRAWN_B)
+//GEN_MOVE(PAWN_UW)
+//GEN_MOVE(BRAWN_UW)
+//GEN_MOVE(PAWN_UB)
+//GEN_MOVE(BRAWN_UB)
+//GEN_MOVE(KNIGHT_W)
+//GEN_MOVE(KNIGHT_B)
+//GEN_MOVE(UNICORN_W)
+//GEN_MOVE(UNICORN_B)
+//GEN_MOVE(DRAGON_W)
+//GEN_MOVE(DRAGON_B)
+//
+//#undef GEN_MOVE
+
+
+
+template std::vector<multiverse::tagged_bb> multiverse::gen_superphysical_move<KING_W, false>(vec4) const;
+
+/************************************
+ 
+ *
+ **
+ ***
+ *****
+ ******
+ *******
+ */
+
+std::vector<vec4> multiverse::gen_piece_move(const vec4& p, int board_color) const
+{
+    std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), board_color);
+    piece_t p_piece = get_piece(p, board_color);
+    const bool p_color = piece_color(p_piece);
+    if(get_umove_flag(p, board_color))
+    {
+        p_piece = static_cast<piece_t>(p_piece | 0x80);
+    }
+    std::vector<multiverse::tagged_bb> mvbbs;
+    switch(p_piece)
+    {
+        case KING_W:
+            mvbbs = gen_superphysical_move<KING_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<KING_W, 0>(p)));
+            break;
+        case KING_B:
+            mvbbs = gen_superphysical_move<KING_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<KING_B, 1>(p)));
+            break;
+        case COMMON_KING_W:
+            mvbbs = gen_superphysical_move<COMMON_KING_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<COMMON_KING_W, 0>(p)));
+            break;
+        case COMMON_KING_B:
+            mvbbs = gen_superphysical_move<COMMON_KING_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<COMMON_KING_B, 1>(p)));
+            break;
+        case ROOK_W:
+            mvbbs = gen_superphysical_move<ROOK_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<ROOK_W, 0>(p)));
+            break;
+        case ROOK_B:
+            mvbbs = gen_superphysical_move<ROOK_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<ROOK_B, 1>(p)));
+            break;
+        case BISHOP_W:
+            mvbbs = gen_superphysical_move<BISHOP_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<BISHOP_W, 0>(p)));
+            break;
+        case BISHOP_B:
+            mvbbs = gen_superphysical_move<BISHOP_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<BISHOP_B, 1>(p)));
+            break;
+        case QUEEN_W:
+            mvbbs = gen_superphysical_move<QUEEN_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<QUEEN_W, 0>(p)));
+            break;
+        case QUEEN_B:
+            mvbbs = gen_superphysical_move<QUEEN_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<QUEEN_B, 1>(p)));
+            break;
+        case PRINCESS_W:
+            mvbbs = gen_superphysical_move<PRINCESS_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<PRINCESS_W, 0>(p)));
+            break;
+        case PRINCESS_B:
+            mvbbs = gen_superphysical_move<PRINCESS_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<PRINCESS_B, 1>(p)));
+            break;
+        case PAWN_W:
+            mvbbs = gen_superphysical_move<PAWN_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<PAWN_W, 0>(p)));
+            break;
+        case BRAWN_W:
+            mvbbs = gen_superphysical_move<BRAWN_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<BRAWN_W, 0>(p)));
+            break;
+        case PAWN_B:
+            mvbbs = gen_superphysical_move<PAWN_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<PAWN_B, 1>(p)));
+            break;
+        case BRAWN_B:
+            mvbbs = gen_superphysical_move<BRAWN_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<BRAWN_B, 1>(p)));
+            break;
+        case PAWN_UW:
+            mvbbs = gen_superphysical_move<PAWN_UW, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<PAWN_UW, 0>(p)));
+            break;
+        case BRAWN_UW:
+            mvbbs = gen_superphysical_move<BRAWN_UW, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<BRAWN_UW, 0>(p)));
+            break;
+        case PAWN_UB:
+            mvbbs = gen_superphysical_move<PAWN_UB, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<PAWN_UB, 1>(p)));
+            break;
+        case BRAWN_UB:
+            mvbbs = gen_superphysical_move<BRAWN_UB, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<BRAWN_UB, 1>(p)));
+            break;
+        case KNIGHT_W:
+            mvbbs = gen_superphysical_move<KNIGHT_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<KNIGHT_W, 0>(p)));
+            break;
+        case KNIGHT_B:
+            mvbbs = gen_superphysical_move<KNIGHT_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<KNIGHT_B, 1>(p)));
+            break;
+        case UNICORN_W:
+            mvbbs = gen_superphysical_move<UNICORN_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<UNICORN_W, 0>(p)));
+            break;
+        case UNICORN_B:
+            mvbbs = gen_superphysical_move<UNICORN_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<UNICORN_B, 1>(p)));
+            break;
+        case DRAGON_W:
+            mvbbs = gen_superphysical_move<DRAGON_W, 0>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<DRAGON_W, 0>(p)));
+            break;
+        case DRAGON_B:
+            mvbbs = gen_superphysical_move<DRAGON_B, 1>(p);
+            mvbbs.push_back(std::make_tuple(p, gen_physical_move<DRAGON_B, 1>(p)));
+            break;
+        default:
+            // Handle unknown piece or add error handling if needed
+            break;
+    }
+    std::vector<vec4> result;
+    for(auto [q, bb] : mvbbs)
+    {
+        for(int pos : marked_pos(bb))
+        {
+            vec4 q = vec4(q.l(), q.t(), pos&((1<<BOARD_BITS)-1), pos>>BOARD_BITS) - p;
+            result.push_back(q);
+        }
+    }
+    return result;
+}
+
+#endif //USE_LEAGACY_GENMOVE
+
+
+constexpr std::initializer_list<vec4> orthogonal_dtls = {
+    vec4(0, 0, 0, 1),
+    vec4(0, 0, 0, -1),
+    vec4(0, 0, -1, 0)
+};
+
+constexpr std::initializer_list<vec4> diagonal_dtls = {
+    vec4(0, 0, 1, 1),
+    vec4(0, 0, 1, -1),
+    vec4(0, 0, -1, 1),
+    vec4(0, 0, -1, -1)
+};
+
+constexpr std::initializer_list<vec4> both_dtls = {
+    vec4(0, 0, 0, 1),
+    vec4(0, 0, 0, -1),
+    vec4(0, 0, -1, 0),
+    vec4(0, 0, 1, 1),
+    vec4(0, 0, 1, -1),
+    vec4(0, 0, -1, 1),
+    vec4(0, 0, -1, -1)
+};
+
+constexpr std::initializer_list<vec4> double_dtls = {
+    vec4(0, 0, 0, 2),
+    vec4(0, 0, 0, -2),
+    vec4(0, 0, -2, 0)
+};
+
+
 template<bool C>
-std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move(vec4 p0)
+std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move(vec4 p0) const
 {
     std::vector<tagged_bb> result;
     std::shared_ptr<board> b0_ptr = get_board(p0.l(), p0.t(), C);
@@ -493,7 +704,7 @@ std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move(vec4 p0)
     {
         lrook = b0_ptr->lrook() & b0_ptr->white();
     }
-    for(auto delta : {vec4(0,1,0,0), vec4(1,0,0,0), vec4(-1,0,0,0)})
+    for(auto delta : orthogonal_dtls)
     {
         bitboard_t remaining = lrook;
         for(vec4 p1 = p0; remaining && inbound(p1, C); p1=p1+delta)
@@ -521,12 +732,12 @@ std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move(vec4 p0)
     return result;
 }
 
-template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move<0>(vec4 p0);
-template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move<1>(vec4 p0);
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move<0>(vec4 p0) const;
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_rook_move<1>(vec4 p0) const;
 
 
 template<bool C>
-std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move(vec4 p0)
+std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move(vec4 p0) const
 {
     std::vector<tagged_bb> result;
     std::shared_ptr<board> b0_ptr = get_board(p0.l(), p0.t(), C);
@@ -539,7 +750,7 @@ std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move(vec4 p0
     {
         lbishop = b0_ptr->lbishop() & b0_ptr->white();
     }
-    for(auto delta : {vec4(1,1,0,0), vec4(1,-1,0,0), vec4(-1,1,0,0), vec4(-1,-1,0,0)})
+    for(auto delta : diagonal_dtls)
     {
         bitboard_t remaining = lbishop;
         for(vec4 p1 = p0; remaining && inbound(p1, C); p1=p1+delta)
@@ -567,12 +778,12 @@ std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move(vec4 p0
     return result;
 }
 
-template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<0>(vec4 p0);
-template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<1>(vec4 p0);
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<false>(vec4) const;
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<true>(vec4) const;
 
 
 template<bool C>
-std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_knight_move(vec4 p0)
+std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_knight_move(vec4 p0) const
 {
     std::vector<tagged_bb> result;
     std::shared_ptr<board> b0_ptr = get_board(p0.l(), p0.t(), C);
@@ -585,7 +796,8 @@ std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_knight_move(vec4 p0
     {
         lknight = b0_ptr->lknight() & b0_ptr->white();
     }
-    const static vector<vec4> knight_pure_sp_delta = {vec4(2, 1, 0, 0), vec4(1, 2, 0, 0), vec4(-2, 1, 0, 0), vec4(1, -2, 0, 0), vec4(2, -1, 0, 0), vec4(-1, 2, 0, 0), vec4(-2, -1, 0, 0), vec4(-1, -2, 0, 0)};
+    const static std::vector<vec4> knight_pure_sp_delta = {vec4(0, 0, 2, 1), vec4(0, 0, 1, 2), vec4(0, 0, -2, 1), vec4(0, 0, 1, -2),
+        vec4(0, 0, 2, -1), vec4(0, 0, -1, 2), vec4(0, 0, -2, -1), vec4(0, 0, -1, -2)};
     for(vec4 delta : knight_pure_sp_delta)
     {
         vec4 p1 = p0 + delta;
@@ -609,8 +821,8 @@ std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_knight_move(vec4 p0
     return result;
 }
 
-template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<0>(vec4 p0);
-template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<1>(vec4 p0);
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<0>(vec4) const;
+template<> std::vector<multiverse::tagged_bb> multiverse::gen_purely_sp_bishop_move<1>(vec4) const;
 
 
 template<piece_t P, bool C>
@@ -634,7 +846,7 @@ bitboard_t multiverse::gen_physical_move(vec4 p) const
         bitboard_t urook = b_ptr->umove() & b_ptr->rook() & friendly;
         if(!b_ptr->is_under_attack(p.xy(), C))
         {
-            for(vec4 d : {vec4(0,0,1,0), vec4(0,0,-1,0)})
+            for(vec4 d : {vec4(1,0,0,0), vec4(-1,0,0,0)})
             {
                 int i = 0;
                 for(vec4 c = d; !c.outbound(); c = c + d)
@@ -733,53 +945,23 @@ bitboard_t multiverse::gen_physical_move(vec4 p) const
 	return a;
 }
 
-#define GEN_MOVE(piece) \
-template<> bitboard_t multiverse::gen_physical_move<piece,0>(vec4) const; \
-template<> bitboard_t multiverse::gen_physical_move<piece,1>(vec4) const;
-
-GEN_MOVE(KING_W)
-GEN_MOVE(KING_B)
-GEN_MOVE(COMMON_KING_W)
-GEN_MOVE(COMMON_KING_B)
-GEN_MOVE(ROOK_W)
-GEN_MOVE(ROOK_B)
-GEN_MOVE(BISHOP_W)
-GEN_MOVE(BISHOP_B)
-GEN_MOVE(QUEEN_W)
-GEN_MOVE(QUEEN_B)
-GEN_MOVE(PRINCESS_W)
-GEN_MOVE(PRINCESS_B)
-GEN_MOVE(PAWN_W)
-GEN_MOVE(BRAWN_W)
-GEN_MOVE(PAWN_B)
-GEN_MOVE(BRAWN_B)
-GEN_MOVE(KNIGHT_W)
-GEN_MOVE(KNIGHT_B)
-GEN_MOVE(UNICORN_W)
-GEN_MOVE(UNICORN_B)
-GEN_MOVE(DRAGON_W)
-GEN_MOVE(DRAGON_B)
-
-#undef GEN_MOVE
-
-const std::vector<vec4> orthogonal_dtls = {vec4(1,0,0,0), vec4(0,1,0,0), vec4(0,-1,0,0)};
-const std::vector<vec4> diagonal_dtls = {vec4(1,1,0,0), vec4(1,-1,0,0), vec4(-1,1,0,0), vec4(-1,-1,0,0)};
-const std::vector<vec4> both_dtls = concat_vectors(orthogonal_dtls, diagonal_dtls);
 
 template<bool C, multiverse::axesmode TL, multiverse::axesmode XY>
-void multiverse::gen_compound_moves(vec4 p, std::vector<multiverse::tagged_bb>& result)
+void multiverse::gen_compound_moves(vec4 p, std::vector<multiverse::tagged_bb>& result) const
 {
     int pos = p.xy();
     bitboard_t occ = 0;
     bitboard_t fri = 0;
     bitboard_t copy_mask;
     
-    constexpr std::vector<vec4> deltas = (TL==multiverse::axesmode::ORTHOGONAL) ? orthogonal_dtls : (TL==multiverse::axesmode::DIAGONAL) ? diagonal_dtls : both_dtls;
+    constexpr auto deltas = (TL==multiverse::axesmode::ORTHOGONAL) ? orthogonal_dtls : (TL==multiverse::axesmode::DIAGONAL) ? diagonal_dtls : both_dtls;
+    
+    constexpr auto copy_mask_fn = (TL==multiverse::axesmode::ORTHOGONAL) ? rook_copy_mask : (TL==multiverse::axesmode::DIAGONAL) ? bishop_copy_mask : queen_copy_mask;
 
     for(vec4 d : deltas)
     {
         vec4 q = p;
-        for (int n = 1; (copy_mask = bishop_copy_mask(pos, 1)); n++) 
+        for (int n = 1; (copy_mask = copy_mask_fn(pos, 1)); n++)
         {
             q = q + d;
             std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
@@ -797,7 +979,7 @@ void multiverse::gen_compound_moves(vec4 p, std::vector<multiverse::tagged_bb>& 
         }
         else
         {
-            static_assert(false, "Are you sure with this option?\n");
+            loc &= queen_attack(pos, occ);
         }
         q = p;
         for (int n = 1; (copy_mask = bishop_copy_mask(pos, 1)); n++) 
@@ -823,23 +1005,17 @@ std::vector<multiverse::tagged_bb> multiverse::gen_superphysical_move(vec4 p) co
     int l = p.l(), t = p.t(), pos = p.xy();
     if constexpr (P == KING_W | P == KING_B | P == COMMON_KING_W | P == COMMON_KING_B)
     {
-        const static vector<vec4> ds = {vec4(1,0,0,0), vec4(1,1,0,0), vec4(0,1,0,0), vec4(-1,1,0,0), vec4(-1,0,0,0), vec4(-1,-1,0,0), vec4(0,-1,0,0), vec4(1,-1,0,0)};
-        for(auto d : ds)
+        for(auto d : both_dtls)
         {
             vec4 q = p+d;
             if(inbound(q, C))
             {
                 std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
-                bitboard_t friendly;
-                if constexpr(C)
+                bitboard_t bb = king_jump_attack(pos) & ~b_ptr->friendly<C>();
+                if(bb)
                 {
-                    friendly = b_ptr->black();
+                    result.push_back(std::make_tuple(q, bb));
                 }
-                else
-                {
-                    friendly = b_ptr->white();
-                }
-                result.push_back(std::make_tuple(q, king_jump_attack(pos) & ~friendly));
             }
         }
     }
@@ -875,15 +1051,188 @@ std::vector<multiverse::tagged_bb> multiverse::gen_superphysical_move(vec4 p) co
     }
     else if (P == QUEEN_W | P == QUEEN_B)
     {
+        bitboard_t z = pmask(p.xy());
+        for(auto [index, bb] : gen_purely_sp_rook_move<C>(p))
+        {
+            bitboard_t bb1 = bb & z;
+            if(bb1)
+            {
+                result.push_back(std::make_tuple(index, bb1));
+            }
+        }
+        for(auto [index, bb] : gen_purely_sp_bishop_move<C>(p))
+        {
+            bitboard_t bb1 = bb & z;
+            if(bb1)
+            {
+                result.push_back(std::make_tuple(index, bb1));
+            }
+        }
+        gen_compound_moves<C, multiverse::axesmode::BOTH, multiverse::axesmode::BOTH>(p, result);
+        
     }
-    else if (P == PAWN_B | P == BRAWN_B)
+    else if (P == PAWN_W | P == BRAWN_W | P == PAWN_UW | P == BRAWN_UW)
     {
+        bitboard_t z = pmask(pos);
+        // pawn capture
+        static std::vector<vec4> pawn_w_cap_tl_delta = {vec4(0, 0, 1, 1), vec4(0, 0, -1, 1)};
+        for(vec4 d : pawn_w_cap_tl_delta)
+        {
+            vec4 q = p + d;
+            if(inbound(q, C))
+            {
+                std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
+                bitboard_t bb = z & b_ptr->hostile<C>();
+                if(bb)
+                {
+                    result.push_back(std::make_tuple(q, bb));
+                }
+            }
+        }
+        // normal pawn movement -- bitboard saved in the very end of the if block
+        vec4 q = p + vec4(0,0,0,1);
+        if(inbound(q, C))
+        {
+            std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
+            bitboard_t bb = z & ~b_ptr->occupied();
+            if(bb)
+            {
+                // unmoved pawn movement
+                if constexpr(P == PAWN_UW | P == BRAWN_UW)
+                {
+                    vec4 r = q + vec4(0,0,0,1);
+                    std::shared_ptr<board> b1_ptr = get_board(r.l(), r.t(), C);
+                    bitboard_t bc = z & ~b_ptr->occupied();
+                    if(bc)
+                    {
+                        result.push_back(std::make_tuple(r, bc));
+                    }
+                }
+            }
+            // brawn capture
+            if constexpr(P == BRAWN_W | P == BRAWN_UW)
+            {
+                bitboard_t mask = shift_north(z) | shift_west(z) | shift_east(z);
+                bb |= mask & b_ptr->hostile<C>();
+            }
+            if(bb)
+            {
+                result.push_back(std::make_tuple(q, bb));
+            }
+        }
+        if constexpr(P == BRAWN_W | P == BRAWN_UW)
+        {
+            vec4 s = p + vec4(0,1,-1,0);
+            if(inbound(s, C))
+            {
+                std::shared_ptr<board> b2_ptr = get_board(s.l(), s.t(), C);
+                bitboard_t bd = shift_north(z) & ~b2_ptr->occupied();
+                if(bd)
+                {
+                    result.push_back(std::make_tuple(s, bd));
+                }
+            }
+        }
     }
-    else if (P == PAWN_W | P == BRAWN_W)
+    else if (P == PAWN_B | P == BRAWN_B | P == PAWN_UB | P == BRAWN_UB)
     {
+        bitboard_t z = pmask(pos);
+        // pawn capture
+        static std::vector<vec4> pawn_w_cap_tl_delta = {vec4(0, 0, 1, -1), vec4(0, 0, -1, -1)};
+        for(vec4 d : pawn_w_cap_tl_delta)
+        {
+            vec4 q = p + d;
+            if(inbound(q, C))
+            {
+                std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
+                bitboard_t bb = z & b_ptr->hostile<C>();
+                if(bb)
+                {
+                    result.push_back(std::make_tuple(q, bb));
+                }
+            }
+        }
+        // normal pawn movement -- bitboard saved in the very end of the if block
+        vec4 q = p + vec4(0,0,0,-1);
+        if(inbound(q, C))
+        {
+            std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
+            bitboard_t bb = z & ~b_ptr->occupied();
+            if(bb)
+            {
+                // unmoved pawn movement
+                if constexpr(P == PAWN_UW | P == BRAWN_UW)
+                {
+                    vec4 r = q + vec4(0,0,0,-1);
+                    std::shared_ptr<board> b1_ptr = get_board(r.l(), r.t(), C);
+                    bitboard_t bc = z & ~b_ptr->occupied();
+                    if(bc)
+                    {
+                        result.push_back(std::make_tuple(r, bc));
+                    }
+                }
+            }
+            // brawn capture
+            if constexpr(P == BRAWN_W | P == BRAWN_UW)
+            {
+                bitboard_t mask = shift_south(z) | shift_west(z) | shift_east(z);
+                bb |= mask & b_ptr->hostile<C>();
+            }
+            if(bb)
+            {
+                result.push_back(std::make_tuple(q, bb));
+            }
+        }
+        if constexpr(P == BRAWN_W | P == BRAWN_UW)
+        {
+            vec4 s = p + vec4(0,1,-1,0);
+            if(inbound(s, C))
+            {
+                std::shared_ptr<board> b2_ptr = get_board(s.l(), s.t(), C);
+                bitboard_t bd = shift_north(z) & ~b2_ptr->occupied();
+                if(bd)
+                {
+                    result.push_back(std::make_tuple(s, bd));
+                }
+            }
+        }
     }
     else if (P == KNIGHT_W | P == KNIGHT_B)
     {
+        for(auto [index, bb] : gen_purely_sp_knight_move<C>(p))
+        {
+            bitboard_t bb1 = bb & pmask(pos);
+            if(bb1)
+            {
+                result.push_back(std::make_tuple(index, bb1));
+            }
+        }
+        for(auto d : orthogonal_dtls)
+        {
+            vec4 q = p+d;
+            if(inbound(q, C))
+            {
+                std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
+                bitboard_t bb = knight_jump1_attack(pos) & ~b_ptr->friendly<C>();
+                if(bb)
+                {
+                    result.push_back(std::make_tuple(q, bb));
+                }
+            }
+        }
+        for(auto d : double_dtls)
+        {
+            vec4 q = p+d;
+            if(inbound(q, C))
+            {
+                std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
+                bitboard_t bb = knight_jump2_attack(pos) & ~b_ptr->friendly<C>();
+                if(bb)
+                {
+                    result.push_back(std::make_tuple(q, bb));
+                }
+            }
+        }
     }
     else if (P == UNICORN_W | P == UNICORN_B)
     {
@@ -896,7 +1245,9 @@ std::vector<multiverse::tagged_bb> multiverse::gen_superphysical_move(vec4 p) co
     }
     else
     {
-        std::cerr << "gen_physical_move:" << P << "not implemented" << std::endl;
+        std::cerr << "gen_superphysical_move:" << P << "not implemented" << std::endl;
     }
     return result;
 }
+
+
