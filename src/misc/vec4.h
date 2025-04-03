@@ -32,10 +32,10 @@ class vec4 {
 public:
     constexpr vec4(int x, int y, int t, int l)
     {
-        value = (l << (T_BITS + Y_BITS + X_BITS) & L_MASK)
-              | (t << (Y_BITS + X_BITS) & T_MASK)
-              | (y << X_BITS & Y_MASK)
-              | (x & X_MASK);
+        value = (static_cast<unsigned int>(l) << (T_BITS + Y_BITS + X_BITS) & L_MASK)
+              | (static_cast<unsigned int>(t) << (Y_BITS + X_BITS) & T_MASK)
+              | (static_cast<unsigned int>(y) << X_BITS & Y_MASK)
+              | (static_cast<unsigned int>(x) & X_MASK);
     }
     constexpr int l() const
     {

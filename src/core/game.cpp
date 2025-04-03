@@ -78,7 +78,7 @@ bool game::is_playable (vec4 p) const
             piece_t p_piece = cs.m.get_piece(p, cs.player);
             if(p_piece != NO_PIECE)
             {
-                return cs.player == piece_color(p_piece);
+                return cs.player == static_cast<int>(piece_color(p_piece));
             }
         }
     }

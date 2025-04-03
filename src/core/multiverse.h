@@ -19,6 +19,8 @@
 #include "vec4.h"
 
 
+//#define USE_LEAGACY_GENMOVE
+
 /*
  Behavior of copying a multiverse object is just copy the vector of vectors of pointers to the boards. It does not perform deep-copy of a board object. (Which is expected.)
  */
