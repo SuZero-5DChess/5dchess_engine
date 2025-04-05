@@ -24,22 +24,21 @@
 /*
  Behavior of copying a multiverse object is just copy the vector of vectors of pointers to the boards. It does not perform deep-copy of a board object. (Which is expected.)
  */
-class multiverse {
+class multiverse
+{
 protected:
     std::vector<std::vector<std::shared_ptr<board>>> boards;
     
 private:
-    using tagged_bb = std::tuple<vec4,bitboard_t>;
     enum class axesmode {ORTHOGONAL, DIAGONAL, BOTH};
+    
     template<bool C, axesmode TL, axesmode XY>
-    void gen_compound_moves(vec4 p, std::vector<tagged_bb>& result) const;
+    void gen_compound_moves(vec4 p, std::map<vec4, bitboard_t>& result) const;
 public:
     
     // the following data are derivated from boards:
     int l_min, l_max;
     std::vector<int> timeline_start, timeline_end;
-    
-    //map<string, string> metadata;
 
     multiverse(const std::string& input);
     
@@ -60,23 +59,24 @@ public:
     std::tuple<int,int> get_present() const;
     bool is_active(int l) const;
 
-    std::vector<vec4> gen_piece_move(const vec4& p, int board_color) const;
+    std::map<vec4, bitboard_t> gen_move(vec4 p, int board_color) const;
+    std::vector<vec4> gen_piece_move(vec4 p, int board_color) const;
     
     
     template<piece_t P, bool C>
     bitboard_t gen_physical_move(vec4 p) const;
     
     template<piece_t P, bool C>
-    std::vector<tagged_bb> gen_superphysical_move(vec4 p) const;
+    std::map<vec4, bitboard_t> gen_superphysical_move(vec4 p) const;
     
     template<bool C>
-    std::vector<tagged_bb> gen_purely_sp_rook_move(vec4 p) const;
+    std::map<vec4, bitboard_t> gen_purely_sp_rook_move(vec4 p) const;
     
     template<bool C>
-    std::vector<multiverse::tagged_bb> gen_purely_sp_bishop_move(vec4 p0) const;
+    std::map<vec4, bitboard_t> gen_purely_sp_bishop_move(vec4 p0) const;
     
     template<bool C>
-    std::vector<multiverse::tagged_bb> gen_purely_sp_knight_move(vec4 p0) const;
+    std::map<vec4, bitboard_t> gen_purely_sp_knight_move(vec4 p0) const;
     
     /*
      The following static functions describe the correspondence between two coordinate systems: L,T and u,v

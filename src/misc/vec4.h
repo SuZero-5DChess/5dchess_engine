@@ -21,10 +21,10 @@ class vec4 {
     vec4_t value;
     
     constexpr vec4(vec4_t v) : value(v) {}
-    constexpr static int m_l = 1U << (L_BITS-1);
-    constexpr static int m_t = 1U << (T_BITS-1);
-    constexpr static int m_y = 1U << (Y_BITS-1);
-    constexpr static int m_x = 1U << (X_BITS-1);
+    constexpr static vec4_t m_l = 1U << (L_BITS-1);
+    constexpr static vec4_t m_t = 1U << (T_BITS-1);
+    constexpr static vec4_t m_y = 1U << (Y_BITS-1);
+    constexpr static vec4_t m_x = 1U << (X_BITS-1);
     constexpr static vec4_t u_x = 1, u_y = u_x << X_BITS, u_t = u_y << Y_BITS, u_l = u_t << T_BITS;
     constexpr static vec4_t L_MASK = 0 - u_l, T_MASK = u_l - u_t, Y_MASK = u_t - u_y, X_MASK = u_y - u_x;
     constexpr static vec4_t mask_top = (u_x << (X_BITS-1)) | (u_y << (Y_BITS-1)) | (u_t << (T_BITS-1)) | (u_l << (L_BITS-1));
@@ -39,22 +39,22 @@ public:
     }
     constexpr int l() const
     {
-        int w = value >> (T_BITS + Y_BITS + X_BITS);
+        int w = static_cast<int>(value >> (T_BITS + Y_BITS + X_BITS));
         return (w ^ m_l) - m_l;
     }
     constexpr int t() const
     {
-        int w = (value & T_MASK) >> (Y_BITS + X_BITS);
+        int w = static_cast<int>((value & T_MASK) >> (Y_BITS + X_BITS));
         return (w ^ m_t) - m_t;
     }
     constexpr int y() const
     {
-        int w = (value & Y_MASK) >> Y_BITS;
+        int w = static_cast<int>((value & Y_MASK) >> Y_BITS);
         return (w ^ m_y) - m_y;
     }
     constexpr int x() const
     {
-        int x = value & X_MASK;
+        int x = static_cast<int>(value & X_MASK);
         return (x ^ m_x) - m_x;
     }
     constexpr vec4 operator +(const vec4& v) const
@@ -78,9 +78,9 @@ public:
         return vec4(scalar*x(), scalar*y(), scalar*t(), scalar*l());
     }
     constexpr bool operator ==(const vec4&) const = default;
-    constexpr bool operator <=>(const vec4& other) const
+    constexpr auto operator <=>(const vec4& other) const
     {
-        return value - other.value;
+        return value <=> other.value;
     }
     friend std::ostream& operator<<(std::ostream& os, const vec4& v)
     {
@@ -103,6 +103,12 @@ public:
     {
         constexpr int mask_x = 0b111, mask_y = 0b111000, y_shift = X_BITS-3;
         return (value & mask_x) | (value >> y_shift & mask_y);
+    }
+    vec4 tl() const
+    {
+        vec4 result = *this;
+        result.value &= (L_MASK | T_MASK);
+        return result;
     }
 };
 
