@@ -387,7 +387,7 @@ int main()
     }
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double, std::milli>(end - start).count();
-    std::cout << "totally " << pgns.size() << " games runned, took " << duration << " ms\n";
+    std::cout << "totally " << pgns.size() << " games ran, took " << duration << " ms\n";
     std::cout << "average time per game: " << duration/pgns.size() << " ms\n";
     std::cout << "average time per move: " << duration/count << " ms\n";
     

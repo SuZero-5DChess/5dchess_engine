@@ -14,33 +14,53 @@
 #include <utility>
 #include <map>
 #include <memory>
-#include <ranges>
 #include "board.h"
 #include "vec4.h"
 
 
-//#define USE_LEAGACY_GENMOVE
 
 /*
  Behavior of copying a multiverse object is just copy the vector of vectors of pointers to the boards. It does not perform deep-copy of a board object. (Which is expected.)
  */
 class multiverse
 {
-protected:
+private:
     std::vector<std::vector<std::shared_ptr<board>>> boards;
     
-private:
+    using mv_cache_t = std::map<vec4, std::map<vec4, bitboard_t>>;
+    mutable mv_cache_t sp_rook_moves_w, sp_rook_moves_b;
+    mutable mv_cache_t sp_bishop_moves_w, sp_bishop_moves_b;
+    mutable mv_cache_t sp_knight_moves_w, sp_knight_moves_b;
+    mutable mv_cache_t all_moves_w, all_moves_b;
+    
+    // move generation for each pieces
     enum class axesmode {ORTHOGONAL, DIAGONAL, BOTH};
     
     template<bool C, axesmode TL, axesmode XY>
     void gen_compound_moves(vec4 p, std::map<vec4, bitboard_t>& result) const;
-public:
     
+    template<piece_t P, bool C>
+    bitboard_t gen_physical_moves(vec4 p) const;
+    
+    template<piece_t P, bool C>
+    std::map<vec4, bitboard_t> gen_superphysical_moves(vec4 p) const;
+    
+    template<bool C>
+    std::map<vec4, bitboard_t> gen_purely_sp_rook_moves(vec4 p) const;
+    
+    template<bool C>
+    std::map<vec4, bitboard_t> gen_purely_sp_bishop_moves(vec4 p0) const;
+    
+    template<bool C>
+    std::map<vec4, bitboard_t> gen_purely_sp_knight_moves(vec4 p0) const;
+public:
     // the following data are derivated from boards:
     int l_min, l_max;
     std::vector<int> timeline_start, timeline_end;
 
     multiverse(const std::string& input);
+    multiverse(const multiverse& other);
+    multiverse& operator=(const multiverse& other);
     
     std::shared_ptr<board> get_board(int l, int t, int c) const;
     void insert_board(int l, int t, int c, const std::shared_ptr<board>& b_ptr);
@@ -52,31 +72,20 @@ public:
     bool get_umove_flag(vec4 a, int color) const;
     
     int number_activated() const;
-    // This helper function returns (number_activated, present_t, current_player)
-    // where: number_activated is max(abs(white's activated lines), abs(black's activated lines))
-    //        present_t is the time of present in L,T coordinate
-    //        present_c is either 0 (for white) or 1 (for black)
+    /*
+     This helper function returns (present_t, present_c)
+     where: present_t is the time of present in L,T coordinate
+            present_c is either 0 (for white) or 1 (for black)
+     */
     std::tuple<int,int> get_present() const;
     bool is_active(int l) const;
-
-    std::map<vec4, bitboard_t> gen_move(vec4 p, int board_color) const;
+    
+    template<bool C>
+    std::map<vec4, bitboard_t> gen_moves(vec4 p) const;
+    
     std::vector<vec4> gen_piece_move(vec4 p, int board_color) const;
     
     
-    template<piece_t P, bool C>
-    bitboard_t gen_physical_move(vec4 p) const;
-    
-    template<piece_t P, bool C>
-    std::map<vec4, bitboard_t> gen_superphysical_move(vec4 p) const;
-    
-    template<bool C>
-    std::map<vec4, bitboard_t> gen_purely_sp_rook_move(vec4 p) const;
-    
-    template<bool C>
-    std::map<vec4, bitboard_t> gen_purely_sp_bishop_move(vec4 p0) const;
-    
-    template<bool C>
-    std::map<vec4, bitboard_t> gen_purely_sp_knight_move(vec4 p0) const;
     
     /*
      The following static functions describe the correspondence between two coordinate systems: L,T and u,v

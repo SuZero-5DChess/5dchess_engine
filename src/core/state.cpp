@@ -1,6 +1,5 @@
 #include "state.h"
 #include <algorithm>
-#include <ranges>
 #include "utils.h"
 
 state::state(multiverse mtv) : m(mtv)
@@ -51,9 +50,20 @@ bool state::apply_move(full_move fm)
             vec4 q = p+d;
             if constexpr (!UNSAFE)
             {
-                std::vector<vec4> moves = m.gen_piece_move(p, player);
-                // is this a viable move? (not counting checking)
-                if(!std::ranges::contains(moves, d))
+                vec4 q = p+d;
+                std::map<vec4, bitboard_t> mvbbs = player ? m.gen_moves<true>(p) : m.gen_moves<false>(p);
+                auto it = mvbbs.find(q.tl());
+                // is it a pseudolegal move?
+                if(it != mvbbs.end())
+                {
+                    bitboard_t bb = mvbbs[q.tl()];
+                    if(!(pmask(q.xy()) & bb))
+                    {
+                        flag = false;
+                        return;
+                    }
+                }
+                else
                 {
                     flag = false;
                     return;
