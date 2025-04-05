@@ -61,7 +61,7 @@ constexpr bitboard_t shift_northwest(bitboard_t b)
 }
 constexpr bitboard_t shift_northeast(bitboard_t b)
 {
-    return (b & ~a_file) << (BOARD_LENGTH + 1);
+    return (b & ~h_file) << (BOARD_LENGTH + 1);
 }
 constexpr bitboard_t shift_southwest(bitboard_t b)
 {
@@ -69,7 +69,7 @@ constexpr bitboard_t shift_southwest(bitboard_t b)
 }
 constexpr bitboard_t shift_southeast(bitboard_t b)
 {
-    return (b & ~a_file) >> (BOARD_LENGTH - 1);
+    return (b & ~h_file) >> (BOARD_LENGTH - 1);
 }
 
 constexpr int bb_get_pos(bitboard_t b)

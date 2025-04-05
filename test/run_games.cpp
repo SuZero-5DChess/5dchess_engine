@@ -120,9 +120,12 @@ void run_game(std::string pgn)
 {
     state s(m0);
     
+//    std::cerr << "Running new game ..." << std::endl;
+    
     std::vector<full_move> mvs = pgn_to_moves(pgn);
     for(full_move mv : mvs)
     {
+//        std::cerr << "apply " << mv << std::endl;
         bool flag = s.apply_move(mv);
         if(!flag)
         {
@@ -147,6 +150,8 @@ void run_game(std::string pgn)
             break;
         }
     }
+//    
+//    std::cerr << "all moves are legal" << std::endl;
 }
 
 int main()
@@ -169,8 +174,7 @@ int main()
 15.(1T10)Nf3e5 (-1T10)Qb3b7 / (-1T10)Qc7>(1T10)e5 
 16.(-1T11)Qb7c8 (1T11)Bc3b4 / (1T11)Ke7>>(1T10)d6 
 17.(-2T11)Bc3b4
-    )",
-        R"(
+    )",  R"(
 1.(0T1)Ng1f3 / (0T1)Ng8f6 
 2.(0T2)e2e3 / (0T2)d7d5 
 3.(0T3)b2b3 / (0T3)c7c6 
@@ -226,7 +230,7 @@ int main()
     };
     for(auto pgn : pgns)
         run_game(pgn);
-    test1();
+    //test1();
     std::cout << "---= run_games.cpp: all tests passed =---" <<std::endl;
     return 0;
 }

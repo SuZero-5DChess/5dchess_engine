@@ -60,33 +60,35 @@ const std::array<bitboard_t, BOARD_SIZE> king_attack_data = generate_array(std::
 
 const std::array<bitboard_t, BOARD_SIZE*BOARD_LENGTH> rook_copy_mask_data = generate_array(std::make_index_sequence<BOARD_SIZE*BOARD_LENGTH>{}, [](size_t key) -> bitboard_t
 {
-    size_t pos = key & ((1 << BOARD_LENGTH) - 1), n = key >> BOARD_BITS;
+    size_t pos = key & ((1 << (BOARD_BITS*2)) - 1);
+    size_t n = key >> (BOARD_BITS*2);
     bitboard_t a, b, c, d, bb = 0;
-    a = b = c = d = bitboard_t(1) << pos;
-    for(int i = 1; i < n; i++)
+    a = b = c = d = pmask(static_cast<int>(pos));
+    for(int i = 0; i < n; i++)
     {
         a = shift_north(a);
         b = shift_south(b);
         c = shift_west(c);
         d = shift_east(d);
-        bb |= a | b | c | d;
     }
+    bb = a | b | c | d;
     return bb;
 });
 
 const std::array<bitboard_t, BOARD_SIZE*BOARD_LENGTH> bishop_copy_mask_data = generate_array(std::make_index_sequence<BOARD_SIZE*BOARD_LENGTH>{}, [](size_t key) -> bitboard_t
 {
-    size_t pos = key & ((1 << BOARD_LENGTH) - 1), n = key >> BOARD_BITS;
+    size_t pos = key & ((1 << (BOARD_BITS*2)) - 1);
+    size_t n = key >> (BOARD_BITS*2);
     bitboard_t a, b, c, d, bb = 0;
-    a = b = c = d = bitboard_t(1) << pos;
-    for(int i = 1; i < n; i++)
+    a = b = c = d = pmask(static_cast<int>(pos));
+    for(int i = 0; i < n; i++)
     {
         a = shift_northwest(a);
         b = shift_northeast(b);
         c = shift_southwest(c);
         d = shift_southeast(d);
-        bb |= a | b | c | d;
     }
+    bb = a | b | c | d;
     return bb;
 });
 
