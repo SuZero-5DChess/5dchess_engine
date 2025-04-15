@@ -5,6 +5,7 @@
 #include <tuple>
 #include <string>
 #include <map>
+#include <set>
 #include "state.h"
 
 class game {
@@ -19,6 +20,9 @@ public:
     std::vector<std::tuple<int,int,int,std::string>> get_current_boards() const;
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_current_timeline_status() const;
     std::vector<vec4> gen_move_if_playable(vec4 p);
+    
+    match_status_t get_match_status() const;
+    std::vector<vec4> get_critical_coords() const;
     
     bool is_playable(vec4 p) const;
     bool can_undo() const;

@@ -80,14 +80,19 @@ multiverse& multiverse::operator=(const multiverse& other)
     if (this != &other)
     {
         boards = other.boards;
-        sp_rook_moves_w.clear();
-        sp_bishop_moves_w.clear();
-        sp_knight_moves_w.clear();
-        sp_rook_moves_b.clear();
-        sp_bishop_moves_b.clear();
-        sp_knight_moves_b.clear();
+        clear_cache();
     }
     return *this;
+}
+
+void multiverse::clear_cache() const
+{
+    sp_rook_moves_w.clear();
+    sp_bishop_moves_w.clear();
+    sp_knight_moves_w.clear();
+    sp_rook_moves_b.clear();
+    sp_bishop_moves_b.clear();
+    sp_knight_moves_b.clear();
 }
 
 int multiverse::number_activated() const
@@ -249,13 +254,13 @@ template<bool C>
 std::map<vec4, bitboard_t> multiverse::gen_moves(vec4 p) const
 {
     auto& all_moves = C ? all_moves_b : all_moves_w;
-    if(all_moves.contains(p))
-    {
-        return all_moves[p];
-    }
+//    if(all_moves.contains(p))
+//    {
+//        std::cerr << "use cached value in gen_moves for " << p << std::endl;
+//        return all_moves[p];
+//    }
     std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), C);
     piece_t p_piece = get_piece(p, C);
-    const bool p_color = piece_color(p_piece);
     if(get_umove_flag(p, C))
     {
         p_piece = static_cast<piece_t>(p_piece | 0x80);
@@ -455,7 +460,6 @@ std::map<vec4, bitboard_t> multiverse::gen_purely_sp_rook_moves(vec4 p0) const
         for(vec4 p1 = p0 + d; remaining && inbound(p1, C); p1 = p1 + d)
         {
             std::shared_ptr<board> b1_ptr = get_board(p1.l(), p1.t(), C);
-            bitboard_t friendly, hostile;
             remaining &= ~b1_ptr->friendly<C>();
             if(remaining)
             {
@@ -486,7 +490,6 @@ std::map<vec4, bitboard_t> multiverse::gen_purely_sp_bishop_moves(vec4 p0) const
         for(vec4 p1 = p0 + d; remaining && inbound(p1, C); p1 = p1 + d)
         {
             std::shared_ptr<board> b1_ptr = get_board(p1.l(), p1.t(), C);
-            bitboard_t friendly, hostile;
             remaining &= ~b1_ptr->friendly<C>();
             if(remaining)
             {
@@ -722,7 +725,7 @@ template<piece_t P, bool C>
 std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
 {
     std::map<vec4, bitboard_t> result;
-    int l = p.l(), t = p.t(), pos = p.xy();
+    int pos = p.xy();
     if constexpr (P == KING_W || P == KING_B || P == COMMON_KING_W || P == COMMON_KING_B || P == KING_UW || P == KING_UB)
     {
         for(auto d : both_dtls)
@@ -820,11 +823,14 @@ std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
                 if constexpr(P == PAWN_UW || P == BRAWN_UW)
                 {
                     vec4 r = q + vec4(0,0,0,1);
-                    std::shared_ptr<board> b1_ptr = get_board(r.l(), r.t(), C);
-                    bitboard_t bc = z & ~b_ptr->occupied();
-                    if(bc)
+                    if(inbound(r,C))
                     {
-                        result[r.tl()] |= bc;
+                        std::shared_ptr<board> b1_ptr = get_board(r.l(), r.t(), C);
+                        bitboard_t bc = z & ~b_ptr->occupied();
+                        if(bc)
+                        {
+                            result[r.tl()] |= bc;
+                        }
                     }
                 }
             }
@@ -883,11 +889,14 @@ std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
                 if constexpr(P == PAWN_UW || P == BRAWN_UW)
                 {
                     vec4 r = q + vec4(0,0,0,-1);
-                    std::shared_ptr<board> b1_ptr = get_board(r.l(), r.t(), C);
-                    bitboard_t bc = z & ~b_ptr->occupied();
-                    if(bc)
+                    if(inbound(r,C))
                     {
-                        result[r.tl()] |= bc;
+                        std::shared_ptr<board> b1_ptr = get_board(r.l(), r.t(), C);
+                        bitboard_t bc = z & ~b_ptr->occupied();
+                        if(bc)
+                        {
+                            result[r.tl()] |= bc;
+                        }
                     }
                 }
             }

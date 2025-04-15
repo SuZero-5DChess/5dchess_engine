@@ -51,6 +51,8 @@ piece_t board::get_piece(int pos) const
             piece = BRAWN_W;
         else if(z & princess())
             piece = PRINCESS_W;
+        else
+            throw std::runtime_error("get_piece: unknown piece\n");
     }
     else if(z & bbs[BLACK])
     {
@@ -78,6 +80,8 @@ piece_t board::get_piece(int pos) const
             piece = BRAWN_B;
         else if(z & princess())
             piece = PRINCESS_B;
+        else
+            throw std::runtime_error("get_piece: unknown piece\n");
     }
     else
     {
@@ -203,7 +207,6 @@ bool board::is_under_attack(int pos, int color)
 {
     bitboard_t hostile = color ? white() : black();
     bitboard_t pawns = lpawn();
-    bitboard_t white_pawns = pawns & white();
     if(color == 0 && white_pawn_attack(pos) & pawns & hostile)
         return true;
     if(color != 0 && black_pawn_attack(pos) & pawns & hostile)

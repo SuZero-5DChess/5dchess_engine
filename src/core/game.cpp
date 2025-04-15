@@ -64,6 +64,20 @@ std::vector<vec4> game::gen_move_if_playable(vec4 p)
     }
 }
 
+match_status_t game::get_match_status() const
+{
+    return get_current_state().match_status;
+}
+
+std::vector<vec4> game::get_critical_coords() const
+{
+    state s = get_current_state();
+    std::set<vec4> cc = s.find_check().critical_coords;
+    std::vector<vec4> v;
+    v.assign(cc.begin(), cc.end());
+    return v;
+}
+
 bool game::is_playable (vec4 p) const
 {
     auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_current_timeline_status();

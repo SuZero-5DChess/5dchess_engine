@@ -24,6 +24,7 @@ t0_fen = """
 g = engine.game(t0_fen)
 game_data = {}
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -62,7 +63,7 @@ def handle_click(data):
         moves = [{'x':q.x(), 'y':q.y(), 't':q.t(), 'l':q.l(), 'c':present_c} for q in qs]
         hl = [
             {
-                'color':'#ff8080',
+                'color':'#ff80c0',
                 'coordinates':[{'x':pos.x(), 'y':pos.y(), 't':pos.t(), 'l':pos.l(), 'c':c}]
             },
             {
@@ -114,7 +115,16 @@ def convert_boards_data(boards):
 def display(hl=[]):
     mandatory, optional, unplayable = g.get_current_timeline_status()
     present_t, present_c = g.get_current_present()
-    emit('response_text', ('white' if present_c==0 else 'black')+"'s move")
+    critical = g.get_critical_coords()
+    cc = [{'x':q.x(), 'y':q.y(), 't':q.t(), 'l':q.l(), 'c':present_c} for q in critical]
+    match_status = g.get_match_status()
+    text = f"""
+<p>{'white' if present_c == 0 else 'black'}'s move</p>
+<p>{str(match_status)}</p>
+<p>{cc}</p>
+"""[1:-1]
+    is_game_over = match_status != engine.match_status_t.PLAYING
+    emit('response_text', text)
     new_data = {
         'submit-button': 'enabled' if g.can_submit() else 'disabled',
         'undo-button': 'enabled' if g.can_undo() else 'disabled',
@@ -146,6 +156,10 @@ def display(hl=[]):
                 'color':'#ffaaaa',
                 'timelines': unplayable,
             },
+            {
+                'color':'#a569bd',
+                'coordinates': cc,
+            }
         ] + hl
     }
     game_data.update(new_data)

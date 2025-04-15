@@ -43,6 +43,16 @@ PYBIND11_MODULE(engine, m) {
         .value("ROYAL_QUEEN_B", ROYAL_QUEEN_B)
         .value("COMMON_KING_B", COMMON_KING_B)
         .export_values();  // Exports the values for easy access
+    py::enum_<match_status_t>(m, "match_status_t")
+        .value("PLAYING", match_status_t::PLAYING)
+        .value("WHITE_WINS", match_status_t::WHITE_WINS)
+        .value("BLACK_WINS", match_status_t::BLACK_WINS)
+        .value("STALEMATE", match_status_t::STALEMATE)
+        .def("__str__", [](match_status_t status) {
+            std::ostringstream oss;
+            oss << status;
+            return oss.str();
+        });
     /*
     py::class_<board>(m, "board")
         .def(py::init<std::string, int, int>(), 
@@ -126,6 +136,8 @@ PYBIND11_MODULE(engine, m) {
         .def("get_current_present", &game::get_current_present)
         .def("get_current_timeline_status", &game::get_current_timeline_status)
         .def("gen_move_if_playable", &game::gen_move_if_playable)
+        .def("get_match_status", &game::get_match_status)
+        .def("get_critical_coords", &game::get_critical_coords)
         .def("is_playable", &game::is_playable)
         .def("can_undo", &game::can_undo)
         .def("can_redo", &game::can_redo)

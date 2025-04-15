@@ -78,6 +78,6 @@ constexpr static int ppos(int x, int y)
     return x|(y<<BOARD_BITS);
 }
 
-
+enum class match_status_t {PLAYING, WHITE_WINS, BLACK_WINS, STALEMATE};
 
 #endif //PIECE_H

@@ -148,8 +148,7 @@ void run_game(std::vector<full_move> mvs)
                     std::cerr << std::endl;
                 }
             }, mv.data);
-            throw std::runtime_error("");
-            break;
+            exit(-1);
         }
     }
 //    
