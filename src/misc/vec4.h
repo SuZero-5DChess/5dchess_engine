@@ -29,13 +29,24 @@ class vec4 {
     constexpr static vec4_t L_MASK = 0 - u_l, T_MASK = u_l - u_t, Y_MASK = u_t - u_y, X_MASK = u_y - u_x;
     constexpr static vec4_t mask_top = (u_x << (X_BITS-1)) | (u_y << (Y_BITS-1)) | (u_t << (T_BITS-1)) | (u_l << (L_BITS-1));
     constexpr static vec4_t mask_lower = ~mask_top;
+    constexpr static int mask_x = 0b111, mask_y = 0b111000, y_shift = X_BITS-3;
 public:
     constexpr vec4(int x, int y, int t, int l)
     {
-        value = (static_cast<unsigned int>(l) << (T_BITS + Y_BITS + X_BITS) & L_MASK)
-              | (static_cast<unsigned int>(t) << (Y_BITS + X_BITS) & T_MASK)
-              | (static_cast<unsigned int>(y) << X_BITS & Y_MASK)
-              | (static_cast<unsigned int>(x) & X_MASK);
+        unsigned int l0 = static_cast<unsigned int>(l);
+        unsigned int t0 = static_cast<unsigned int>(t);
+        unsigned int y0 = static_cast<unsigned int>(y);
+        unsigned int x0 = static_cast<unsigned int>(x);
+        value = (static_cast<vec4_t>(l0) << (T_BITS + Y_BITS + X_BITS) & L_MASK)
+              | (static_cast<vec4_t>(t0) << (Y_BITS + X_BITS) & T_MASK)
+              | (static_cast<vec4_t>(y0) << X_BITS & Y_MASK)
+              | (static_cast<vec4_t>(x0) & X_MASK);
+    }
+    constexpr vec4(int xy, vec4 tl)
+    {
+        value = (tl.value & (L_MASK | T_MASK))
+              | static_cast<vec4_t>((xy & mask_y) << y_shift)
+              | static_cast<vec4_t>(xy & mask_x);
     }
     constexpr int l() const
     {
@@ -101,7 +112,6 @@ public:
     }
     int xy() const
     {
-        constexpr int mask_x = 0b111, mask_y = 0b111000, y_shift = X_BITS-3;
         return (value & mask_x) | (value >> y_shift & mask_y);
     }
     vec4 tl() const

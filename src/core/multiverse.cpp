@@ -405,7 +405,7 @@ std::vector<vec4> multiverse::gen_piece_move(vec4 p, int board_color) const
     {
         for(int pos : marked_pos(bb))
         {
-            vec4 q = vec4(pos&((1<<BOARD_BITS)-1), pos>>BOARD_BITS, r.t(), r.l()) - p;
+            vec4 q = vec4(pos, r) - p;
 			//std::cerr << q << std::endl;
             result.push_back(q);
         }

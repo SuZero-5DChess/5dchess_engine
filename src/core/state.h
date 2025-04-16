@@ -29,7 +29,11 @@ struct state
     int new_line() const;
 
     bool can_submit() const;
-
+    
+    /*
+     apply_move: Apply move to the current state as a side effect. Return true if it is successfull.
+     Parameter `UNSAFE=true`: unsafe mode, does not check whether the pending move is pseudolegal or legal.
+     */
     template<bool UNSAFE = false>
     bool apply_move(full_move fm);
     
@@ -44,20 +48,27 @@ struct state
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_timeline_status() const;
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_timeline_status(int present_t, int present_v) const;
     
-    struct mobility_data
-    {
-        /*
-         if `is_check` is true, then `critical_coords` contains (usually just one) friendly piece that checks the opponents king
-         otherwise, `critical_coords` contains all friendly pieces that are able to perform at least one pseudolegal move
-         */
-        bool is_check;
-        std::set<vec4> critical_coords;
-    };
+    /*
+     find_check()
+     For the 'player' and 'present' that is told from the shape of the board (which might be newer than the states's present), test if that player is able to capture an enermy royal piece.
+     */
+    bool find_check() const;
     
-    mobility_data find_check();
-
+    /*
+     find_check_impl<C>(lines)
+     For all boards on the end of timelines specified in `lines` with color `C`,
+     test if one of piece on that board with color `C` can capture an enermy royal piece.
+     */
     template<bool C>
-    mobility_data find_check_impl() const;
+    bool find_check_impl(const std::vector<int>& lines) const;
+    
+    std::map<vec4, bitboard_t> gen_movable_pieces() const;
+    template<bool C>
+    std::map<vec4, bitboard_t> gen_movable_pieces_impl(const std::vector<int>& lines) const;
+    
+    std::vector<std::pair<vec4,vec4>> find_all_checks() const;
+    template<bool C>
+    std::vector<std::pair<vec4,vec4>> find_all_checks_impl(const std::vector<int>& lines) const;
 };
 
 std::ostream& operator<<(std::ostream& os, const match_status_t& status);

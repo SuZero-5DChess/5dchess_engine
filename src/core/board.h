@@ -38,7 +38,6 @@ public:
     constexpr bitboard_t white() const { return bbs[WHITE]; }
     constexpr bitboard_t black() const { return bbs[BLACK]; }
     
-    
     constexpr bitboard_t royal() const { return bbs[ROYAL]; }
 
     constexpr bitboard_t lking() const { return bbs[LKING]; }

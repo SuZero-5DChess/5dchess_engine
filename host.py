@@ -52,10 +52,29 @@ def handle_click(data):
     if pos in qs:
         fm = engine.full_move.move(p0, pos-p0)
         flag = g.apply_move(fm)
-        print('applying move ', fm, ' --success' if flag else ' --failure')
+        hl = []
+        if flag:
+            print('applying move ', fm, ' --success')
+        else:
+            flag = g.apply_indicator_move(fm)
+            if flag:
+                checks = g.get_current_checks()
+                arrows = []
+                for p, q in checks:
+                    arrows.append({
+                        'from': {'l':p.l(), 't': p.t(), 'x':p.x(), 'y':p.y(), 'c':1-present_c},
+                        'to': {'l':q.l(), 't': q.t(), 'x':q.x(), 'y':q.y(), 'c':1-present_c},
+                    })
+                hl = [
+                    {
+                        'color':'#ff1111',
+                        'arrows':arrows
+                    },
+                ]
+            print('applying move ', fm, ' --success (indicator)' if flag else ' --failure')
         #print(' now ', g.get_current_boards())
         qs = []
-        display()
+        display(hl)
     elif c == present_c:
         ds = g.gen_move_if_playable(pos)
         #print('ds = ', ds)
@@ -115,7 +134,7 @@ def convert_boards_data(boards):
 def display(hl=[]):
     mandatory, optional, unplayable = g.get_current_timeline_status()
     present_t, present_c = g.get_current_present()
-    critical = g.get_critical_coords()
+    critical = g.get_movable_pieces()
     cc = [{'x':q.x(), 'y':q.y(), 't':q.t(), 'l':q.l(), 'c':present_c} for q in critical]
     match_status = g.get_match_status()
     text = f"""

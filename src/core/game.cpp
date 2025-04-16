@@ -69,12 +69,17 @@ match_status_t game::get_match_status() const
     return get_current_state().match_status;
 }
 
-std::vector<vec4> game::get_critical_coords() const
+std::vector<vec4> game::get_movable_pieces() const
 {
     state s = get_current_state();
-    std::set<vec4> cc = s.find_check().critical_coords;
     std::vector<vec4> v;
-    v.assign(cc.begin(), cc.end());
+    for(const auto &[p0, bb] : s.gen_movable_pieces())
+    {
+        for(int pos : marked_pos(bb))
+        {
+            v.push_back(vec4(pos, p0));
+        }
+    }
     return v;
 }
 
@@ -146,4 +151,28 @@ bool game::apply_move(full_move fm)
         now = cached_states.end() - 1;
     }
     return flag;
+}
+
+bool game::apply_indicator_move(full_move fm)
+{
+    state new_state = *now;
+    if (std::holds_alternative<std::tuple<vec4,vec4>>(fm.data))
+    {
+        auto [p,d] = std::get<std::tuple<vec4,vec4>>(fm.data);
+        if(!is_playable(p))
+        {
+            return false;
+        }
+    }
+    new_state.apply_move(fm);
+    
+    cached_states.erase(now + 1, cached_states.end());
+    cached_states.push_back(new_state);
+    now = cached_states.end() - 1;
+    return true;
+}
+
+std::vector<std::pair<vec4, vec4>> game::get_current_checks() const
+{
+    return get_current_state().find_all_checks();
 }

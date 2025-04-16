@@ -137,7 +137,7 @@ PYBIND11_MODULE(engine, m) {
         .def("get_current_timeline_status", &game::get_current_timeline_status)
         .def("gen_move_if_playable", &game::gen_move_if_playable)
         .def("get_match_status", &game::get_match_status)
-        .def("get_critical_coords", &game::get_critical_coords)
+        .def("get_movable_pieces", &game::get_movable_pieces)
         .def("is_playable", &game::is_playable)
         .def("can_undo", &game::can_undo)
         .def("can_redo", &game::can_redo)
@@ -145,5 +145,7 @@ PYBIND11_MODULE(engine, m) {
         .def("undo", &game::undo)
         .def("redo", &game::redo)
         .def("apply_move", &game::apply_move, py::return_value_policy::reference)
+        .def("apply_indicator_move", &game::apply_indicator_move, py::return_value_policy::reference)
+        .def("get_current_checks", &game::get_current_checks)
         .def_readwrite("metadata", &game::metadata);  // Expose metadata map
 }

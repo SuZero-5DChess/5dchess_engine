@@ -22,7 +22,7 @@ public:
     std::vector<vec4> gen_move_if_playable(vec4 p);
     
     match_status_t get_match_status() const;
-    std::vector<vec4> get_critical_coords() const;
+    std::vector<vec4> get_movable_pieces() const;
     
     bool is_playable(vec4 p) const;
     bool can_undo() const;
@@ -31,6 +31,8 @@ public:
     void undo();
     void redo();
     bool apply_move(full_move fm);
+    bool apply_indicator_move(full_move fm);
+    std::vector<std::pair<vec4,vec4>> get_current_checks() const;
 };
 
 

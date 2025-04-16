@@ -170,16 +170,13 @@ bool state::apply_move(full_move fm)
             // is this a legal move? (check detection here)
             if constexpr (!UNSAFE)
             {
-                // cache the present line and temporarily "submit" the move
-                auto present0 = present, player0 = player;
-                auto [present_t, present_c] = m.get_present();
-                present = present_t;
-                player  = present_c;
-                mobility_data movable_pieces = find_check();
-                present = present0;
-                player = player0;
+                bool is_check = find_check();
+                flag = !is_check;
             }
-            flag = true;
+            else
+            {
+                flag = true;
+            }
         }
     }, fm.data);
     return flag;
@@ -206,7 +203,7 @@ std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_time
         else
         {
             auto [t, c] = multiverse::v_to_tc(v);
-            if(player==c)
+            if(present_c==c)
             {
                 optional_timelines.push_back(l);
             }
@@ -219,79 +216,226 @@ std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_time
     return std::make_tuple(mandatory_timelines, optional_timelines, unplayable_timelines);
 }
 
-state::mobility_data state::find_check()
+bool state::find_check() const
 {
-    state::mobility_data result;
-	if (player == 0)
+    auto [t0, c0] = m.get_present();
+    auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_timeline_status(t0, c0);
+    //    print_range("Mandatory: ", mandatory_timelines);
+    //    print_range("Optional: ", optional_timelines);
+    //    print_range("Unplayable: ", unplayable_timelines);
+    //
+    auto lines = concat_vectors(mandatory_timelines, optional_timelines);
+	if (c0 == 0)
 	{
-		result = find_check_impl<false>();
-        if (result.is_check)
-        {
-            match_status = match_status_t::WHITE_WINS;
-        }
+		return find_check_impl<false>(lines);
 	}
 	else
 	{
-		result = find_check_impl<true>();
-		if (result.is_check)
-		{
-			match_status = match_status_t::BLACK_WINS;
-		}
+		return find_check_impl<true>(lines);
 	}
-	if (!result.is_check && result.critical_coords.empty())
-	{
-		match_status = match_status_t::STALEMATE;
-	}
-    return result;
 }
 
 template<bool C>
-state::mobility_data state::find_check_impl() const
+bool state::find_check_impl(const std::vector<int>& lines) const
 {
-    std::set<vec4> movable, checking;
-    auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_timeline_status();
-//    print_range("Mandatory: ", mandatory_timelines);
-//    print_range("Optional: ", optional_timelines);
-//    print_range("Unplayable: ", unplayable_timelines);
-//    
-    for (int l : mandatory_timelines)
+    std::set<vec4> checking;
+//    std::cerr << "\nIn find_check_impl<" << C << ">(...):\n";
+    for (int l : lines)
     {
         // take the active board
         int v = m.timeline_end[multiverse::l_to_u(l)];
         auto [t, c] = multiverse::v_to_tc(v);
+//        std::cerr << c << " " << C << "\n";
         assert(c == C);
-        std::shared_ptr<board> b_ptr = m.get_board(l, t, player);
+        std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
         bitboard_t b_pieces = b_ptr->friendly<C>();
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {
-            vec4 p = vec4(src_pos & ((1 << BOARD_BITS) - 1), src_pos >> BOARD_BITS, t, l);
-            int count = 0;
+            vec4 p = vec4(src_pos, vec4(0,0,t,l));
             // generate the aviliable moves
             std::map<vec4, bitboard_t> moves = m.gen_moves<C>(p);
+//            std::cerr << "The allowed moves are: ";
+//            for(vec4 d : m.gen_piece_move(p, C))
+//            {
+//                std::cerr << full_move::move(p, d) << " ";
+//            }
+//            std::cerr << std::endl;
             // for each destination board and bit location
+//            std::cerr << "for piece " << m.get_piece(p, C) << " on " << p << ":\n";
             for (const auto& [q0, bb] : moves)
             {
-                std::shared_ptr<board> b1_ptr = m.get_board(q0.l(), q0.t(), player);
+//                std::cerr << "q0 = " << q0 << std::endl;
+                std::shared_ptr<board> b1_ptr = m.get_board(q0.l(), q0.t(), C);
                 if (bb)
                 {
                     // if the destination square is royal, this is a check
                     if (bb & b1_ptr->royal())
                     {
-                        checking.insert(p);
+                        return true;
                     }
-                    // otherwise, this is a nontrivial destination location
-                    // which implies the source piece is movable
-                    count++;
                 }
-            }
-            if (count > 0)
-            {
-                movable.insert(p);
             }
         }
     }
-    for (int l : optional_timelines)
+    return false;
+}
+
+
+std::vector<std::pair<vec4,vec4>> state::find_all_checks() const
+{
+    auto [t0, c0] = m.get_present();
+    auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_timeline_status(t0, c0);
+    auto lines = concat_vectors(mandatory_timelines, optional_timelines);
+    if (c0 == 0)
+    {
+        return find_all_checks_impl<false>(lines);
+    }
+    else
+    {
+        return find_all_checks_impl<true>(lines);
+    }
+}
+
+template<bool C>
+std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl(const std::vector<int>& lines) const
+{
+    std::vector<std::pair<vec4,vec4>> checking;
+    for (int l : lines)
+    {
+        // take the active board
+        int v = m.timeline_end[multiverse::l_to_u(l)];
+        auto [t, c] = multiverse::v_to_tc(v);
+        assert(c == C);
+        std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
+        bitboard_t b_pieces = b_ptr->friendly<C>();
+        // for each friendly piece on this board
+        for (int src_pos : marked_pos(b_pieces))
+        {
+            vec4 p = vec4(src_pos, vec4(0,0,t,l));
+            // generate the aviliable moves
+            std::map<vec4, bitboard_t> moves = m.gen_moves<C>(p);
+            // for each destination board and bit location
+            for (const auto& [q0, bb] : moves)
+            {
+                std::shared_ptr<board> b1_ptr = m.get_board(q0.l(), q0.t(), C);
+                if (bb)
+                {
+                    // if the destination square is royal, this is a check
+                    bitboard_t c_pieces = bb & b1_ptr->royal();
+                    if (c_pieces)
+                    {
+                        for(int dst_pos : marked_pos(c_pieces))
+                        {
+                            vec4 q = vec4(dst_pos, q0);
+                            checking.push_back(std::make_pair(p, q));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return checking;
+}
+
+
+std::map<vec4, bitboard_t> state::gen_movable_pieces() const
+{
+    auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_timeline_status(present, player);
+    auto lines = concat_vectors(mandatory_timelines, optional_timelines);
+    if (player == 0)
+    {
+        return gen_movable_pieces_impl<false>(lines);
+    }
+    else
+    {
+        return gen_movable_pieces_impl<true>(lines);
+    }
+}
+
+template <bool C>
+std::map<vec4, bitboard_t> state::gen_movable_pieces_impl(const std::vector<int> &lines) const
+{
+    std::map<vec4, bitboard_t> movable;
+    for (int l : lines)
+    {
+        // take the active board
+        int v = m.timeline_end[multiverse::l_to_u(l)];
+        auto [t, c] = multiverse::v_to_tc(v);
+        const vec4 p0 = vec4(0,0,t,l);
+        assert(c == C);
+        std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
+        bitboard_t b_pieces = b_ptr->friendly<C>();
+        // for each friendly piece on this board
+        for (int src_pos : marked_pos(b_pieces))
+        {
+            vec4 p = vec4(src_pos, p0);
+            // generate the aviliable moves
+            std::map<vec4, bitboard_t> moves = m.gen_moves<C>(p);
+            // for each destination board and bit location
+            bool still = true;
+            for (const auto& [q0, bb] : moves)
+            {
+                if (bb)
+                {
+                    still = false;
+                    break;
+                }
+            }
+            if(still)
+            {
+                // if this is a still pos, remove it mask
+                b_pieces &= ~pmask(src_pos);
+            }
+        }
+        if(b_pieces)
+        {
+            movable[p0] = b_pieces;
+        }
+    }
+    return movable;
+}
+
+/*
+bool state::find_all_checks()
+{
+    state::mobility_data result;
+    if (player == 0)
+    {
+        result = find_check_impl<false>();
+        if (result.is_check)
+        {
+            match_status = match_status_t::WHITE_WINS;
+        }
+    }
+    else
+    {
+        result = find_check_impl<true>();
+        if (result.is_check)
+        {
+            match_status = match_status_t::BLACK_WINS;
+        }
+    }
+    if (!result.is_check && result.critical_coords.empty())
+    {
+        match_status = match_status_t::STALEMATE;
+    }
+    return result;
+}
+
+
+template<bool C>
+state::mobility_data state::find_all_checks() const
+{
+    std::set<vec4> movable, checking;
+    auto [t0, c0] = m.get_present();
+    auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_timeline_status(t0, c0);
+//    print_range("Mandatory: ", mandatory_timelines);
+//    print_range("Optional: ", optional_timelines);
+//    print_range("Unplayable: ", unplayable_timelines);
+//
+    auto lines = concat_vectors(mandatory_timelines, optional_timelines);
+    for (int l : lines)
     {
         // take the active board
         int v = m.timeline_end[multiverse::l_to_u(l)];
@@ -341,6 +485,7 @@ state::mobility_data state::find_check_impl() const
     }
     return result;
 }
+*/
 
 std::ostream& operator<<(std::ostream& os, const match_status_t& status)
 {
@@ -365,6 +510,11 @@ std::ostream& operator<<(std::ostream& os, const match_status_t& status)
 template bool state::apply_move<false>(full_move);
 template bool state::apply_move<true>(full_move);
 
-template state::mobility_data state::find_check_impl<false>() const;
-template state::mobility_data state::find_check_impl<true>() const;
+template bool state::find_check_impl<false>(const std::vector<int>&) const;
+template bool state::find_check_impl<true>(const std::vector<int>&) const;
 
+template std::map<vec4, bitboard_t> state::gen_movable_pieces_impl<false>(const std::vector<int>&) const;
+template std::map<vec4, bitboard_t> state::gen_movable_pieces_impl<true>(const std::vector<int>&) const;
+
+template std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl<false>(const std::vector<int>&) const;
+template std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl<true>(const std::vector<int>&) const;
