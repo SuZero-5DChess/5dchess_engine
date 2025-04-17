@@ -140,7 +140,6 @@ def display(hl=[]):
     text = f"""
 <p>{'white' if present_c == 0 else 'black'}'s move</p>
 <p>{str(match_status)}</p>
-<p>{cc}</p>
 """[1:-1]
     is_game_over = match_status != engine.match_status_t.PLAYING
     emit('response_text', text)
@@ -155,9 +154,10 @@ def display(hl=[]):
         'present': {
             't': present_t,
             'c': present_c,
+            'color': 'rgba(219,172,52,0.4)' if not is_game_over else 'rgba(128,128,128,0.4)'
         },
         'focus': {
-            'l': 0,
+            'l': mandatory[0] if mandatory else (optional[0] if optional else 0),
             't': present_t,
             'c': present_c
         },

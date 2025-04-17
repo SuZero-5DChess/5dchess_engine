@@ -18,7 +18,7 @@ cmake ..
 make
 ```
 
-After that, *go to base directory* and run `main.py`. If the server starts smoothly, the chessboard can be found at <http://127.0.0.1:5000>.
+After that, *go to base directory* and run `host.py`. If the server starts smoothly, the chessboard can be found at <http://127.0.0.1:5000>.
 
 ### Usage (Windows)
 

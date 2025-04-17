@@ -218,28 +218,49 @@ std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_time
 
 bool state::find_check() const
 {
-    auto [t0, c0] = m.get_present();
-    auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_timeline_status(t0, c0);
-    //    print_range("Mandatory: ", mandatory_timelines);
-    //    print_range("Optional: ", optional_timelines);
-    //    print_range("Unplayable: ", unplayable_timelines);
-    //
-    auto lines = concat_vectors(mandatory_timelines, optional_timelines);
-	if (c0 == 0)
+    std::list<int> lines;
+    int next_v = multiverse::tc_to_v(present, player) + 1;
+    for(int l = m.l_min; l <= m.l_max; l++)
+    {
+        int v = m.timeline_end[multiverse::l_to_u(l)];
+        if (std::max(m.l_min, -m.number_activated()) <= l
+            && std::min(m.l_max, m.number_activated()) >= l
+            && v == next_v)
+        {
+            //if this board is on a mandatory line, then it is more likely to create a check
+            lines.push_front(l);
+        }
+        else
+        {
+            auto [t, c] = multiverse::v_to_tc(v);
+            if(player!=c)
+            {
+                //if this board is on an optional line, it is still possible to create a check
+                lines.push_back(l);
+            }
+        }
+    }
+    // find checks on the opponents timelines
+	if (player == 0)
 	{
-		return find_check_impl<false>(lines);
+		return find_check_impl<true>(lines);
 	}
 	else
 	{
-		return find_check_impl<true>(lines);
+		return find_check_impl<false>(lines);
 	}
 }
 
 template<bool C>
-bool state::find_check_impl(const std::vector<int>& lines) const
+bool state::find_check_impl(const std::list<int>& lines) const
 {
     std::set<vec4> checking;
-//    std::cerr << "\nIn find_check_impl<" << C << ">(...):\n";
+    std::cerr << "\nIn find_check_impl<" << C << ">(";
+    for(int l : lines)
+    {
+        std::cerr << l << ",";
+    }
+    std::cerr << "\b)\n";
     for (int l : lines)
     {
         // take the active board
@@ -284,21 +305,41 @@ bool state::find_check_impl(const std::vector<int>& lines) const
 
 std::vector<std::pair<vec4,vec4>> state::find_all_checks() const
 {
-    auto [t0, c0] = m.get_present();
-    auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_timeline_status(t0, c0);
-    auto lines = concat_vectors(mandatory_timelines, optional_timelines);
-    if (c0 == 0)
+    std::list<int> lines;
+    int next_v = multiverse::tc_to_v(present, player) + 1;
+    for(int l = m.l_min; l <= m.l_max; l++)
     {
-        return find_all_checks_impl<false>(lines);
+        int v = m.timeline_end[multiverse::l_to_u(l)];
+        if (std::max(m.l_min, -m.number_activated()) <= l
+            && std::min(m.l_max, m.number_activated()) >= l
+            && v == next_v)
+        {
+            //if this board is on a mandatory line, then it is more likely to create a check
+            lines.push_front(l);
+        }
+        else
+        {
+            auto [t, c] = multiverse::v_to_tc(v);
+            if(player!=c)
+            {
+                //if this board is on an optional line, it is still possible to create a check
+                lines.push_back(l);
+            }
+        }
+    }
+    // find checks on the opponents timelines
+    if (player == 0)
+    {
+        return find_all_checks_impl<true>(lines);
     }
     else
     {
-        return find_all_checks_impl<true>(lines);
+        return find_all_checks_impl<false>(lines);
     }
 }
 
 template<bool C>
-std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl(const std::vector<int>& lines) const
+std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl(const std::list<int>& lines) const
 {
     std::vector<std::pair<vec4,vec4>> checking;
     for (int l : lines)
@@ -510,11 +551,11 @@ std::ostream& operator<<(std::ostream& os, const match_status_t& status)
 template bool state::apply_move<false>(full_move);
 template bool state::apply_move<true>(full_move);
 
-template bool state::find_check_impl<false>(const std::vector<int>&) const;
-template bool state::find_check_impl<true>(const std::vector<int>&) const;
+template bool state::find_check_impl<false>(const std::list<int>&) const;
+template bool state::find_check_impl<true>(const std::list<int>&) const;
 
 template std::map<vec4, bitboard_t> state::gen_movable_pieces_impl<false>(const std::vector<int>&) const;
 template std::map<vec4, bitboard_t> state::gen_movable_pieces_impl<true>(const std::vector<int>&) const;
 
-template std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl<false>(const std::vector<int>&) const;
-template std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl<true>(const std::vector<int>&) const;
+template std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl<false>(const std::list<int>&) const;
+template std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl<true>(const std::list<int>&) const;
