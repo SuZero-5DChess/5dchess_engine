@@ -101,9 +101,10 @@ public:
     std::string to_string() const;
     std::string get_fen() const;
 
-    // the pieces (both white and black) that attacks a given square
-    bitboard_t attacks_to(int pos);
-    bool is_under_attack(int pos, int color);
+    // all the pieces (both white and black) that attacks a given square
+    bitboard_t attacks_to(int pos) const;
+	// pieces hositile to `color` that attacks a given square
+    bool is_under_attack(int pos, int color) const;
 };
 
 

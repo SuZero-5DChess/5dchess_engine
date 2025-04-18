@@ -251,6 +251,61 @@ bool multiverse::get_umove_flag(vec4 a, int color) const
  */
 
 template<bool C>
+std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves(vec4 p) const
+{
+    std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), C);
+    piece_t p_piece = b_ptr->get_piece(p.xy());
+    if (b_ptr->umove() & pmask(p.xy()))
+    {
+        p_piece = static_cast<piece_t>(p_piece | 0x80);
+    }
+    std::map<vec4, bitboard_t> mvbbs;
+    switch (p_piece)
+    {
+#define GENERATE_MOVES_CASE(PIECE) \
+        case PIECE: \
+            mvbbs = gen_superphysical_moves_impl<PIECE, C>(p); \
+            break;
+
+        GENERATE_MOVES_CASE(KING_W)
+        GENERATE_MOVES_CASE(KING_B)
+        GENERATE_MOVES_CASE(KING_UW)
+        GENERATE_MOVES_CASE(KING_UB)
+        GENERATE_MOVES_CASE(COMMON_KING_W)
+        GENERATE_MOVES_CASE(COMMON_KING_B)
+        GENERATE_MOVES_CASE(ROOK_W)
+        GENERATE_MOVES_CASE(ROOK_B)
+        GENERATE_MOVES_CASE(ROOK_UW)
+        GENERATE_MOVES_CASE(ROOK_UB)
+        GENERATE_MOVES_CASE(BISHOP_W)
+        GENERATE_MOVES_CASE(BISHOP_B)
+        GENERATE_MOVES_CASE(QUEEN_W)
+        GENERATE_MOVES_CASE(QUEEN_B)
+        GENERATE_MOVES_CASE(PRINCESS_W)
+        GENERATE_MOVES_CASE(PRINCESS_B)
+        GENERATE_MOVES_CASE(PAWN_W)
+        GENERATE_MOVES_CASE(BRAWN_W)
+        GENERATE_MOVES_CASE(PAWN_B)
+        GENERATE_MOVES_CASE(BRAWN_B)
+        GENERATE_MOVES_CASE(PAWN_UW)
+        GENERATE_MOVES_CASE(BRAWN_UW)
+        GENERATE_MOVES_CASE(PAWN_UB)
+        GENERATE_MOVES_CASE(BRAWN_UB)
+        GENERATE_MOVES_CASE(KNIGHT_W)
+        GENERATE_MOVES_CASE(KNIGHT_B)
+        GENERATE_MOVES_CASE(UNICORN_W)
+        GENERATE_MOVES_CASE(UNICORN_B)
+        GENERATE_MOVES_CASE(DRAGON_W)
+        GENERATE_MOVES_CASE(DRAGON_B)
+#undef GENERATE_MOVES_CASE
+    default:
+        throw std::runtime_error("Unknown piece " + std::string({ (char)piece_name(p_piece) }) + (p_piece & 0x80 ? "*" : "") + "\n");
+        break;
+    }
+	return mvbbs;
+}
+
+template<bool C>
 std::map<vec4, bitboard_t> multiverse::gen_moves(vec4 p) const
 {
     auto& all_moves = C ? all_moves_b : all_moves_w;
@@ -260,135 +315,51 @@ std::map<vec4, bitboard_t> multiverse::gen_moves(vec4 p) const
 //        return all_moves[p];
 //    }
     std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), C);
-    piece_t p_piece = get_piece(p, C);
-    if(get_umove_flag(p, C))
+    piece_t p_piece = b_ptr->get_piece(p.xy());
+	if (b_ptr->umove() & pmask(p.xy()))
     {
         p_piece = static_cast<piece_t>(p_piece | 0x80);
     }
     std::map<vec4, bitboard_t> mvbbs;
     switch(p_piece)
     {
-        case KING_W:
-            mvbbs = gen_superphysical_moves<KING_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<KING_W, C>(p);
-            break;
-        case KING_B:
-            mvbbs = gen_superphysical_moves<KING_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<KING_B, C>(p);
-            break;
-        case KING_UW:
-            mvbbs = gen_superphysical_moves<KING_UW, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<KING_UW, C>(p);
-            break;
-        case KING_UB:
-            mvbbs = gen_superphysical_moves<KING_UB, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<KING_UB, C>(p);
-            break;
-        case COMMON_KING_W:
-            mvbbs = gen_superphysical_moves<COMMON_KING_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<COMMON_KING_W, C>(p);
-            break;
-        case COMMON_KING_B:
-            mvbbs = gen_superphysical_moves<COMMON_KING_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<COMMON_KING_B, C>(p);
-            break;
-        case ROOK_W:
-            mvbbs = gen_superphysical_moves<ROOK_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<ROOK_W, C>(p);
-            break;
-        case ROOK_B:
-            mvbbs = gen_superphysical_moves<ROOK_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<ROOK_B, C>(p);
-            break;
-        case ROOK_UW:
-            mvbbs = gen_superphysical_moves<ROOK_UW, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<ROOK_UW, C>(p);
-            break;
-        case ROOK_UB:
-            mvbbs = gen_superphysical_moves<ROOK_UB, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<ROOK_UB, C>(p);
-            break;
-        case BISHOP_W:
-            mvbbs = gen_superphysical_moves<BISHOP_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<BISHOP_W, C>(p);
-            break;
-        case BISHOP_B:
-            mvbbs = gen_superphysical_moves<BISHOP_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<BISHOP_B, C>(p);
-            break;
-        case QUEEN_W:
-            mvbbs = gen_superphysical_moves<QUEEN_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<QUEEN_W, C>(p);
-            break;
-        case QUEEN_B:
-            mvbbs = gen_superphysical_moves<QUEEN_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<QUEEN_B, C>(p);
-            break;
-        case PRINCESS_W:
-            mvbbs = gen_superphysical_moves<PRINCESS_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<PRINCESS_W, C>(p);
-            break;
-        case PRINCESS_B:
-            mvbbs = gen_superphysical_moves<PRINCESS_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<PRINCESS_B, C>(p);
-            break;
-        case PAWN_W:
-            mvbbs = gen_superphysical_moves<PAWN_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<PAWN_W, C>(p);
-            break;
-        case BRAWN_W:
-            mvbbs = gen_superphysical_moves<BRAWN_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<BRAWN_W, C>(p);
-            break;
-        case PAWN_B:
-            mvbbs = gen_superphysical_moves<PAWN_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<PAWN_B, C>(p);
-            break;
-        case BRAWN_B:
-            mvbbs = gen_superphysical_moves<BRAWN_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<BRAWN_B, C>(p);
-            break;
-        case PAWN_UW:
-            mvbbs = gen_superphysical_moves<PAWN_UW, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<PAWN_UW, C>(p);
-            break;
-        case BRAWN_UW:
-            mvbbs = gen_superphysical_moves<BRAWN_UW, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<BRAWN_UW, C>(p);
-            break;
-        case PAWN_UB:
-            mvbbs = gen_superphysical_moves<PAWN_UB, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<PAWN_UB, C>(p);
-            break;
-        case BRAWN_UB:
-            mvbbs = gen_superphysical_moves<BRAWN_UB, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<BRAWN_UB, C>(p);
-            break;
-        case KNIGHT_W:
-            mvbbs = gen_superphysical_moves<KNIGHT_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<KNIGHT_W, C>(p);
-            break;
-        case KNIGHT_B:
-            mvbbs = gen_superphysical_moves<KNIGHT_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<KNIGHT_B, C>(p);
-            break;
-        case UNICORN_W:
-            mvbbs = gen_superphysical_moves<UNICORN_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<UNICORN_W, C>(p);
-            break;
-        case UNICORN_B:
-            mvbbs = gen_superphysical_moves<UNICORN_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<UNICORN_B, C>(p);
-            break;
-        case DRAGON_W:
-            mvbbs = gen_superphysical_moves<DRAGON_W, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<DRAGON_W, C>(p);
-            break;
-        case DRAGON_B:
-            mvbbs = gen_superphysical_moves<DRAGON_B, C>(p);
-            mvbbs[p.tl()] = gen_physical_moves<DRAGON_B, C>(p);
+#define GENERATE_MOVES_CASE(PIECE) \
+        case PIECE: \
+            mvbbs = gen_superphysical_moves_impl<PIECE, C>(p); \
+            mvbbs[p.tl()] = gen_physical_moves_impl<PIECE, C>(p); \
             break;
 
+        GENERATE_MOVES_CASE(KING_W)
+        GENERATE_MOVES_CASE(KING_B)
+        GENERATE_MOVES_CASE(KING_UW)
+        GENERATE_MOVES_CASE(KING_UB)
+        GENERATE_MOVES_CASE(COMMON_KING_W)
+        GENERATE_MOVES_CASE(COMMON_KING_B)
+        GENERATE_MOVES_CASE(ROOK_W)
+        GENERATE_MOVES_CASE(ROOK_B)
+        GENERATE_MOVES_CASE(ROOK_UW)
+        GENERATE_MOVES_CASE(ROOK_UB)
+        GENERATE_MOVES_CASE(BISHOP_W)
+        GENERATE_MOVES_CASE(BISHOP_B)
+        GENERATE_MOVES_CASE(QUEEN_W)
+        GENERATE_MOVES_CASE(QUEEN_B)
+        GENERATE_MOVES_CASE(PRINCESS_W)
+        GENERATE_MOVES_CASE(PRINCESS_B)
+        GENERATE_MOVES_CASE(PAWN_W)
+        GENERATE_MOVES_CASE(BRAWN_W)
+        GENERATE_MOVES_CASE(PAWN_B)
+        GENERATE_MOVES_CASE(BRAWN_B)
+        GENERATE_MOVES_CASE(PAWN_UW)
+        GENERATE_MOVES_CASE(BRAWN_UW)
+        GENERATE_MOVES_CASE(PAWN_UB)
+        GENERATE_MOVES_CASE(BRAWN_UB)
+        GENERATE_MOVES_CASE(KNIGHT_W)
+        GENERATE_MOVES_CASE(KNIGHT_B)
+        GENERATE_MOVES_CASE(UNICORN_W)
+        GENERATE_MOVES_CASE(UNICORN_B)
+        GENERATE_MOVES_CASE(DRAGON_W)
+        GENERATE_MOVES_CASE(DRAGON_B)
+#undef GENERATE_MOVES_CASE
         default:
             throw std::runtime_error("Unknown piece " + std::string({(char)piece_name(p_piece)}) + (p_piece & 0x80 ? "*": "") + "\n");
             break;
@@ -536,7 +507,7 @@ std::map<vec4, bitboard_t> multiverse::gen_purely_sp_knight_moves(vec4 p0) const
 
 
 template<piece_t P, bool C>
-bitboard_t multiverse::gen_physical_moves(vec4 p) const
+bitboard_t multiverse::gen_physical_moves_impl(vec4 p) const
 {
 	//int u = l_to_u(p.l()), v = tc_to_v(p.t(), board_color);
 	std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), C);
@@ -550,7 +521,7 @@ bitboard_t multiverse::gen_physical_moves(vec4 p) const
     {
         a = king_attack(p.xy()) & ~friendly;
     }
-    else if (P == KING_UW || P == KING_UB)
+    else if constexpr (P == KING_UW || P == KING_UB)
     {
         a = king_attack(p.xy()) & ~friendly;
         bitboard_t urook = b_ptr->umove() & b_ptr->rook() & friendly;
@@ -580,19 +551,19 @@ bitboard_t multiverse::gen_physical_moves(vec4 p) const
             }
         }
     }
-    else if (P == ROOK_W || P == ROOK_B || P == ROOK_UW || P == ROOK_UB)
+    else if constexpr (P == ROOK_W || P == ROOK_B || P == ROOK_UW || P == ROOK_UB)
     {
 		a = rook_attack(p.xy(), b_ptr->occupied()) & ~friendly;
 	}
-    else if (P == BISHOP_W || P == BISHOP_B)
+    else if constexpr (P == BISHOP_W || P == BISHOP_B)
     {
 		a = bishop_attack(p.xy(), b_ptr->occupied()) & ~friendly;
     }
-    else if (P == QUEEN_W || P == QUEEN_B || P == PRINCESS_W || P == PRINCESS_B)
+    else if constexpr (P == QUEEN_W || P == QUEEN_B || P == PRINCESS_W || P == PRINCESS_B)
     {
         a = queen_attack(p.xy(), b_ptr->occupied()) & ~friendly;
 	}
-    else if (P == PAWN_W || P == BRAWN_W || P == PAWN_UW || P == BRAWN_UW)
+    else if constexpr (P == PAWN_W || P == BRAWN_W || P == PAWN_UW || P == BRAWN_UW)
     {
         bitboard_t patt = white_pawn_attack(pos);
         // normal move and capture
@@ -616,7 +587,7 @@ bitboard_t multiverse::gen_physical_moves(vec4 p) const
             a |= shift_north(shift_north(z) & empty);
         }
     }
-    else if (P == PAWN_B || P == BRAWN_B || P == PAWN_UB || P == BRAWN_UB)
+    else if constexpr (P == PAWN_B || P == BRAWN_B || P == PAWN_UB || P == BRAWN_UB)
     {
         bitboard_t patt = black_pawn_attack(pos);
         // normal move and capture
@@ -640,17 +611,17 @@ bitboard_t multiverse::gen_physical_moves(vec4 p) const
             a |= shift_south(shift_south(z) & empty);
         }
     }
-	else if (P == KNIGHT_W || P == KNIGHT_B)
+	else if constexpr (P == KNIGHT_W || P == KNIGHT_B)
 	{
 		a = knight_attack(p.xy()) & ~friendly;
 	}
-    else if (P == UNICORN_W || P == UNICORN_B || P == DRAGON_W || P == DRAGON_B)
+    else if constexpr (P == UNICORN_W || P == UNICORN_B || P == DRAGON_W || P == DRAGON_B)
     {
         a = 0;
     }
 	else
 	{
-		std::cerr << "gen_physical_moves:" << P << "not implemented" << std::endl;
+		std::cerr << "gen_physical_moves_impl:" << P << "not implemented" << std::endl;
 	}
 	return a;
 }
@@ -722,7 +693,7 @@ void multiverse::gen_compound_moves(vec4 p, std::map<vec4, bitboard_t>& result) 
 }
 
 template<piece_t P, bool C>
-std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
+std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves_impl(vec4 p) const
 {
     std::map<vec4, bitboard_t> result;
     int pos = p.xy();
@@ -742,7 +713,7 @@ std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
             }
         }
     }
-    else if (P == ROOK_W || P == ROOK_B || P == ROOK_UW || P == ROOK_UB)
+    else if constexpr (P == ROOK_W || P == ROOK_B || P == ROOK_UW || P == ROOK_UB)
     {
         bitboard_t z = pmask(p.xy());
         for(auto [index, bb] : gen_purely_sp_rook_moves<C>(p))
@@ -754,7 +725,7 @@ std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
             }
         }
     }
-    else if (P == BISHOP_W || P == BISHOP_B)
+    else if constexpr (P == BISHOP_W || P == BISHOP_B)
     {
         bitboard_t z = pmask(p.xy());
         for(auto [index, bb] : gen_purely_sp_bishop_moves<C>(p))
@@ -767,12 +738,12 @@ std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
         }
         gen_compound_moves<C, multiverse::axesmode::ORTHOGONAL, multiverse::axesmode::ORTHOGONAL>(p, result);
     }
-    else if (P == PRINCESS_W || P == PRINCESS_B)
+    else if constexpr (P == PRINCESS_W || P == PRINCESS_B)
     {
-        result = gen_superphysical_moves<ROOK_W,C>(p);
-        result.merge(gen_superphysical_moves<BISHOP_W,C>(p));
+        result = gen_superphysical_moves_impl<ROOK_W,C>(p);
+        result.merge(gen_superphysical_moves_impl<BISHOP_W,C>(p));
     }
-    else if (P == QUEEN_W || P == QUEEN_B)
+    else if constexpr (P == QUEEN_W || P == QUEEN_B)
     {
         bitboard_t z = pmask(p.xy());
         for(auto [index, bb] : gen_purely_sp_rook_moves<C>(p))
@@ -793,7 +764,7 @@ std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
         }
         gen_compound_moves<C, multiverse::axesmode::BOTH, multiverse::axesmode::BOTH>(p, result);
     }
-    else if (P == PAWN_W || P == BRAWN_W || P == PAWN_UW || P == BRAWN_UW)
+    else if constexpr (P == PAWN_W || P == BRAWN_W || P == PAWN_UW || P == BRAWN_UW)
     {
         bitboard_t z = pmask(pos);
         // pawn capture
@@ -859,7 +830,7 @@ std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
             }
         }
     }
-    else if (P == PAWN_B || P == BRAWN_B || P == PAWN_UB || P == BRAWN_UB)
+    else if constexpr (P == PAWN_B || P == BRAWN_B || P == PAWN_UB || P == BRAWN_UB)
     {
         bitboard_t z = pmask(pos);
         // pawn capture
@@ -925,7 +896,7 @@ std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
             }
         }
     }
-    else if (P == KNIGHT_W || P == KNIGHT_B)
+    else if constexpr (P == KNIGHT_W || P == KNIGHT_B)
     {
         for(auto [index, bb] : gen_purely_sp_knight_moves<C>(p))
         {
@@ -962,77 +933,77 @@ std::map<vec4, bitboard_t>multiverse::gen_superphysical_moves(vec4 p) const
             }
         }
     }
-    else if (P == UNICORN_W || P == UNICORN_B)
+    else if constexpr (P == UNICORN_W || P == UNICORN_B)
     {
         gen_compound_moves<C, multiverse::axesmode::ORTHOGONAL, multiverse::axesmode::DIAGONAL>(p, result);
         gen_compound_moves<C, multiverse::axesmode::DIAGONAL, multiverse::axesmode::ORTHOGONAL>(p, result);
     }
-    else if (P == DRAGON_W || P == DRAGON_B)
+    else if constexpr (P == DRAGON_W || P == DRAGON_B)
     {
         gen_compound_moves<C, multiverse::axesmode::DIAGONAL, multiverse::axesmode::DIAGONAL>(p, result);
     }
     else
     {
-        std::cerr << "gen_superphysical_moves:" << P << "not implemented" << std::endl;
+        std::cerr << "gen_superphysical_moves_impl:" << P << "not implemented" << std::endl;
     }
     return result;
 }
 
 
 // Explicit instantiation of the template for specific types
-template bitboard_t multiverse::gen_physical_moves<KING_W, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<KING_B, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<KING_UW, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<KING_UB, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<COMMON_KING_W, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<COMMON_KING_B, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<ROOK_W, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<ROOK_B, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<ROOK_UW, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<ROOK_UB, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<BISHOP_W, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<BISHOP_B, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<QUEEN_W, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<QUEEN_B, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PRINCESS_W, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PRINCESS_B, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PAWN_W, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PAWN_B, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PAWN_UW, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PAWN_UB, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<KNIGHT_W, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<KNIGHT_B, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<UNICORN_W, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<UNICORN_B, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<DRAGON_W, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<DRAGON_B, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KING_W, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KING_B, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KING_UW, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KING_UB, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<COMMON_KING_W, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<COMMON_KING_B, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<ROOK_W, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<ROOK_B, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<ROOK_UW, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<ROOK_UB, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<BISHOP_W, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<BISHOP_B, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<QUEEN_W, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<QUEEN_B, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PRINCESS_W, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PRINCESS_B, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PAWN_W, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PAWN_B, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PAWN_UW, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PAWN_UB, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KNIGHT_W, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KNIGHT_B, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<UNICORN_W, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<UNICORN_B, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<DRAGON_W, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<DRAGON_B, true>(vec4 p) const;
 
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KING_W, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KING_B, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KING_UW, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KING_UB, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<COMMON_KING_W, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<COMMON_KING_B, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<ROOK_W, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<ROOK_B, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<ROOK_UW, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<ROOK_UB, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<BISHOP_W, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<BISHOP_B, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<QUEEN_W, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<QUEEN_B, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PRINCESS_W, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PRINCESS_B, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PAWN_W, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PAWN_B, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PAWN_UW, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PAWN_UB, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KNIGHT_W, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KNIGHT_B, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<UNICORN_W, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<UNICORN_B, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<DRAGON_W, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<DRAGON_B, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KING_W, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KING_B, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KING_UW, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KING_UB, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<COMMON_KING_W, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<COMMON_KING_B, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<ROOK_W, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<ROOK_B, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<ROOK_UW, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<ROOK_UB, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<BISHOP_W, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<BISHOP_B, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<QUEEN_W, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<QUEEN_B, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PRINCESS_W, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PRINCESS_B, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PAWN_W, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PAWN_B, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PAWN_UW, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PAWN_UB, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KNIGHT_W, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KNIGHT_B, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<UNICORN_W, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<UNICORN_B, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<DRAGON_W, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<DRAGON_B, true>(vec4 p) const;
 
 template std::map<vec4, bitboard_t> multiverse::gen_purely_sp_rook_moves<false>(vec4 p) const;
 template std::map<vec4, bitboard_t> multiverse::gen_purely_sp_rook_moves<true>(vec4 p) const;
@@ -1048,61 +1019,64 @@ template void multiverse::gen_compound_moves<true, multiverse::axesmode::DIAGONA
 template void multiverse::gen_compound_moves<false, multiverse::axesmode::BOTH, multiverse::axesmode::BOTH>(vec4 p, std::map<vec4, bitboard_t>& result) const;
 template void multiverse::gen_compound_moves<true, multiverse::axesmode::BOTH, multiverse::axesmode::BOTH>(vec4 p, std::map<vec4, bitboard_t>& result) const;
 
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<false>(vec4 p) const;
+
 template std::map<vec4, bitboard_t> multiverse::gen_moves<true>(vec4 p) const;
 template std::map<vec4, bitboard_t> multiverse::gen_moves<false>(vec4 p) const;
 
 // perhaps these template specializations will never get called
 // but I decide to include them for completeness & prevent disasterious compiler errors
-template bitboard_t multiverse::gen_physical_moves<KING_W, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<KING_B, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<KING_UW, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<KING_UB, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<COMMON_KING_W, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<COMMON_KING_B, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<ROOK_W, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<ROOK_B, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<ROOK_UW, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<ROOK_UB, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<BISHOP_W, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<BISHOP_B, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<QUEEN_W, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<QUEEN_B, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PRINCESS_W, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PRINCESS_B, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PAWN_W, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PAWN_B, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PAWN_UW, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<PAWN_UB, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<KNIGHT_W, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<KNIGHT_B, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<UNICORN_W, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<UNICORN_B, false>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<DRAGON_W, true>(vec4 p) const;
-template bitboard_t multiverse::gen_physical_moves<DRAGON_B, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KING_W, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KING_B, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KING_UW, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KING_UB, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<COMMON_KING_W, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<COMMON_KING_B, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<ROOK_W, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<ROOK_B, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<ROOK_UW, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<ROOK_UB, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<BISHOP_W, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<BISHOP_B, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<QUEEN_W, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<QUEEN_B, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PRINCESS_W, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PRINCESS_B, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PAWN_W, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PAWN_B, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PAWN_UW, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<PAWN_UB, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KNIGHT_W, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<KNIGHT_B, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<UNICORN_W, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<UNICORN_B, false>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<DRAGON_W, true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves_impl<DRAGON_B, false>(vec4 p) const;
 
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KING_W, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KING_B, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KING_UW, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KING_UB, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<COMMON_KING_W, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<COMMON_KING_B, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<ROOK_W, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<ROOK_B, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<ROOK_UW, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<ROOK_UB, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<BISHOP_W, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<BISHOP_B, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<QUEEN_W, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<QUEEN_B, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PRINCESS_W, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PRINCESS_B, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PAWN_W, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PAWN_B, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PAWN_UW, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<PAWN_UB, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KNIGHT_W, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<KNIGHT_B, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<UNICORN_W, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<UNICORN_B, false>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<DRAGON_W, true>(vec4 p) const;
-template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves<DRAGON_B, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KING_W, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KING_B, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KING_UW, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KING_UB, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<COMMON_KING_W, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<COMMON_KING_B, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<ROOK_W, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<ROOK_B, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<ROOK_UW, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<ROOK_UB, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<BISHOP_W, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<BISHOP_B, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<QUEEN_W, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<QUEEN_B, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PRINCESS_W, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PRINCESS_B, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PAWN_W, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PAWN_B, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PAWN_UW, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<PAWN_UB, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KNIGHT_W, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<KNIGHT_B, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<UNICORN_W, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<UNICORN_B, false>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<DRAGON_W, true>(vec4 p) const;
+template std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves_impl<DRAGON_B, false>(vec4 p) const;

@@ -39,12 +39,13 @@ private:
     template<bool C, axesmode TL, axesmode XY>
     void gen_compound_moves(vec4 p, std::map<vec4, bitboard_t>& result) const;
     
+
     template<piece_t P, bool C>
-    bitboard_t gen_physical_moves(vec4 p) const;
-    
+    bitboard_t gen_physical_moves_impl(vec4 p) const;
+
     template<piece_t P, bool C>
-    std::map<vec4, bitboard_t> gen_superphysical_moves(vec4 p) const;
-    
+    std::map<vec4, bitboard_t> gen_superphysical_moves_impl(vec4 p) const;
+
     template<bool C>
     std::map<vec4, bitboard_t> gen_purely_sp_rook_moves(vec4 p) const;
     
@@ -85,6 +86,9 @@ public:
     std::tuple<int,int> get_present() const;
     bool is_active(int l) const;
     
+    template<bool C>
+    std::map<vec4, bitboard_t> gen_superphysical_moves(vec4 p) const;
+
     template<bool C>
     std::map<vec4, bitboard_t> gen_moves(vec4 p) const;
     
