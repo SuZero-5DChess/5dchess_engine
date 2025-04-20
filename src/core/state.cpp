@@ -83,7 +83,7 @@ bool state::apply_move(full_move fm)
         },
         [&](std::tuple<vec4, vec4> data)
         {
-            auto [p, d] = data;
+            const auto& [p, d] = data;
             vec4 q = p+d;
             if constexpr (!UNSAFE)
             {
@@ -172,6 +172,11 @@ bool state::apply_move(full_move fm)
             {
                 bool is_check = find_check();
                 flag = !is_check;
+				if (!flag)
+				{
+					std::cerr << "In apply_move<" << UNSAFE << ">(" << fm << "):\n";
+					std::cerr << "This move creates a check!\n";
+				}
             }
             else
             {
@@ -270,12 +275,22 @@ bool state::find_check_impl(const std::list<int>& lines) const
 //        assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
         bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
+        // find checks for the physical moves
+        for (int pos : marked_pos(b_ptr->hostile<C>()& b_ptr->royal()))
+        {
+            if (b_ptr->is_under_attack(pos, !C))
+            {
+				//std::cerr << "The royal piece is under attack on " << vec4(pos, vec4(0, 0, t, l)) << std::endl;
+                return true;
+            }
+        }
+		// find checks for the superphysical moves
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {
             vec4 p = vec4(src_pos, vec4(0,0,t,l));
-            // generate the aviliable moves
-            std::map<vec4, bitboard_t> moves = m.gen_moves<C>(p);
+            // generate the aviliable superphysical moves
+            std::map<vec4, bitboard_t> moves = m.gen_superphysical_moves<C>(p);
 //            std::cerr << "The allowed moves are: ";
 //            for(vec4 d : m.gen_piece_move(p, C))
 //            {
@@ -293,6 +308,7 @@ bool state::find_check_impl(const std::list<int>& lines) const
                     // if the destination square is royal, this is a check
                     if (bb & b1_ptr->royal())
                     {
+						//std::cerr << "Found a check on " << q0 << std::endl;
                         return true;
                     }
                 }
@@ -436,97 +452,6 @@ std::map<vec4, bitboard_t> state::gen_movable_pieces_impl(const std::vector<int>
     }
     return movable;
 }
-
-/*
-bool state::find_all_checks()
-{
-    state::mobility_data result;
-    if (player == 0)
-    {
-        result = find_check_impl<false>();
-        if (result.is_check)
-        {
-            match_status = match_status_t::WHITE_WINS;
-        }
-    }
-    else
-    {
-        result = find_check_impl<true>();
-        if (result.is_check)
-        {
-            match_status = match_status_t::BLACK_WINS;
-        }
-    }
-    if (!result.is_check && result.critical_coords.empty())
-    {
-        match_status = match_status_t::STALEMATE;
-    }
-    return result;
-}
-
-
-template<bool C>
-state::mobility_data state::find_all_checks() const
-{
-    std::set<vec4> movable, checking;
-    auto [t0, c0] = m.get_present();
-    auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_timeline_status(t0, c0);
-//    print_range("Mandatory: ", mandatory_timelines);
-//    print_range("Optional: ", optional_timelines);
-//    print_range("Unplayable: ", unplayable_timelines);
-//
-    auto lines = concat_vectors(mandatory_timelines, optional_timelines);
-    for (int l : lines)
-    {
-        // take the active board
-        int v = m.timeline_end[multiverse::l_to_u(l)];
-        auto [t, c] = multiverse::v_to_tc(v);
-        assert(c == C);
-        std::shared_ptr<board> b_ptr = m.get_board(l, t, player);
-        bitboard_t b_pieces = b_ptr->friendly<C>();
-        // for each friendly piece on this board
-        for (int src_pos : marked_pos(b_pieces))
-        {
-            vec4 p = vec4(src_pos & ((1 << BOARD_BITS) - 1), src_pos >> BOARD_BITS, t, l);
-            int count = 0;
-            // generate the aviliable moves
-            std::map<vec4, bitboard_t> moves = m.gen_moves<C>(p);
-            // for each destination board and bit location
-            for (const auto& [q0, bb] : moves)
-            {
-                std::shared_ptr<board> b1_ptr = m.get_board(q0.l(), q0.t(), player);
-                if (bb)
-                {
-                    // if the destination square is royal, this is a check
-                    if (bb & b1_ptr->royal())
-                    {
-                        checking.insert(p);
-                    }
-                    // otherwise, this is a nontrivial destination location
-                    // which implies the source piece is movable
-                    count++;
-                }
-            }
-            if (count > 0)
-            {
-                movable.insert(p);
-            }
-        }
-    }
-    state::mobility_data result;
-    if(checking.empty())
-    {
-        result.is_check = false;
-        result.critical_coords = std::move(movable);
-    }
-    else
-    {
-        result.is_check = true;
-        result.critical_coords = std::move(checking);
-    }
-    return result;
-}
-*/
 
 std::ostream& operator<<(std::ostream& os, const match_status_t& status)
 {
