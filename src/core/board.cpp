@@ -6,9 +6,9 @@
 
 #include "magic.h"
 
-board::board(std::string fen, const int x_size, const int y_size) : bbs{}, umove_mask{0}
+board::board(std::string fen, int size_x, int size_y) : bbs{}, umove_mask{0}
 {
-    array_board arrb(fen, x_size, y_size);
+    array_board arrb(fen, size_x, size_y);
     for(int i = 0; i < BOARD_SIZE; i++)
     {
         piece_t p0 = arrb.get_piece(i);
@@ -51,6 +51,8 @@ piece_t board::get_piece(int pos) const
             piece = BRAWN_W;
         else if(z & princess())
             piece = PRINCESS_W;
+        else if(z & wall())
+            piece = WALL_PIECE;
         else
             throw std::runtime_error("get_piece: unknown piece\n");
     }
@@ -98,7 +100,16 @@ void board::set_piece(int pos, piece_t p)
     {
         bbs[i] &= ~z;
     }
-    if(p != NO_PIECE)
+    if(p == NO_PIECE)
+    {
+        //pass
+    }
+    else if(p == WALL_PIECE)
+    {
+        bbs[board::WHITE] |= z;
+        bbs[board::BLACK] |= z;
+    }
+    else
     {
         if(piece_color(p)==0)
         {
@@ -436,15 +447,15 @@ std::string array_board::to_string() const
 
 std::string array_board::get_fen() const
 {
-    std::string result = "";
-    for (int y = BOARD_LENGTH - 1; y >= 0; y--) 
+    std::string result = "/";
+    for (int y = BOARD_LENGTH - 1; y >= 0; y--)
     {
         for (int x = 0; x < BOARD_LENGTH; x++) 
         {
             switch(this->get_piece(ppos(x,y)))
             {
                 case NO_PIECE:
-                    if(!result.empty() && isdigit(result.back()))
+                    if(isdigit(result.back()))
                     {
                         result.back() += 1;
                     }
@@ -460,8 +471,12 @@ std::string array_board::get_fen() const
                     break;
             }
         }
-        result += "/";
+        if(result.back() != '/')
+        {
+            result += "/";
+        }
     }
+    result.erase(result.begin());
     result.pop_back(); // remove the extra '/'
     return result;
 }

@@ -10,7 +10,7 @@
 #include <initializer_list>
 
 
-multiverse::multiverse(const std::string &input)
+multiverse::multiverse(const std::string &input,  int size_x, int size_y)
 {
     const static std::regex comment_pattern(R"(\{.*?\})");
     const static std::regex block_pattern(R"(\[[^\[\]]*\])");
@@ -43,7 +43,7 @@ multiverse::multiverse(const std::string &input)
                 throw std::runtime_error("Unknown color:" + sm[4].str() + " in " + str);
                 break;
             }
-            insert_board(l, t, c, std::make_shared<board>(sm[1]));
+            insert_board(l, t, c, std::make_shared<board>(sm[1], size_x, size_y));
         }
         clean_input = block_match.suffix(); //all it to search the remaining parts
     }

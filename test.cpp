@@ -1,24 +1,22 @@
 #include <iostream>
-#include "bitboard.h"
+#include <string>
+#include "board.h"
+#include <regex>
 
- int main()
- {
-     int pos = 8*2+4, n = 3;
-     std::cout << bb_to_string(queen_copy_mask(pos,n));
-     std::cout << bb_to_string(bishop_copy_mask_data[(n<<6)|pos]);
-    
-     bitboard_t a, b, c, d, bb = 0;
-     a = b = c = d = pmask(static_cast<int>(pos));
-     for(int i = 0; i < n; i++)
-     {
-         a = shift_northwest(a);
-         b = shift_northeast(b);
-         c = shift_southwest(c);
-         d = shift_southeast(d);
-     }
-     bb = a | b | c | d;
-     std::cout << "bb: " << bb_to_string(bb);
-//     std::cout << shift_northeast(a);
-//     std::cout << "shutting down" << std::endl;
-     return 0;
- }
+int main()
+{
+    std::regex size_regex(R"(^\s*(\d+)\s*x\s*(\d+)\s*$)");
+    std::string size = "  8 x 9";
+    std::smatch size_sm;
+    if(std::regex_search(size, size_sm, size_regex))
+    {
+        int size_x = std::stoi(size_sm[1]);
+        int size_y = std::stoi(size_sm[2]);
+        std::cout << size_x << ", " << size_y << std::endl;
+    }
+    else
+    {
+        std::cout << "incorrect" <<std::endl;
+    }
+    return 0;
+}

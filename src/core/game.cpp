@@ -6,10 +6,35 @@
 #include <cassert>
 #include <variant>
 
+std::vector<full_move> pgn_to_moves(const std::string& input)
+{
+    // Regex to match slashes ("/") and move numbers (e.g., "1.", "2.")
+    const static std::regex pattern(R"((\d+\.)|(/))");
+    std::string output = std::regex_replace(input, pattern, " submit ");
+    // Split the result by whitespace into a vector of moves
+    std::vector<full_move> result;
+    std::istringstream result_stream(output);
+    std::string word;
+    //remove the first "submit"
+    result_stream >> word;
+    while (result_stream >> word)
+    {
+        if(word.compare("submit") != 0)
+        {
+            result.push_back(full_move(word));
+        }
+        else
+        {
+            result.push_back(full_move::submit());
+        }
+    }
+    return result;
+}
+
 game::game(std::string input)
 {
     const static std::regex comment_pattern(R"(\{.*?\})");
-    const static std::regex metadata_pattern(R"(\[([^:]*)\s([^:]*)\])");
+    const static std::regex metadata_pattern(R"%(\[([^:]*)\s"([^:]*)"\])%");
     const static std::regex block_pattern(R"(\[[^\[\]]*\])");
     std::string clean_input = std::regex_replace(input, comment_pattern, "");
     std::smatch block_match;
@@ -20,15 +45,29 @@ game::game(std::string input)
         
         if(std::regex_search(str, sm, metadata_pattern))
         {
-            metadata[sm[1]] = sm[2];
+            std::string s = sm[1];
+            std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){
+                return std::tolower(c);
+            }); // keys are always stored in lower cases
+            metadata[s] = sm[2];
             //cerr << "Key: " << sm[1] << "\tValue: " << sm[2] << endl;
         }
         clean_input = block_match.suffix(); //all it to search the remaining parts
     }
-
-    multiverse m(input);
+    
+    metadata.try_emplace("size", "8x8");
+    auto [size_x, size_y] = get_board_size();
+    
+    multiverse m(input, size_x, size_y);
     cached_states.push_back(state(m));
     now = cached_states.begin();
+    
+    // apply the moves stated in input string
+    std::vector<full_move> moves = pgn_to_moves(clean_input);
+    for(const auto &move : moves)
+    {
+        apply_move(move);
+    }
 }
 
 std::tuple<int,int> game::get_current_present() const
@@ -95,7 +134,7 @@ bool game::is_playable (vec4 p) const
         if(v1 == v2)
         {
             piece_t p_piece = cs.m.get_piece(p, cs.player);
-            if(p_piece != NO_PIECE)
+            if(p_piece != NO_PIECE && p_piece != WALL_PIECE)
             {
                 return cs.player == static_cast<int>(piece_color(p_piece));
             }
@@ -175,4 +214,22 @@ bool game::apply_indicator_move(full_move fm)
 std::vector<std::pair<vec4, vec4>> game::get_current_checks() const
 {
     return get_current_state().find_all_checks();
+}
+
+std::tuple<int, int> game::get_board_size() const
+{
+    int size_x, size_y;
+    const static std::regex size_regex(R"(^\s*(\d+)\s*x\s*(\d+)\s*$)");
+    std::smatch size_sm;
+    if(std::regex_search(metadata.at("size"), size_sm, size_regex))
+    {
+        size_x = std::stoi(size_sm[1]);
+        size_y = std::stoi(size_sm[2]);
+    }
+    else
+    {
+        throw std::runtime_error("game::get_board_size(): "
+                                 "Invalid size in metadata: " + metadata.at("size"));
+    }
+    return std::make_tuple(size_x, size_y);
 }

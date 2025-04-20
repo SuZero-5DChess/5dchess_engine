@@ -255,21 +255,21 @@ template<bool C>
 bool state::find_check_impl(const std::list<int>& lines) const
 {
     std::set<vec4> checking;
-    std::cerr << "\nIn find_check_impl<" << C << ">(";
-    for(int l : lines)
-    {
-        std::cerr << l << ",";
-    }
-    std::cerr << "\b)\n";
+//    std::cerr << "\nIn find_check_impl<" << C << ">(";
+//    for(int l : lines)
+//    {
+//        std::cerr << l << ",";
+//    }
+//    std::cerr << "\b)\n";
     for (int l : lines)
     {
         // take the active board
         int v = m.timeline_end[multiverse::l_to_u(l)];
         auto [t, c] = multiverse::v_to_tc(v);
 //        std::cerr << c << " " << C << "\n";
-        assert(c == C);
+//        assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
-        bitboard_t b_pieces = b_ptr->friendly<C>();
+        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {
@@ -347,9 +347,9 @@ std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl(const std::list<in
         // take the active board
         int v = m.timeline_end[multiverse::l_to_u(l)];
         auto [t, c] = multiverse::v_to_tc(v);
-        assert(c == C);
+//        assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
-        bitboard_t b_pieces = b_ptr->friendly<C>();
+        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {
@@ -406,7 +406,7 @@ std::map<vec4, bitboard_t> state::gen_movable_pieces_impl(const std::vector<int>
         const vec4 p0 = vec4(0,0,t,l);
         assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
-        bitboard_t b_pieces = b_ptr->friendly<C>();
+        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {

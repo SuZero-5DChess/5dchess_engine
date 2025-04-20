@@ -147,5 +147,6 @@ PYBIND11_MODULE(engine, m) {
         .def("apply_move", &game::apply_move, py::return_value_policy::reference)
         .def("apply_indicator_move", &game::apply_indicator_move, py::return_value_policy::reference)
         .def("get_current_checks", &game::get_current_checks)
+        .def("get_board_size", &game::get_board_size)
         .def_readwrite("metadata", &game::metadata);  // Expose metadata map
 }

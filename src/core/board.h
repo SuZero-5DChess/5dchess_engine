@@ -31,12 +31,13 @@ class board
     bitboard_t umove_mask;
 
 public:
-    board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
+    board(std::string fen, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
     // inline getter functions
     constexpr bitboard_t umove() const { return umove_mask; }
 
     constexpr bitboard_t white() const { return bbs[WHITE]; }
     constexpr bitboard_t black() const { return bbs[BLACK]; }
+    constexpr bitboard_t wall() const { return bbs[WHITE] & bbs[BLACK]; }
     
     constexpr bitboard_t royal() const { return bbs[ROYAL]; }
 
@@ -112,7 +113,7 @@ private:
     std::array<piece_t, BOARD_SIZE> piece;
 public:
     array_board(): piece{}{}
-    array_board(std::string fen, const int x_size = BOARD_LENGTH, const int y_size = BOARD_LENGTH);
+    array_board(std::string fen, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
     
     // the getter method
     piece_t get_piece(int p) const;

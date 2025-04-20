@@ -17,11 +17,17 @@ socketio = SocketIO(app)
 
 t0_fen = """
 [Size "8x8"]
-[Board  "custom"]
+[Board "custom"]
 [r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:0:b]
 [r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:1:w]
 """
-g = engine.game(t0_fen)
+very_small_open = """
+[Size "4x4"]
+[Board "custom"]
+[Mode "5D"]
+[nbrk/3p*/P*3/KRBN:0:1:w]
+"""
+g = engine.game(very_small_open)
 game_data = {}
 
 
@@ -143,24 +149,30 @@ def display(hl=[]):
 """[1:-1]
     is_game_over = match_status != engine.match_status_t.PLAYING
     emit('response_text', text)
+    size_x, size_y = g.get_board_size()
     new_data = {
         'submit-button': 'enabled' if g.can_submit() else 'disabled',
         'undo-button': 'enabled' if g.can_undo() else 'disabled',
         'redo-button': 'enabled' if g.can_redo() else 'disabled',
         'metadata': {
-            "size" : "8x8",
             "mode" : "odd"
+        },
+        'size': {
+            'x':size_x,
+            'y':size_y
         },
         'present': {
             't': present_t,
             'c': present_c,
             'color': 'rgba(219,172,52,0.4)' if not is_game_over else 'rgba(128,128,128,0.4)'
         },
-        'focus': {
-            'l': mandatory[0] if mandatory else (optional[0] if optional else 0),
-            't': present_t,
-            'c': present_c
-        },
+        'focus': [
+            {
+                'l': line,
+                't': present_t,
+                'c': present_c
+            } for line in mandatory
+        ],
         'boards':convert_boards_data(g.get_current_boards()),
         'highlights':[
             {

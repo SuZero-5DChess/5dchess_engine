@@ -58,7 +58,7 @@ public:
     int l_min, l_max;
     std::vector<int> timeline_start, timeline_end;
 
-    multiverse(const std::string& input);
+    multiverse(const std::string& input, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
     multiverse(const multiverse& other);
     multiverse& operator=(const multiverse& other);
     

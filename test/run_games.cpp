@@ -14,7 +14,7 @@ std::string t0_fen = ""
 "[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:1:w]\n";
 
 
-std::vector<full_move> pgn_to_moves(const std::string& input)
+std::vector<full_move> pgn_to_moves_(const std::string& input)
 {
     std::string output;
     
@@ -375,7 +375,7 @@ int main()
     int count = 0;
     for(auto pgn : pgns)
     {
-        auto mvs = pgn_to_moves(pgn);
+        auto mvs = pgn_to_moves_(pgn);
         mvss.push_back(mvs);
         count += mvs.size();
     }

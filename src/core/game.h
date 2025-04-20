@@ -8,7 +8,8 @@
 #include <set>
 #include "state.h"
 
-class game {
+class game
+{
     std::vector<state> cached_states;
     std::vector<state>::iterator now;
 public:
@@ -33,6 +34,8 @@ public:
     bool apply_move(full_move fm);
     bool apply_indicator_move(full_move fm);
     std::vector<std::pair<vec4,vec4>> get_current_checks() const;
+    
+    std::tuple<int, int> get_board_size() const;
 };
 
 
