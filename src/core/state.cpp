@@ -50,6 +50,20 @@ bool state::can_submit() const
     return player != present_c || present != present_t;
 }
 
+std::optional<state> state::can_apply(full_move fm)
+{
+    state new_state = *this;
+    bool flag = new_state.apply_move<false>(fm);
+    if(flag)
+    {
+        return std::optional<state>(new_state);
+    }
+    else
+    {
+        return std::nullopt;
+    }
+}
+
 template<bool UNSAFE>
 bool state::apply_move(full_move fm)
 {
@@ -167,21 +181,22 @@ bool state::apply_move(full_move fm)
             }
             // clear the cache for find_check() method because state has modified
             //clear_cache();
-            // is this a legal move? (check detection here)
-            if constexpr (!UNSAFE)
-            {
-                bool is_check = find_check();
-                flag = !is_check;
-				if (!flag)
-				{
-					std::cerr << "In apply_move<" << UNSAFE << ">(" << fm << "):\n";
-					std::cerr << "This move creates a check!\n";
-				}
-            }
-            else
-            {
-                flag = true;
-            }
+//            // is this a legal move? (check detection here)
+//            if constexpr (!UNSAFE)
+//            {
+//                bool is_check = find_check();
+//                flag = !is_check;
+//				if (!flag)
+//				{
+//					std::cerr << "In apply_move<" << UNSAFE << ">(" << fm << "):\n";
+//					std::cerr << "This move creates a check!\n";
+//				}
+//            }
+//            else
+//            {
+//                flag = true;
+//            }
+            flag = true;
         }
     }, fm.data);
     return flag;
@@ -420,7 +435,7 @@ std::map<vec4, bitboard_t> state::gen_movable_pieces_impl(const std::vector<int>
         int v = m.timeline_end[multiverse::l_to_u(l)];
         auto [t, c] = multiverse::v_to_tc(v);
         const vec4 p0 = vec4(0,0,t,l);
-        assert(c == C);
+//        assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
         bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
         // for each friendly piece on this board

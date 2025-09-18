@@ -32,7 +32,8 @@ public:
     void undo();
     void redo();
     bool apply_move(full_move fm);
-    bool apply_indicator_move(full_move fm);
+    //bool apply_indicator_move(full_move fm);
+    bool currently_check() const;
     std::vector<std::pair<vec4,vec4>> get_current_checks() const;
     
     std::tuple<int, int> get_board_size() const;

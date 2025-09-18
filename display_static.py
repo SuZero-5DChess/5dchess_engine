@@ -84,5 +84,14 @@ if __name__ == '__main__':
         {
             'color': '#80ff80',
             'coordinates': moves
+        },
+        {
+            'color': '#8080ff',
+            'arrows': [
+                {
+                    'from': {'l':0,'t':1,'x':4,'y':1,'c':0},
+                    'to': {'l':0,'t':2,'x':4,'y':3,'c':0}
+                }
+            ]
         }
     ])

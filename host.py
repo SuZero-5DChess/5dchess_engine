@@ -21,13 +21,17 @@ t0_fen = """
 [r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:0:b]
 [r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:1:w]
 """
+tminf_fen = """
+[Size "8x8"]
+[Board "custom"]
+""" + '\n'.join([f'[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:{i}:b][r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:{i+1}:w]' for i in range(0, 41)])
 very_small_open = """
 [Size "4x4"]
 [Board "custom"]
 [Mode "5D"]
 [nbrk/3p*/P*3/KRBN:0:1:w]
 """
-g = engine.game(very_small_open)
+g = engine.game(t0_fen)
 game_data = {}
 
 
@@ -60,10 +64,7 @@ def handle_click(data):
         flag = g.apply_move(fm)
         hl = []
         if flag:
-            print('applying move ', fm, ' --success')
-        else:
-            flag = g.apply_indicator_move(fm)
-            if flag:
+            if g.currently_check():
                 checks = g.get_current_checks()
                 arrows = []
                 for p, q in checks:
@@ -71,14 +72,18 @@ def handle_click(data):
                         'from': {'l':p.l(), 't': p.t(), 'x':p.x(), 'y':p.y(), 'c':1-present_c},
                         'to': {'l':q.l(), 't': q.t(), 'x':q.x(), 'y':q.y(), 'c':1-present_c},
                     })
+                    print('piece on', p, 'is checking', q)
                 hl = [
                     {
                         'color':'#ff1111',
                         'arrows':arrows
                     },
                 ]
-            print('applying move ', fm, ' --success (indicator)' if flag else ' --failure')
-        #print(' now ', g.get_current_boards())
+                print('applying move ', fm, ' --success (checking)')
+            else:
+                print('applying move ', fm, ' --success')
+        else:
+            print('applying move ', fm, ' --failure')
         qs = []
         display(hl)
     elif c == present_c:

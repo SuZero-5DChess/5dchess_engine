@@ -30,10 +30,16 @@ struct state
     int new_line() const;
 
     bool can_submit() const;
+
+    /*
+     can_apply: Check if the move can be applied to the current state. If yes, return the new state after applying the move; otherwise return std::nullopt.
+     Note that this function is different from `apply_move` in that it does not change the current state as a side effect.
+    */
+    std::optional<state> can_apply(full_move fm);
     
     /*
      apply_move: Apply move to the current state as a side effect. Return true if it is successfull.
-     Parameter `UNSAFE=true`: unsafe mode, does not check whether the pending move is pseudolegal or legal.
+     Parameter `UNSAFE=true`: unsafe mode, does not check whether the pending move is pseudolegal. If it is indeed not pseudolegal, the outcome may be unexpected.
      */
     template<bool UNSAFE = false>
     bool apply_move(full_move fm);

@@ -373,6 +373,7 @@ int main()
     };
     std::vector<std::vector<full_move>> mvss;
     int count = 0;
+    int n = 200;
     for(auto pgn : pgns)
     {
         auto mvs = pgn_to_moves_(pgn);
@@ -380,15 +381,18 @@ int main()
         count += mvs.size();
     }
     auto start = std::chrono::high_resolution_clock::now();
-    for(auto mvs : mvss)
+    for(int i = 0; i < n; i++)
     {
-        run_game(mvs);
+        for(auto mvs : mvss)
+        {
+            run_game(mvs);
+        }
     }
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double, std::milli>(end - start).count();
-    std::cout << "totally " << pgns.size() << " games ran, took " << duration << " ms\n";
-    std::cout << "average time per game: " << duration/pgns.size() << " ms\n";
-    std::cout << "average time per move: " << duration/count << " ms\n";
+    std::cout << "totally " << pgns.size()*n << " games ran, took " << duration << " ms\n";
+    std::cout << "average time per game: " << duration/(pgns.size()*n) << " ms\n";
+    std::cout << "average time per move: " << duration/(count*n) << " ms\n";
     
     //test1();
     std::cout << "---= run_games.cpp: all tests passed =---" <<std::endl;

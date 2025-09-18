@@ -172,7 +172,6 @@ void game::redo()
 
 bool game::apply_move(full_move fm)
 {
-    state new_state = *now;
     if (std::holds_alternative<std::tuple<vec4,vec4>>(fm.data))
     {
         auto [p,d] = std::get<std::tuple<vec4,vec4>>(fm.data);
@@ -181,34 +180,40 @@ bool game::apply_move(full_move fm)
             return false;
         }
     }
-    bool flag = new_state.apply_move(fm);
+    std::optional<state> ans = now->can_apply(fm);
     
-    if(flag)
+    if(ans)
     {
+        state new_state = ans.value();
         cached_states.erase(now + 1, cached_states.end());
         cached_states.push_back(new_state);
         now = cached_states.end() - 1;
     }
-    return flag;
+    return ans.has_value();
 }
 
-bool game::apply_indicator_move(full_move fm)
-{
-    state new_state = *now;
-    if (std::holds_alternative<std::tuple<vec4,vec4>>(fm.data))
-    {
-        auto [p,d] = std::get<std::tuple<vec4,vec4>>(fm.data);
-        if(!is_playable(p))
-        {
-            return false;
-        }
-    }
-    new_state.apply_move(fm);
+// bool game::apply_indicator_move(full_move fm)
+// {
+//     state new_state = *now;
+//     if (std::holds_alternative<std::tuple<vec4,vec4>>(fm.data))
+//     {
+//         auto [p,d] = std::get<std::tuple<vec4,vec4>>(fm.data);
+//         if(!is_playable(p))
+//         {
+//             return false;
+//         }
+//     }
+//     new_state.apply_move(fm);
     
-    cached_states.erase(now + 1, cached_states.end());
-    cached_states.push_back(new_state);
-    now = cached_states.end() - 1;
-    return true;
+//     cached_states.erase(now + 1, cached_states.end());
+//     cached_states.push_back(new_state);
+//     now = cached_states.end() - 1;
+//     return true;
+// }
+
+bool game::currently_check() const
+{
+    return get_current_state().find_check();
 }
 
 std::vector<std::pair<vec4, vec4>> game::get_current_checks() const
