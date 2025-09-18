@@ -27,12 +27,6 @@ class multiverse
 private:
     std::vector<std::vector<std::shared_ptr<board>>> boards;
     
-    using mv_cache_t = std::map<vec4, std::map<vec4, bitboard_t>>;
-    mutable mv_cache_t sp_rook_moves_w, sp_rook_moves_b;
-    mutable mv_cache_t sp_bishop_moves_w, sp_bishop_moves_b;
-    mutable mv_cache_t sp_knight_moves_w, sp_knight_moves_b;
-    mutable mv_cache_t all_moves_w, all_moves_b;
-    
     // move generation for each pieces
     enum class axesmode {ORTHOGONAL, DIAGONAL, BOTH};
     
@@ -62,8 +56,6 @@ public:
     multiverse(const std::string& input, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
     multiverse(const multiverse& other);
     multiverse& operator=(const multiverse& other);
-    
-    void clear_cache() const;
     
     std::shared_ptr<board> get_board(int l, int t, int c) const;
     void insert_board(int l, int t, int c, const std::shared_ptr<board>& b_ptr);

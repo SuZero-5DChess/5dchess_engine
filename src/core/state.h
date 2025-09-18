@@ -19,13 +19,8 @@ struct state
     int present, player;
 
 	match_status_t match_status;
-    //mutable std::set<vec4> critical_coords;
 
     state(multiverse mtv);
-    // state(const state& other);
-    // state& operator=(const state& other);
-
-    // void clear_cache();
 
     int new_line() const;
 

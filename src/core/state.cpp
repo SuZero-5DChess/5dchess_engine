@@ -16,31 +16,6 @@ int state::new_line() const
         return m.l_min - 1;
 }
 
-// state::state(const state& other)
-//     : m(other.m),
-//       present(other.present),
-//       player(other.player),
-//       match_status(other.match_status),
-//       critical_coords{} // do not copy cache
-// {}
-
-// state& state::operator=(const state& other)
-// {
-//     if (this != &other) {
-//         m = other.m;
-//         present = other.present;
-//         player = other.player;
-//         match_status = other.match_status;
-//         critical_coords.clear(); // reset cache
-//     }
-//     return *this;
-// }
-
-// void state::clear_cache()
-// {
-//     critical_coords.clear();
-// }
-
 bool state::can_submit() const
 {
     auto [present_t, present_c] = m.get_present();
@@ -179,23 +154,6 @@ bool state::apply_move(full_move fm)
                     present = new_present;
                 }
             }
-            // clear the cache for find_check() method because state has modified
-            //clear_cache();
-//            // is this a legal move? (check detection here)
-//            if constexpr (!UNSAFE)
-//            {
-//                bool is_check = find_check();
-//                flag = !is_check;
-//				if (!flag)
-//				{
-//					std::cerr << "In apply_move<" << UNSAFE << ">(" << fm << "):\n";
-//					std::cerr << "This move creates a check!\n";
-//				}
-//            }
-//            else
-//            {
-//                flag = true;
-//            }
             flag = true;
         }
     }, fm.data);

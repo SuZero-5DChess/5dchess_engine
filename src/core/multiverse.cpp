@@ -65,10 +65,6 @@ multiverse::multiverse(const std::string &input,  int size_x, int size_y)
 
 multiverse::multiverse(const multiverse& other)
     : boards(other.boards),
-      sp_rook_moves_w(), sp_rook_moves_b(),
-      sp_bishop_moves_w(), sp_bishop_moves_b(),
-      sp_knight_moves_w(), sp_knight_moves_b(),
-      all_moves_w(), all_moves_b(),
       l_min(other.l_min),
       l_max(other.l_max),
       timeline_start(other.timeline_start),
@@ -80,20 +76,10 @@ multiverse& multiverse::operator=(const multiverse& other)
     if (this != &other)
     {
         boards = other.boards;
-        clear_cache();
     }
     return *this;
 }
 
-void multiverse::clear_cache() const
-{
-    sp_rook_moves_w.clear();
-    sp_bishop_moves_w.clear();
-    sp_knight_moves_w.clear();
-    sp_rook_moves_b.clear();
-    sp_bishop_moves_b.clear();
-    sp_knight_moves_b.clear();
-}
 
 int multiverse::number_activated() const
 {
@@ -308,7 +294,6 @@ std::map<vec4, bitboard_t> multiverse::gen_superphysical_moves(vec4 p) const
 template<bool C>
 std::map<vec4, bitboard_t> multiverse::gen_moves(vec4 p) const
 {
-    auto& all_moves = C ? all_moves_b : all_moves_w;
 //    if(all_moves.contains(p))
 //    {
 //        std::cerr << "use cached value in gen_moves for " << p << std::endl;
@@ -364,7 +349,6 @@ std::map<vec4, bitboard_t> multiverse::gen_moves(vec4 p) const
             throw std::runtime_error("Unknown piece " + std::string({(char)piece_name(p_piece)}) + (p_piece & 0x80 ? "*": "") + "\n");
             break;
     }
-    all_moves[p] = mvbbs;
     return mvbbs;
 }
 
@@ -417,11 +401,6 @@ constexpr std::initializer_list<vec4> double_dtls = {
 template<bool C>
 std::map<vec4, bitboard_t> multiverse::gen_purely_sp_rook_moves(vec4 p0) const
 {
-    auto& sp_rook_moves = C ? sp_rook_moves_b : sp_rook_moves_w;
-    if(sp_rook_moves.contains(p0.tl()))
-    {
-        return sp_rook_moves[p0.tl()];
-    }
     std::map<vec4, bitboard_t> result;
     std::shared_ptr<board> b0_ptr = get_board(p0.l(), p0.t(), C);
     bitboard_t lrook = b0_ptr->lrook() & b0_ptr->friendly<C>();
@@ -439,7 +418,6 @@ std::map<vec4, bitboard_t> multiverse::gen_purely_sp_rook_moves(vec4 p0) const
             }
         }
     }
-    sp_rook_moves[p0.tl()] = result;
     return result;
 }
 
@@ -447,11 +425,6 @@ std::map<vec4, bitboard_t> multiverse::gen_purely_sp_rook_moves(vec4 p0) const
 template<bool C>
 std::map<vec4, bitboard_t> multiverse::gen_purely_sp_bishop_moves(vec4 p0) const
 {
-    auto& sp_bishop_moves = C ? sp_bishop_moves_b : sp_bishop_moves_w;
-    if(sp_bishop_moves.contains(p0.tl()))
-    {
-        return sp_bishop_moves[p0.tl()];
-    }
     std::map<vec4, bitboard_t> result;
     std::shared_ptr<board> b0_ptr = get_board(p0.l(), p0.t(), C);
     bitboard_t lbishop = b0_ptr->lbishop() & b0_ptr->friendly<C>();
@@ -469,7 +442,6 @@ std::map<vec4, bitboard_t> multiverse::gen_purely_sp_bishop_moves(vec4 p0) const
             }
         }
     }
-    sp_bishop_moves[p0.tl()] = result;
     return result;
 }
 
@@ -477,11 +449,6 @@ std::map<vec4, bitboard_t> multiverse::gen_purely_sp_bishop_moves(vec4 p0) const
 template<bool C>
 std::map<vec4, bitboard_t> multiverse::gen_purely_sp_knight_moves(vec4 p0) const
 {
-    auto& sp_knight_moves = C ? sp_knight_moves_b : sp_knight_moves_w;
-    if(sp_knight_moves.contains(p0.tl()))
-    {
-        return sp_knight_moves[p0.tl()];
-    }
     std::map<vec4, bitboard_t> result;
     std::shared_ptr<board> b0_ptr = get_board(p0.l(), p0.t(), C);
     bitboard_t lknight = b0_ptr->lknight() & b0_ptr->friendly<C>();
@@ -501,7 +468,6 @@ std::map<vec4, bitboard_t> multiverse::gen_purely_sp_knight_moves(vec4 p0) const
             }
         }
     }
-    sp_knight_moves[p0.tl()] = result;
     return result;
 }
 

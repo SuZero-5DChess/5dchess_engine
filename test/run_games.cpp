@@ -119,6 +119,7 @@ void test1()
 
 multiverse m0(t0_fen);
 
+template<bool DETECT_CHECKS>
 void run_game(std::vector<full_move> mvs)
 {
     state s(m0);
@@ -149,6 +150,17 @@ void run_game(std::vector<full_move> mvs)
                 }
             }, mv.data);
             exit(-1);
+        }
+        if constexpr(DETECT_CHECKS)
+        {
+            bool checking = s.find_check();
+            if(checking)
+            {
+                std::cerr << "In run_game:\n";
+                std::cerr << "current boards:\n";
+                std::cerr << s.m.to_string() << std::endl;
+                std::cerr << "This move" << mv << "is illeagal because hostile is checking.\n";
+            }
         }
     }
 //    
@@ -385,7 +397,7 @@ int main()
     {
         for(auto mvs : mvss)
         {
-            run_game(mvs);
+            run_game<false>(mvs);
         }
     }
     auto end = std::chrono::high_resolution_clock::now();
