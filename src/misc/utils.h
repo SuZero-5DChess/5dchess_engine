@@ -4,6 +4,9 @@
 #include <vector>
 #include <tuple>
 #include <iostream>
+#include <set>
+#include <algorithm>
+#include <iterator>
 
 /*
 The append/concatenate functions.
@@ -89,6 +92,19 @@ constexpr auto generate_array(std::index_sequence<N...>, F f)
 -> std::array<decltype(f(std::declval<size_t>())), sizeof...(N)>
 {
     return {f(N)...};
+}
+
+/*
+ set minus function
+ */
+
+template <typename T>
+std::set<T> set_minus(const std::set<T>& a, const std::set<T>& b)
+{
+    std::set<T> result;
+    std::set_difference(a.begin(), a.end(), b.begin(), b.end(),
+                        std::inserter(result, result.begin()));
+    return result;
 }
 
 #endif // UTILS_H

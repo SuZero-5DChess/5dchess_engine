@@ -31,7 +31,7 @@ very_small_open = """
 [Mode "5D"]
 [nbrk/3p*/P*3/KRBN:0:1:w]
 """
-g = engine.game(t0_fen)
+g = engine.game(very_small_open)
 game_data = {}
 
 
