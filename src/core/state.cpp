@@ -247,7 +247,7 @@ bool state::find_check_impl(const std::list<int>& lines) const
 //        std::cerr << c << " " << C << "\n";
 //        assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
-        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
+        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->wall();
         // find checks for the physical moves
         for (int pos : marked_pos(b_ptr->hostile<C>()& b_ptr->royal()))
         {
@@ -338,7 +338,7 @@ std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl(const std::list<in
         auto [t, c] = multiverse::v_to_tc(v);
 //        assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
-        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
+        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->wall();
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {
@@ -395,7 +395,7 @@ std::map<vec4, bitboard_t> state::gen_movable_pieces_impl(const std::vector<int>
         const vec4 p0 = vec4(0,0,t,l);
 //        assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
-        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
+        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->wall();
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {

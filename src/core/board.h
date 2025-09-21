@@ -70,6 +70,8 @@ public:
     template<bool C>
     constexpr bitboard_t friendly() const
     {
+        // walls are considered as friendly
+        // because friendly pieces are blockers
         if constexpr (C)
         {
             return bbs[BLACK];
@@ -85,11 +87,11 @@ public:
     {
         if constexpr (C)
         {
-            return bbs[WHITE];
+            return bbs[WHITE] & ~bbs[BLACK]; // exclude walls
         }
         else
         {
-            return bbs[BLACK];
+            return bbs[BLACK] & ~bbs[WHITE];
         }
     }
     
