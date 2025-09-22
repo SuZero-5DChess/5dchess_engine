@@ -16,16 +16,21 @@ int state::new_line() const
         return m.l_min - 1;
 }
 
-bool state::can_submit() const
+std::optional<state> state::can_submit() const
 {
-    auto [present_t, present_c] = m.get_present();
-//    std::cout << present_t << " " << present_c << std::endl;
-//    std::cout << present << " " << player << std::endl;
-//    std::cout << (player != present_c) << (present != present_t);
-    return player != present_c || present != present_t;
+    state new_state = *this;
+    bool flag = new_state.submit<false>();
+    if(flag)
+    {
+        return std::optional<state>(new_state);
+    }
+    else
+    {
+        return std::nullopt;
+    }
 }
 
-std::optional<state> state::can_apply(full_move fm)
+std::optional<state> state::can_apply(full_move fm) const
 {
     state new_state = *this;
     bool flag = new_state.apply_move<false>(fm);
@@ -51,113 +56,103 @@ bool state::apply_move(full_move fm)
             throw std::runtime_error("Attempt to move finalized game.\n");
         }
     }
-    bool flag;
-//    std::cerr << "apply_move<" << UNSAFE << ">(" << fm << ")\n";
-    std::visit(overloads {
-        [&](std::monostate)
+    vec4 p = fm.from;
+    vec4 q = fm.to;
+    vec4 d = q - p;
+    if constexpr (!UNSAFE)
+    {
+        std::map<vec4, bitboard_t> mvbbs = player ? m.gen_moves<true>(p) : m.gen_moves<false>(p);
+        auto it = mvbbs.find(q.tl());
+        // is it a pseudolegal move?
+        if(it != mvbbs.end())
         {
-            if constexpr (!UNSAFE)
+            bitboard_t bb = mvbbs[q.tl()];
+            if(!(pmask(q.xy()) & bb))
             {
-                // can present be shifted to the opponent?
-                if(!can_submit())
-                {
-                    flag = false;
-                    return;
-                }
+                return false;
             }
-            auto [present_t, present_c] = m.get_present();
-            present = present_t;
-            player  = present_c;
-            flag = true;
-        },
-        [&](std::tuple<vec4, vec4> data)
-        {
-            const auto& [p, d] = data;
-            vec4 q = p+d;
-            if constexpr (!UNSAFE)
-            {
-                vec4 q = p+d;
-                std::map<vec4, bitboard_t> mvbbs = player ? m.gen_moves<true>(p) : m.gen_moves<false>(p);
-                auto it = mvbbs.find(q.tl());
-                // is it a pseudolegal move?
-                if(it != mvbbs.end())
-                {
-                    bitboard_t bb = mvbbs[q.tl()];
-                    if(!(pmask(q.xy()) & bb))
-                    {
-                        flag = false;
-                        return;
-                    }
-                }
-                else
-                {
-                    flag = false;
-                    return;
-                }
-            }
-            
-            // physical move, no time travel
-            if(d.l() == 0 && d.t() == 0)
-            {
-                const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
-                piece_t pic = b_ptr->get_piece(p.xy());
-                // en passant
-                if(to_white(pic) == PAWN_W && d.x()!=0 && b_ptr->get_piece(q.xy()) == NO_PIECE)
-                {
-                    //std::cout << " ... en passant";
-                    m.append_board(p.l(),
-                                   b_ptr->replace_piece(ppos(q.x(),p.y()), NO_PIECE)
-                                   ->move_piece(p.xy(), q.xy()));
-                }
-                // TODO: promotion
-                // castling
-                else if(to_white(pic) == KING_W && abs(d.x()) > 1)
-                {
-                    //std::cout << " ... castling";
-                    int rook_x1 = d.x() < 0 ? 0 : 7;
-                    int rook_x2 = q.x() + (d.x() < 0 ? 1 : -1);
-                    m.append_board(p.l(),b_ptr
-                                   ->move_piece(ppos(rook_x1, p.y()), ppos(rook_x2,q.y()))
-                                   ->move_piece(p.xy(), q.xy()));
-                }
-                // normal move
-                else
-                {
-                    //std::cout << " ... normal move/capture";
-                    m.append_board(p.l(), b_ptr->move_piece(p.xy(), q.xy()));
-                }
-            }
-            // non-branching superphysical move
-            else if(multiverse::tc_to_v(q.t(), player) == m.timeline_end[multiverse::l_to_u(q.l())])
-            {
-                //std::cout << " ... nonbranching move";
-                const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
-                const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
-                m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
-                const std::shared_ptr<board>& c_ptr = m.get_board(q.l(), q.t(), player);
-                m.append_board(q.l(), c_ptr->replace_piece(q.xy(), pic));
-            }
-            //branching move
-            else
-            {
-                //std::cout << " ... branching move";
-                const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
-                const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
-                m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
-                const std::shared_ptr<board>& x_ptr = m.get_board(q.l(), q.t(), player);
-                auto [t, c] = multiverse::v_to_tc(multiverse::tc_to_v(q.t(), player)+1);
-                m.insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), pic));
-                auto [new_present, _] = m.get_present();
-                if(new_present < present)
-                {
-                    // if a historical board is activated by this travel, go back
-                    present = new_present;
-                }
-            }
-            flag = true;
         }
-    }, fm.data);
-    return flag;
+        else
+        {
+            return false;
+        }
+    }
+    
+    // physical move, no time travel
+    if(d.l() == 0 && d.t() == 0)
+    {
+        const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
+        piece_t pic = b_ptr->get_piece(p.xy());
+        // en passant
+        if(to_white(pic) == PAWN_W && d.x()!=0 && b_ptr->get_piece(q.xy()) == NO_PIECE)
+        {
+            //std::cout << " ... en passant";
+            m.append_board(p.l(),
+                            b_ptr->replace_piece(ppos(q.x(),p.y()), NO_PIECE)
+                            ->move_piece(p.xy(), q.xy()));
+        }
+        // TODO: promotion
+        // castling
+        else if(to_white(pic) == KING_W && abs(d.x()) > 1)
+        {
+            //std::cout << " ... castling";
+            int rook_x1 = d.x() < 0 ? 0 : 7;
+            int rook_x2 = q.x() + (d.x() < 0 ? 1 : -1);
+            m.append_board(p.l(),b_ptr
+                            ->move_piece(ppos(rook_x1, p.y()), ppos(rook_x2,q.y()))
+                            ->move_piece(p.xy(), q.xy()));
+        }
+        // normal move
+        else
+        {
+            //std::cout << " ... normal move/capture";
+            m.append_board(p.l(), b_ptr->move_piece(p.xy(), q.xy()));
+        }
+    }
+    // non-branching superphysical move
+    else if(multiverse::tc_to_v(q.t(), player) == m.timeline_end[multiverse::l_to_u(q.l())])
+    {
+        //std::cout << " ... nonbranching move";
+        const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
+        const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
+        m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
+        const std::shared_ptr<board>& c_ptr = m.get_board(q.l(), q.t(), player);
+        m.append_board(q.l(), c_ptr->replace_piece(q.xy(), pic));
+    }
+    //branching move
+    else
+    {
+        //std::cout << " ... branching move";
+        const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
+        const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
+        m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
+        const std::shared_ptr<board>& x_ptr = m.get_board(q.l(), q.t(), player);
+        auto [t, c] = multiverse::v_to_tc(multiverse::tc_to_v(q.t(), player)+1);
+        m.insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), pic));
+        auto [new_present, _] = m.get_present();
+        if(new_present < present)
+        {
+            // if a historical board is activated by this travel, go back
+            present = new_present;
+        }
+    }
+    return true;
+}
+
+template <bool UNSAFE>
+bool state::submit()
+{
+    auto [present_t, present_c] = m.get_present();
+    if constexpr (!UNSAFE)
+    {
+        if(player == present_c)
+        {
+            return false;
+        }
+    }
+    present = present_t;
+    player  = present_c;
+    return true;
 }
 
 std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_timeline_status() const
@@ -193,6 +188,18 @@ std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_time
     }
     return std::make_tuple(mandatory_timelines, optional_timelines, unplayable_timelines);
 }
+
+
+/**********
+ *********
+ ********
+ *******
+ ******
+ *****
+ ****
+ ***
+ **
+ */
 
 bool state::find_check() const
 {
@@ -247,7 +254,7 @@ bool state::find_check_impl(const std::list<int>& lines) const
 //        std::cerr << c << " " << C << "\n";
 //        assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
-        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
+        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->wall();
         // find checks for the physical moves
         for (int pos : marked_pos(b_ptr->hostile<C>()& b_ptr->royal()))
         {
@@ -267,7 +274,7 @@ bool state::find_check_impl(const std::list<int>& lines) const
 //            std::cerr << "The allowed moves are: ";
 //            for(vec4 d : m.gen_piece_move(p, C))
 //            {
-//                std::cerr << full_move::move(p, d) << " ";
+//                std::cerr << move5d::move(p, d) << " ";
 //            }
 //            std::cerr << std::endl;
             // for each destination board and bit location
@@ -292,7 +299,7 @@ bool state::find_check_impl(const std::list<int>& lines) const
 }
 
 
-std::vector<std::pair<vec4,vec4>> state::find_all_checks() const
+std::vector<full_move> state::find_all_checks() const
 {
     std::list<int> lines;
     int next_v = multiverse::tc_to_v(present, player) + 1;
@@ -328,9 +335,9 @@ std::vector<std::pair<vec4,vec4>> state::find_all_checks() const
 }
 
 template<bool C>
-std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl(const std::list<int>& lines) const
+std::vector<full_move> state::find_all_checks_impl(const std::list<int>& lines) const
 {
-    std::vector<std::pair<vec4,vec4>> checking;
+    std::vector<full_move> checking;
     for (int l : lines)
     {
         // take the active board
@@ -338,7 +345,7 @@ std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl(const std::list<in
         auto [t, c] = multiverse::v_to_tc(v);
 //        assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
-        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
+        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->wall();
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {
@@ -358,7 +365,7 @@ std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl(const std::list<in
                         for(int dst_pos : marked_pos(c_pieces))
                         {
                             vec4 q = vec4(dst_pos, q0);
-                            checking.push_back(std::make_pair(p, q));
+                            checking.push_back({p, q});
                         }
                     }
                 }
@@ -395,7 +402,7 @@ std::map<vec4, bitboard_t> state::gen_movable_pieces_impl(const std::vector<int>
         const vec4 p0 = vec4(0,0,t,l);
 //        assert(c == C);
         std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
-        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->hostile<C>();
+        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->wall();
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {
@@ -448,6 +455,8 @@ std::ostream& operator<<(std::ostream& os, const match_status_t& status)
 
 template bool state::apply_move<false>(full_move);
 template bool state::apply_move<true>(full_move);
+template bool state::submit<false>();
+template bool state::submit<true>();
 
 template bool state::find_check_impl<false>(const std::list<int>&) const;
 template bool state::find_check_impl<true>(const std::list<int>&) const;
@@ -455,5 +464,5 @@ template bool state::find_check_impl<true>(const std::list<int>&) const;
 template std::map<vec4, bitboard_t> state::gen_movable_pieces_impl<false>(const std::vector<int>&) const;
 template std::map<vec4, bitboard_t> state::gen_movable_pieces_impl<true>(const std::vector<int>&) const;
 
-template std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl<false>(const std::list<int>&) const;
-template std::vector<std::pair<vec4,vec4>> state::find_all_checks_impl<true>(const std::list<int>&) const;
+template std::vector<full_move> state::find_all_checks_impl<false>(const std::list<int>&) const;
+template std::vector<full_move> state::find_all_checks_impl<true>(const std::list<int>&) const;

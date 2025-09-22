@@ -14,7 +14,7 @@ std::string t0_fen = ""
 "[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:1:w]\n";
 
 
-std::vector<full_move> pgn_to_moves_(const std::string& input)
+std::vector<move5d> pgn_to_moves_(const std::string& input)
 {
     std::string output;
     
@@ -34,7 +34,7 @@ std::vector<full_move> pgn_to_moves_(const std::string& input)
     }
 
     // Split the result by whitespace into a vector of moves
-    std::vector<full_move> result;
+    std::vector<move5d> result;
     std::istringstream result_stream(output);
     std::string word;
     //remove the first "submit"
@@ -43,11 +43,11 @@ std::vector<full_move> pgn_to_moves_(const std::string& input)
     {
         if(word.compare("submit") != 0)
         {
-            result.push_back(full_move(word));
+            result.push_back(move5d(word));
         }
         else
         {
-            result.push_back(full_move::submit());
+            result.push_back(move5d::submit());
         }
     }
     return result;
@@ -56,7 +56,7 @@ std::vector<full_move> pgn_to_moves_(const std::string& input)
 void test1()
 {
     game g(t0_fen);
-//     full_move mv("(0T1)Ng1f3");
+//     move5d mv("(0T1)Ng1f3");
 //     std :: cout << st.m.get_present() << endl;
 //     st.apply_move(mv);
 //     std :: cout << st.m.get_present() << endl;
@@ -78,24 +78,24 @@ void test1()
 //         }
 //     }, mv.data);
 //
-    std::vector<full_move> mvs = {
-        full_move("(0T1)e2e3"),
-        full_move::submit(),
-        full_move("(0T1)g8f6"),
-        full_move::submit(),
-        full_move("(0T2)f1c4"),
-        full_move::submit(),
-        full_move("(0T2)g7g5"),
-        full_move::submit(),
-        full_move("(0T3)g1h3"),
-        full_move::submit(),
-        full_move("(0T3)g5g4"),
-        full_move::submit(),
-        full_move("(0T4)e1g1"),
-        full_move::submit(),
+    std::vector<move5d> mvs = {
+        move5d("(0T1)e2e3"),
+        move5d::submit(),
+        move5d("(0T1)g8f6"),
+        move5d::submit(),
+        move5d("(0T2)f1c4"),
+        move5d::submit(),
+        move5d("(0T2)g7g5"),
+        move5d::submit(),
+        move5d("(0T3)g1h3"),
+        move5d::submit(),
+        move5d("(0T3)g5g4"),
+        move5d::submit(),
+        move5d("(0T4)e1g1"),
+        move5d::submit(),
     };
     
-    for(full_move mv : mvs)
+    for(move5d mv : mvs)
     {
         std::cout << "Applying move: " << mv;
         bool flag = g.apply_move(mv);
@@ -111,7 +111,7 @@ void test1()
 //     g.undo();
 //     g.undo();
 //     g.redo();
-//     std::cout << g.apply_move(full_move("(0T2)Rh8g8")) << endl;
+//     std::cout << g.apply_move(move5d("(0T2)Rh8g8")) << endl;
     std::cout << g.get_current_state().m.to_string();
     std::cout << "test1 finished" << std::endl;
 }
@@ -120,16 +120,29 @@ void test1()
 multiverse m0(t0_fen);
 
 template<bool DETECT_CHECKS>
-void run_game(std::vector<full_move> mvs)
+void run_game(std::vector<move5d> mvs)
 {
     state s(m0);
     
 //    std::cerr << "Running new game ..." << std::endl;
     
-    for(full_move mv : mvs)
+    for(move5d mv : mvs)
     {
+        bool flag;
 //        std::cerr << "apply " << mv << std::endl;
-        bool flag = s.apply_move(mv);
+        if(std::holds_alternative<std::monostate>(mv.data))
+        {
+            flag = s.submit();
+        }
+        else if(std::holds_alternative<full_move>(mv.data))
+        {
+            auto fm = std::get<full_move>(mv.data);
+            flag = s.apply_move(fm);
+        }
+        else
+        {
+            throw std::runtime_error("Unknown move5d variant.\n");
+        }
         if(!flag)
         {
             std::cerr << "In run_game:\n";
@@ -138,13 +151,13 @@ void run_game(std::vector<full_move> mvs)
             std::cerr << "failed to apply: " << mv << "\n";
             std::visit(overloads {
                 [&](std::monostate){},
-                [&](std::tuple<vec4, vec4> data)
+                [&](full_move data)
                 {
-                    auto [p, _] = data;
+                    vec4 p = data.from;
                     std::cerr << "The allowed moves are: ";
                     for(vec4 d : s.m.gen_piece_move(p, s.player))
                     {
-                        std::cerr << full_move::move(p, d) << " ";
+                        std::cerr << move5d::move(p, d) << " ";
                     }
                     std::cerr << std::endl;
                 }
@@ -383,7 +396,7 @@ int main()
 22.{1:04}(1T21)Kc1>>(0T20)b1 / {15:43}(1T21)Nd3b2 (0T21)Rd1e1 
 )"
     };
-    std::vector<std::vector<full_move>> mvss;
+    std::vector<std::vector<move5d>> mvss;
     int count = 0;
     int n = 200;
     for(auto pgn : pgns)

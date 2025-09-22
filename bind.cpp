@@ -114,14 +114,14 @@ PYBIND11_MODULE(engine, m) {
         .def("to_string", &vec4::to_string)
         // Bind the stream operator for string representation
         .def("__repr__", [](const vec4 &v) { return v.to_string(); });
-    py::class_<full_move>(m, "full_move")
+    py::class_<move5d>(m, "move5d")
         .def(py::init<std::string>())
-        .def_static("submit", &full_move::submit)
-        .def_static("move", &full_move::move)
-        .def("nonempty", &full_move::nonempty)
-        .def("__lt__", &full_move::operator<)
-        .def("__eq__", &full_move::operator==)
-        .def("__repr__", [](const full_move& fm) {
+        .def_static("submit", &move5d::submit)
+        .def_static("move", &move5d::move)
+        .def("nonempty", &move5d::nonempty)
+        .def("__lt__", &move5d::operator<)
+        .def("__eq__", &move5d::operator==)
+        .def("__repr__", [](const move5d& fm) {
             std::ostringstream os;
             os << fm;
             return os.str();

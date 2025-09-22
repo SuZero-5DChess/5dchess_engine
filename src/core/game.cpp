@@ -6,13 +6,13 @@
 #include <cassert>
 #include <variant>
 
-std::vector<full_move> pgn_to_moves(const std::string& input)
+std::vector<move5d> pgn_to_moves(const std::string& input)
 {
     // Regex to match slashes ("/") and move numbers (e.g., "1.", "2.")
     const static std::regex pattern(R"((\d+\.)|(/))");
     std::string output = std::regex_replace(input, pattern, " submit ");
     // Split the result by whitespace into a vector of moves
-    std::vector<full_move> result;
+    std::vector<move5d> result;
     std::istringstream result_stream(output);
     std::string word;
     //remove the first "submit"
@@ -21,11 +21,11 @@ std::vector<full_move> pgn_to_moves(const std::string& input)
     {
         if(word.compare("submit") != 0)
         {
-            result.push_back(full_move(word));
+            result.push_back(move5d(word));
         }
         else
         {
-            result.push_back(full_move::submit());
+            result.push_back(move5d::submit());
         }
     }
     return result;
@@ -63,7 +63,7 @@ game::game(std::string input)
     now = cached_states.begin();
     
     // apply the moves stated in input string
-    std::vector<full_move> moves = pgn_to_moves(clean_input);
+    std::vector<move5d> moves = pgn_to_moves(clean_input);
     for(const auto &move : moves)
     {
         apply_move(move);
@@ -122,7 +122,7 @@ std::vector<vec4> game::get_movable_pieces() const
     return v;
 }
 
-bool game::is_playable (vec4 p) const
+bool game::is_playable(vec4 p) const
 {
     auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_current_timeline_status();
     const state& cs = get_current_state();
@@ -155,7 +155,7 @@ bool game::can_redo() const
 
 bool game::can_submit() const
 {
-    return get_current_state().can_submit();
+    return get_current_state().can_submit().has_value();
 }
 
 void game::undo()
@@ -170,29 +170,36 @@ void game::redo()
         now++;
 }
 
-bool game::apply_move(full_move fm)
+bool game::apply_move(move5d mv)
 {
-    if (std::holds_alternative<std::tuple<vec4,vec4>>(fm.data))
+    std::optional<state> ans;
+    if (std::holds_alternative<full_move>(mv.data))
     {
-        auto [p,d] = std::get<std::tuple<vec4,vec4>>(fm.data);
+        auto fm = std::get<full_move>(mv.data);
+        vec4 p = fm.from;
         if(!is_playable(p))
         {
             return false;
         }
+        ans = now->can_apply(fm);
     }
-    std::optional<state> ans = now->can_apply(fm);
+    else if (std::holds_alternative<std::monostate>(mv.data))
+    {
+        ans = now->can_submit();
+    }
     
+    bool flag = ans.has_value();
     if(ans)
     {
-        state new_state = ans.value();
+        state new_state = std::move(ans.value());
         cached_states.erase(now + 1, cached_states.end());
         cached_states.push_back(new_state);
         now = cached_states.end() - 1;
     }
-    return ans.has_value();
+    return flag;
 }
 
-// bool game::apply_indicator_move(full_move fm)
+// bool game::apply_indicator_move(move5d fm)
 // {
 //     state new_state = *now;
 //     if (std::holds_alternative<std::tuple<vec4,vec4>>(fm.data))
@@ -218,7 +225,12 @@ bool game::currently_check() const
 
 std::vector<std::pair<vec4, vec4>> game::get_current_checks() const
 {
-    return get_current_state().find_all_checks();
+    std::vector<std::pair<vec4, vec4>> result;
+    for(full_move fm : get_current_state().find_all_checks())
+    {
+        result.push_back(std::make_pair(fm.from, fm.to));
+    }
+    return result;
 }
 
 std::tuple<int, int> game::get_board_size() const

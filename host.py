@@ -58,9 +58,9 @@ def handle_click(data):
     global qs, p0, g
     pos = engine.vec4(x,y,t,l)
     present_t, present_c = g.get_current_present()
-    #print(pos, qs, pos in qs)
+    print(pos, qs, pos in qs)
     if pos in qs:
-        fm = engine.full_move.move(p0, pos-p0)
+        fm = engine.move5d.move(p0, pos)
         flag = g.apply_move(fm)
         hl = []
         if flag:
@@ -87,9 +87,8 @@ def handle_click(data):
         qs = []
         display(hl)
     elif c == present_c:
-        ds = g.gen_move_if_playable(pos)
+        qs = g.gen_move_if_playable(pos)
         #print('ds = ', ds)
-        qs = [pos + d for d in ds]
         moves = [{'x':q.x(), 'y':q.y(), 't':q.t(), 'l':q.l(), 'c':present_c} for q in qs]
         hl = [
             {
@@ -132,7 +131,7 @@ def handle_redo():
 @socketio.on('request_submit')
 def handle_submit():
     print('received submition request', end='')
-    flag = g.apply_move(engine.full_move.submit())
+    flag = g.apply_move(engine.move5d.submit())
     print(' ---', 'success' if flag else 'failed')
     display()
 

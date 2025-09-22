@@ -360,7 +360,7 @@ std::vector<vec4> multiverse::gen_piece_move(vec4 p, int board_color) const
     {
         for(int pos : marked_pos(bb))
         {
-            vec4 q = vec4(pos, r) - p;
+            vec4 q = vec4(pos, r);
 			//std::cerr << q << std::endl;
             result.push_back(q);
         }
@@ -550,7 +550,7 @@ bitboard_t multiverse::gen_physical_moves_impl(vec4 p) const
         // additional move for unmoved pawns
         if constexpr (P == PAWN_UW || P == BRAWN_UW)
         {
-            a |= shift_north(shift_north(z) & empty);
+            a |= shift_north(shift_north(z) & empty) & empty;
         }
     }
     else if constexpr (P == PAWN_B || P == BRAWN_B || P == PAWN_UB || P == BRAWN_UB)
@@ -574,7 +574,7 @@ bitboard_t multiverse::gen_physical_moves_impl(vec4 p) const
         // additional move for unmoved pawns
         if constexpr (P == PAWN_UB || P == BRAWN_UB)
         {
-            a |= shift_south(shift_south(z) & empty);
+            a |= shift_south(shift_south(z) & empty) & empty;
         }
     }
 	else if constexpr (P == KNIGHT_W || P == KNIGHT_B)
