@@ -24,13 +24,12 @@ struct state
 
     int new_line() const;
 
-    bool can_submit() const;
-
     /*
      can_apply: Check if the move can be applied to the current state. If yes, return the new state after applying the move; otherwise return std::nullopt.
      Note that this function is different from `apply_move` in that it does not change the current state as a side effect.
     */
-    std::optional<state> can_apply(full_move fm);
+    std::optional<state> can_apply(full_move fm) const;
+    std::optional<state> can_submit() const;
     
     /*
      apply_move: Apply move to the current state as a side effect. Return true if it is successfull.
@@ -38,8 +37,9 @@ struct state
      */
     template<bool UNSAFE = false>
     bool apply_move(full_move fm);
+    template<bool UNSAFE = false>
+    bool submit();
     
-
     /*
      get_timeline_status() returns `std::make_tuple(mandatory_timelines, optional_timelines, unplayable_timelines)`
      where:
@@ -68,9 +68,9 @@ struct state
     template<bool C>
     std::map<vec4, bitboard_t> gen_movable_pieces_impl(const std::vector<int>& lines) const;
     
-    std::vector<std::pair<vec4,vec4>> find_all_checks() const;
+    std::vector<full_move>find_all_checks() const;
     template<bool C>
-    std::vector<std::pair<vec4,vec4>> find_all_checks_impl(const std::list<int>& lines) const;
+    std::vector<full_move> find_all_checks_impl(const std::list<int>& lines) const;
 };
 
 std::ostream& operator<<(std::ostream& os, const match_status_t& status);

@@ -3,11 +3,8 @@
 #include <sstream>
 #include "utils.h"
 
-full_move::full_move() : data(std::monostate()) {}
 
-full_move::full_move(const vec4& p, const vec4& d) : data(std::make_tuple(p, d)) {}
-
-full_move::full_move(std::string str)
+full_move::full_move(std::string str): from{0,0,0,0}, to{0,0,0,0}
 {
     std::regex pattern1(R"(\((-?\d+)T(-?\d+)\)[A-Z]?([a-h])([1-8])([a-h])([1-8]))");
     std::regex pattern2(R"(\((-?\d+)T(-?\d+)\)[A-Z]?([a-h])([1-8])>>?\(T(-?\d+)\)([a-h])([1-8]))");
@@ -50,73 +47,104 @@ full_move::full_move(std::string str)
     {
         throw std::runtime_error("Cannot match this move in any known pattern: " + str);
     }
-    vec4 p = vec4(x1, y1, t1, l1);
-    data = std::make_tuple(p, vec4(x2, y2, t2, l2) - p);
-}
-
-full_move full_move::submit() { return full_move(); }
-
-full_move full_move::move(const vec4& p, const vec4& d) { return full_move(p, d); }
-
-bool full_move::nonempty()
-{
-    return data.index();
-}
-
-bool full_move::operator<(const full_move& other) const 
-{
-    return data < other.data;
-}
-
-bool full_move::operator==(const full_move& other) const 
-{
-    return data == other.data;
+    from = vec4(x1, y1, t1, l1);
+    to = vec4(x2, y2, t2, l2);
 }
 
 std::string full_move::to_string() const
 {
     std::ostringstream os;
-    switch (data.index())
+    vec4 p = from， q = to;
+    vec4 d = q - p;
+    if(d.l() == 0)
     {
-        case 0:
-            os << "Submit";
-            break;
-        case 1:
-            auto [p, d] = std::get<std::tuple<vec4, vec4>>(data);
-            vec4 q = p+d;
-            if(d.l() == 0)
-            {
-                if(d.t() == 0)
-                {
-                    os << '(' << p.l() << 'T' << p.t() << ')' << (char)(p.x()+'a') << (char)(p.y()+'1') << (char)(q.x()+'a') << (char)(q.y()+'1');
-                }
-                else
-                {
-                    os << '(' << p.l() << 'T' << p.t() << ')' << (char)(p.x()+'a') << (char)(p.y()+'1') << ">(T" << q.t() << ')' << (char)(q.x()+'a') << (char)(q.y()+'1');
-                }
-            }
-            else
-            {
-                os << '(' << p.l() << 'T' << p.t() << ')' << (char)(p.x()+'a') << (char)(p.y()+'1') << ">(" << q.l() << 'T' << q.t() << ')' << (char)(q.x()+'a') << (char)(q.y()+'1');
-            }
-            break;
+        if(d.t() == 0)
+        {
+            os << '(' << p.l() << 'T' << p.t() << ')' << (char)(p.x()+'a') << (char)(p.y()+'1') << (char)(q.x()+'a') << (char)(q.y()+'1');
+        }
+        else
+        {
+            os << '(' << p.l() << 'T' << p.t() << ')' << (char)(p.x()+'a') << (char)(p.y()+'1') << ">(T" << q.t() << ')' << (char)(q.x()+'a') << (char)(q.y()+'1');
+        }
+    }
+    else
+    {
+        os << '(' << p.l() << 'T' << p.t() << ')' << (char)(p.x()+'a') << (char)(p.y()+'1') << ">(" << q.l() << 'T' << q.t() << ')' << (char)(q.x()+'a') << (char)(q.y()+'1');
     }
     return os.str();
 }
 
-std::ostream& operator<<(std::ostream& os, const full_move& m)
+bool full_move::operator<(const full_move &other) const
+{
+    return std::tie(from, to) < std::tie(other.from, other.to); 
+}
+
+bool full_move::operator==(const full_move &other) const
+{
+    return std::tie(from, to) == std::tie(other.from, other.to);
+}
+
+/*********************************/
+
+move5d::move5d() : data(std::monostate()) {}
+
+move5d::move5d(const vec4& p, const vec4& q) : data(full_move(p,q)) {}
+
+move5d::move5d(std::string str)
+{
+    data = full_move(str);
+}
+
+move5d move5d::submit() { return move5d(); }
+
+move5d move5d::move(const vec4& p, const vec4& d) { return move5d(p, d); }
+
+bool move5d::nonempty()
+{
+    return data.index();
+}
+
+bool move5d::operator<(const move5d& other) const 
+{
+    return data < other.data;
+}
+
+bool move5d::operator==(const move5d& other) const 
+{
+    return data == other.data;
+}
+
+std::string move5d::to_string() const
+{
+    switch (data.index())
+    {
+        case 0:
+            return os << "Submit";
+        case 1:
+            return std::get<full_move>(data).to_string();
+    }
+    return os.str();
+}
+
+std::ostream &operator<<(std::ostream &os, const full_move &fm)
+{
+    os << fm.to_string();
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const move5d &m)
 {
     os << m.to_string();
     return os;
 }
 
-actions::actions(full_move m) : value(m) {}
+actions::actions(move5d m) : value(m) {}
 
-actions::actions(full_move m, std::set<actions> s) : value(std::make_tuple(m, std::move(s))) {}
+actions::actions(move5d m, std::set<actions> s) : value(std::make_tuple(m, std::move(s))) {}
 
-actions actions::leaf(full_move m) { return actions(m); }
+actions actions::leaf(move5d m) { return actions(m); }
 
-actions actions::branch(full_move m, std::set<actions> s) { return actions(m, std::move(s)); }
+actions actions::branch(move5d m, std::set<actions> s) { return actions(m, std::move(s)); }
 
 bool actions::operator<(const actions& other) const { return value < other.value; }
 
@@ -127,17 +155,19 @@ std::ostream& operator<<(std::ostream& os, const actions& a)
     return a.pretty_print(os, "", 0);
 }
 
+/*********************************/
+
 const static std::string shapes[] = { "", "", "├── ", "│   ", "└── " , "    " };
 
 std::ostream& actions::pretty_print(std::ostream& os, const std::string& prefix, const int& now) const
 {
-    if (std::holds_alternative<full_move>(value))
+    if (std::holds_alternative<move5d>(value))
     {
-        os << prefix << shapes[now] << std::get<full_move>(value) << "\n";
+        os << prefix << shapes[now] << std::get<move5d>(value) << "\n";
     }
     else
     {
-        const auto& [m, set] = std::get<std::tuple<full_move, std::set<actions>>>(value);
+        const auto& [m, set] = std::get<std::tuple<move5d, std::set<actions>>>(value);
         os << prefix << shapes[now] << m << "\n";
         auto it = set.begin();
         while (it != set.end())

@@ -1,3 +1,5 @@
+// game.h
+// interface for python library
 #ifndef GAME_H
 #define GAME_H
 
@@ -31,8 +33,8 @@ public:
     bool can_submit() const;
     void undo();
     void redo();
-    bool apply_move(full_move fm);
-    //bool apply_indicator_move(full_move fm);
+    bool apply_move(move5d fm);
+    //bool apply_indicator_move(move5d fm);
     bool currently_check() const;
     std::vector<std::pair<vec4,vec4>> get_current_checks() const;
     
