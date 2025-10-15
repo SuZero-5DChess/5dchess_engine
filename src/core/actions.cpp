@@ -54,7 +54,7 @@ full_move::full_move(std::string str): from{0,0,0,0}, to{0,0,0,0}
 std::string full_move::to_string() const
 {
     std::ostringstream os;
-    vec4 p = from， q = to;
+    vec4 p = from, q = to;
     vec4 d = q - p;
     if(d.l() == 0)
     {
@@ -119,11 +119,12 @@ std::string move5d::to_string() const
     switch (data.index())
     {
         case 0:
-            return os << "Submit";
+            return "Submit";
         case 1:
             return std::get<full_move>(data).to_string();
+        default:
+            throw std::runtime_error("Unknown move5d variant");
     }
-    return os.str();
 }
 
 std::ostream &operator<<(std::ostream &os, const full_move &fm)

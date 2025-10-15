@@ -65,10 +65,10 @@ The list printer function. (For debugging.)
 */
 void print_range(auto const rem, auto const& range)
 {
-    std::cout << rem;
+    std::cout << rem << "{";
     for(auto const& elem : range)
-        std::cout << elem << ' ';
-    std::cout << '\n';
+        std::cout << elem << ", ";
+    std::cout << "}\n";
 }
 
 #define SHOW(s) std::cout << #s << ": " << (s) << std::endl;

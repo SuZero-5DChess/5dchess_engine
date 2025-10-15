@@ -390,6 +390,18 @@ std::map<vec4, bitboard_t> state::gen_movable_pieces() const
     }
 }
 
+std::map<vec4, bitboard_t> state::get_movable_pieces(std::vector<int> lines) const
+{
+    if (player == 0)
+    {
+        return gen_movable_pieces_impl<false>(lines);
+    }
+    else
+    {
+        return gen_movable_pieces_impl<true>(lines);
+    }
+}
+
 template <bool C>
 std::map<vec4, bitboard_t> state::gen_movable_pieces_impl(const std::vector<int> &lines) const
 {

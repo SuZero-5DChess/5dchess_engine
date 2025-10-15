@@ -65,6 +65,7 @@ struct state
     bool find_check_impl(const std::list<int>& lines) const;
     
     std::map<vec4, bitboard_t> gen_movable_pieces() const;
+    std::map<vec4, bitboard_t> get_movable_pieces(std::vector<int> lines) const;
     template<bool C>
     std::map<vec4, bitboard_t> gen_movable_pieces_impl(const std::vector<int>& lines) const;
     

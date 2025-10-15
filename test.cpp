@@ -1,22 +1,17 @@
 #include <iostream>
-#include <string>
-#include "board.h"
-#include <regex>
+#include <vector>
+#include <algorithm>
 
 int main()
 {
-    std::regex size_regex(R"(^\s*(\d+)\s*x\s*(\d+)\s*$)");
-    std::string size = "  8 x 9";
-    std::smatch size_sm;
-    if(std::regex_search(size, size_sm, size_regex))
+    std::vector<int> xs = {3,8,7,5,6,2,4,1};
+    int sign = -1;
+    std::sort(xs.begin(), xs.end(), [sign=sign](int a, int b){
+            return sign*a < sign*b;
+        });
+    for(int x:xs)
     {
-        int size_x = std::stoi(size_sm[1]);
-        int size_y = std::stoi(size_sm[2]);
-        std::cout << size_x << ", " << size_y << std::endl;
+        std::cout << x << ",";
     }
-    else
-    {
-        std::cout << "incorrect" <<std::endl;
-    }
-    return 0;
+    std::cout << "\n\n";
 }

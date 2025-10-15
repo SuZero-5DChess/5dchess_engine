@@ -7,6 +7,9 @@
 #include <ostream>
 #include "vec4.h"
 
+/*
+ In this implementation, I use `full_move` instead of `move` to avoid confusion with `std::move`.
+ */
 struct full_move
 {
     vec4 from, to;
@@ -19,8 +22,7 @@ struct full_move
 };
 
 /*
- A move is either moving a piece from coordinate p to coordinate q or the action of submition.
- In this implementation, I use `full_move` instead of `move` to avoid confusion with `std::move`.
+ A 5d move is either moving a piece from coordinate p to coordinate q or the action of submition.
  */
 struct move5d {
     std::variant<std::monostate, full_move> data;

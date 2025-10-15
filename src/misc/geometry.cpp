@@ -3,6 +3,11 @@
 #include <sstream>
 #include "utils.h"
 
+const std::set<int> &HC::operator[](size_t i) const
+{
+    return axes[i];
+}
+
 bool HC::contains(point loc) const
 {
     assert(loc.size() == axes.size());
@@ -22,6 +27,11 @@ bool search_space::contains(point loc) const
             return true;
     }
     return false;
+}
+
+void search_space::concat(search_space &&other)
+{
+    hcs.splice(hcs.end(), other.hcs);
 }
 
 search_space HC::remove_slice(const slice &s) const
@@ -68,9 +78,26 @@ std::string HC::to_string(bool verbose) const
     return oss.str();
 }
 
+std::string slice::to_string() const
+{
+    std::ostringstream oss;
+    oss << "Slice with " << fixed_axes.size() << " axes fixed: \n";
+    for(const auto& [k, v] : fixed_axes)
+    {
+        oss << "On axis " << k << ", fixing {";
+        for(int i : v)
+        {
+            oss << i << ", ";
+        }
+        oss.seekp(-2, oss.cur);
+        oss << "}\n";
+    }
+    return oss.str();
+}
+
 std::string search_space::to_string() const
 {
-    std::string result = "Search space:\n";
+    std::string result = "Search space: total " + std::to_string(hcs.size()) + " hypercuboids  \n";
     for(const auto& hc : hcs)
     {   
         result += hc.to_string(false);
