@@ -95,7 +95,12 @@ std::vector<vec4> game::gen_move_if_playable(vec4 p)
     if(is_playable(p))
     {
         const state& cs = get_current_state();
-        return cs.m.gen_piece_move(p, cs.player);
+        std::vector<vec4> result;
+        for(const vec4& v : cs.m.gen_piece_move(p, cs.player))
+        {
+            result.push_back(v);
+        }
+        return result;
     }
     else
     {

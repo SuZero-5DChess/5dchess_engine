@@ -61,12 +61,16 @@ bool state::apply_move(full_move fm)
     vec4 d = q - p;
     if constexpr (!UNSAFE)
     {
-        std::map<vec4, bitboard_t> mvbbs = player ? m.gen_moves<true>(p) : m.gen_moves<false>(p);
-        auto it = mvbbs.find(q.tl());
+        auto mvs = player ? m.gen_moves<true>(p) : m.gen_moves<false>(p);
+        //auto it = mvbbs.find(q.tl());
+        const auto &res = mvs.find([&q](const auto &pair){
+            const auto &[tl, bb] = pair;
+            return tl == q.tl();
+        });
         // is it a pseudolegal move?
-        if(it != mvbbs.end())
+        if(res)
         {
-            bitboard_t bb = mvbbs[q.tl()];
+            bitboard_t bb = res.value().second;
             if(!(pmask(q.xy()) & bb))
             {
                 return false;
@@ -270,7 +274,7 @@ bool state::find_check_impl(const std::list<int>& lines) const
         {
             vec4 p = vec4(src_pos, vec4(0,0,t,l));
             // generate the aviliable superphysical moves
-            std::map<vec4, bitboard_t> moves = m.gen_superphysical_moves<C>(p);
+            auto moves = m.gen_superphysical_moves<C>(p);
 //            std::cerr << "The allowed moves are: ";
 //            for(vec4 d : m.gen_piece_move(p, C))
 //            {
@@ -351,7 +355,7 @@ std::vector<full_move> state::find_all_checks_impl(const std::list<int>& lines) 
         {
             vec4 p = vec4(src_pos, vec4(0,0,t,l));
             // generate the aviliable moves
-            std::map<vec4, bitboard_t> moves = m.gen_moves<C>(p);
+            auto moves = m.gen_moves<C>(p);
             // for each destination board and bit location
             for (const auto& [q0, bb] : moves)
             {
@@ -420,7 +424,7 @@ std::map<vec4, bitboard_t> state::gen_movable_pieces_impl(const std::vector<int>
         {
             vec4 p = vec4(src_pos, p0);
             // generate the aviliable moves
-            std::map<vec4, bitboard_t> moves = m.gen_moves<C>(p);
+            auto moves = m.gen_moves<C>(p);
             // for each destination board and bit location
             bool still = true;
             for (const auto& [q0, bb] : moves)

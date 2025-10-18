@@ -16,8 +16,9 @@
 #include <memory>
 #include "board.h"
 #include "vec4.h"
+#include "generator.h"
 
-
+using movegen_t = generator<std::pair<vec4, bitboard_t>>;
 
 /*
  Behavior of copying a multiverse object is just copy the vector of vectors of pointers to the boards. It does not perform deep-copy of a board object. (Which is expected.)
@@ -28,26 +29,35 @@ private:
     std::vector<std::vector<std::shared_ptr<board>>> boards;
     
     // move generation for each pieces
-    enum class axesmode {ORTHOGONAL, DIAGONAL, BOTH};
-    
-    template<bool C, axesmode TL, axesmode XY>
-    void gen_compound_moves(vec4 p, std::map<vec4, bitboard_t>& result) const;
-    
 
     template<piece_t P, bool C>
     bitboard_t gen_physical_moves_impl(vec4 p) const;
 
-    template<piece_t P, bool C>
-    std::map<vec4, bitboard_t> gen_superphysical_moves_impl(vec4 p) const;
+    template<piece_t P, bool C, bool ONLY_SP>
+    movegen_t gen_moves_impl(vec4 p0) const;
+
+    /**
+     generate sliding moves in directions that are:
+      + starting from `p`
+      + in superphysical directions, moves as axesmode `TL`
+        - when `TL` is `ORTHOGONAL`, moves to p+(*,*,1,0), p+(*,*,1,0), etc.
+        - when `TL` is `DIAGONAL`, moves to p+(*,*,1,1), p+(*,*,1,-1), etc.
+      + in physical directions, moves as axesmode `XY`
+        - when `XY` is `ORTHOGONAL`, moves to p+(1,0,*,*), p+(0,1,*,*), etc.
+        - when `XY` is `DIAGONAL`, moves to p+(1,1,*,*), p+(1,-1,*,*), etc.
+     */
+    enum class axesmode {ORTHOGONAL, DIAGONAL, BOTH};
+    template<bool C, axesmode TL, axesmode XY>
+    void gen_compound_moves(vec4 p, std::map<vec4, bitboard_t>& result) const;
 
     template<bool C>
-    std::map<vec4, bitboard_t> gen_purely_sp_rook_moves(vec4 p) const;
+    std::vector<std::pair<vec4, bitboard_t>> gen_purely_sp_rook_moves(vec4 p0) const;
     
     template<bool C>
-    std::map<vec4, bitboard_t> gen_purely_sp_bishop_moves(vec4 p0) const;
+    std::vector<std::pair<vec4, bitboard_t>> gen_purely_sp_bishop_moves(vec4 p0) const;
     
     template<bool C>
-    std::map<vec4, bitboard_t> gen_purely_sp_knight_moves(vec4 p0) const;
+    std::vector<std::pair<vec4, bitboard_t>> gen_purely_sp_knight_moves(vec4 p0) const;
 public:
     // the following data are derivated from boards:
     int l_min, l_max;
@@ -79,12 +89,12 @@ public:
     bool is_active(int l) const;
     
     template<bool C>
-    std::map<vec4, bitboard_t> gen_superphysical_moves(vec4 p) const;
+    movegen_t gen_superphysical_moves(vec4 p) const;
 
     template<bool C>
-    std::map<vec4, bitboard_t> gen_moves(vec4 p) const;
+    movegen_t gen_moves(vec4 p) const;
     
-    std::vector<vec4> gen_piece_move(vec4 p, int board_color) const;
+    generator<vec4> gen_piece_move(vec4 p, int board_color) const;
     
     
     
