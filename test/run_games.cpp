@@ -112,12 +112,12 @@ void test1()
 //     g.undo();
 //     g.redo();
 //     std::cout << g.apply_move(move5d("(0T2)Rh8g8")) << endl;
-    std::cout << g.get_current_state().m.to_string();
+    std::cout << g.get_current_state().to_string();
     std::cout << "test1 finished" << std::endl;
 }
 
 
-multiverse m0(t0_fen);
+multiverse_odd m0(t0_fen);
 
 template<bool DETECT_CHECKS>
 void run_game(std::vector<move5d> mvs)
@@ -147,7 +147,7 @@ void run_game(std::vector<move5d> mvs)
         {
             std::cerr << "In run_game:\n";
             std::cerr << "current boards:\n";
-            std::cerr << s.m.to_string() << std::endl;
+            std::cerr << s.to_string() << std::endl;
             std::cerr << "failed to apply: " << mv << "\n";
             std::visit(overloads {
                 [&](std::monostate){},
@@ -155,7 +155,7 @@ void run_game(std::vector<move5d> mvs)
                 {
                     vec4 p = data.from;
                     std::cerr << "The allowed moves are: ";
-                    for(vec4 d : s.m.gen_piece_move(p, s.player))
+                    for(vec4 d : s.gen_piece_move(p))
                     {
                         std::cerr << move5d::move(p, d) << " ";
                     }
@@ -171,7 +171,7 @@ void run_game(std::vector<move5d> mvs)
             {
                 std::cerr << "In run_game:\n";
                 std::cerr << "current boards:\n";
-                std::cerr << s.m.to_string() << std::endl;
+                std::cerr << s.to_string() << std::endl;
                 std::cerr << "This move" << mv << "is illeagal because hostile is checking.\n";
             }
         }

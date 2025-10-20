@@ -21,30 +21,41 @@
 using movegen_t = generator<std::pair<vec4, bitboard_t>>;
 
 /*
+ The multiverse class.
+
  Behavior of copying a multiverse object is just copy the vector of vectors of pointers to the boards. It does not perform deep-copy of a board object. (Which is expected.)
+
+ This is an abstract base class. Two child classes are defined for odd and even timelines respectively.
  */
 class multiverse
 {
 private:
     std::vector<std::vector<std::shared_ptr<board>>> boards;
+    // the following data are derivated from boards:
+    int l_min, l_max, active_min, active_max;
+    std::vector<int> timeline_start, timeline_end;
     
-    // move generation for each pieces
-
+    // private methods for move generation
     template<piece_t P, bool C>
     bitboard_t gen_physical_moves_impl(vec4 p) const;
 
     template<piece_t P, bool C, bool ONLY_SP>
-    movegen_t gen_moves_impl(vec4 p0) const;
+    movegen_t gen_moves_impl(vec4 p) const;
 
-    /**
+    template<bool C>
+    generator<vec4> gen_board_move_impl(vec4 p0) const;
+
+    /*
      generate sliding moves in directions that are:
       + starting from `p`
       + in superphysical directions, moves as axesmode `TL`
         - when `TL` is `ORTHOGONAL`, moves to p+(*,*,1,0), p+(*,*,1,0), etc.
         - when `TL` is `DIAGONAL`, moves to p+(*,*,1,1), p+(*,*,1,-1), etc.
+        - `BOTH` means both of the above
       + in physical directions, moves as axesmode `XY`
         - when `XY` is `ORTHOGONAL`, moves to p+(1,0,*,*), p+(0,1,*,*), etc.
         - when `XY` is `DIAGONAL`, moves to p+(1,1,*,*), p+(1,-1,*,*), etc.
+        - `BOTH` means both of the above
      */
     enum class axesmode {ORTHOGONAL, DIAGONAL, BOTH};
     template<bool C, axesmode TL, axesmode XY>
@@ -58,79 +69,74 @@ private:
     
     template<bool C>
     std::vector<std::pair<vec4, bitboard_t>> gen_purely_sp_knight_moves(vec4 p0) const;
-public:
-    // the following data are derivated from boards:
-    int l_min, l_max;
-    std::vector<int> timeline_start, timeline_end;
 
+
+    void insert_board_impl(int l, int t, int c, const std::shared_ptr<board>& b_ptr);
+protected:
+    virtual std::pair<int,int> calculate_active_range() const = 0;
+    void update_active_range();
+public:
+    // constructor and copy constructors
     multiverse(const std::string& input, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
     multiverse(const multiverse& other);
     multiverse& operator=(const multiverse& other);
     
-    std::shared_ptr<board> get_board(int l, int t, int c) const;
+    // modifiers
     void insert_board(int l, int t, int c, const std::shared_ptr<board>& b_ptr);
     void append_board(int l, const std::shared_ptr<board>& b_ptr);
+
+    // getters
+    std::pair<int, int> get_lines_range() const;
+    std::pair<int, int> get_active_range() const;
+    std::pair<int, int> get_timeline_start(int l) const;
+    std::pair<int, int> get_timeline_end(int l) const;
+    std::shared_ptr<board> get_board(int l, int t, int c) const;
     std::vector<std::tuple<int,int,int,std::string>> get_boards() const;
     std::string to_string() const;
-    bool inbound(vec4 a, int color) const;
     piece_t get_piece(vec4 a, int color) const;
     bool get_umove_flag(vec4 a, int color) const;
     
-    /*
-     `number_activated` is max(abs(white's activated lines), abs(black's activated lines)).
-     */
-    int number_activated() const;
     /*
      This helper function returns (present_t, present_c)
      where: present_t is the time of present in L,T coordinate
             present_c is either 0 (for white) or 1 (for black)
      */
     std::tuple<int,int> get_present() const;
-    bool is_active(int l) const;
     
-    template<bool C>
-    movegen_t gen_superphysical_moves(vec4 p) const;
-
-    template<bool C>
-    movegen_t gen_moves(vec4 p) const;
-    
+    // move generation
+    template<bool C> movegen_t gen_superphysical_moves(vec4 p) const;
+    template<bool C> movegen_t gen_moves(vec4 p) const;
     generator<vec4> gen_piece_move(vec4 p, int board_color) const;
+    generator<vec4> gen_board_move(vec4 p0, int board_color) const;
     
-    
-    
-    /*
-     The following static functions describe the correspondence between two coordinate systems: L,T and u,v
-     
-    l_to_u make use of the bijection from integers to non-negative integers:
-    x -> ~(x>>1)
-     */
-    constexpr static int l_to_u(int l)
-    {
-        if(l >= 0)
-            return l << 1;
-        else
-            return ~(l << 1);
-    }
+    // help functions
+    bool inbound(vec4 a, int color) const;
+    virtual std::unique_ptr<multiverse> clone() const = 0;
+    virtual ~multiverse() = default;
+};
 
-    constexpr static int tc_to_v(int t, int c)
+class multiverse_odd : public multiverse
+{
+    std::pair<int,int> calculate_active_range() const override;
+public:
+    using multiverse::multiverse;
+    multiverse_odd(std::string input, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
+    std::unique_ptr<multiverse> clone() const override
     {
-        return t << 1 | c;
-    }
-
-    constexpr static int u_to_l(int u)
-    {
-        if(u & 1)
-            return ~(u >> 1);
-        else
-            return u >> 1;
-    }
-
-    constexpr static std::tuple<int, int> v_to_tc(int v)
-    {
-        return std::tuple<int, int>(v >> 1, v & 1);
+        return std::make_unique<multiverse_odd>(*this);
     }
 };
 
-
+class multiverse_even : public multiverse
+{
+    std::pair<int,int> calculate_active_range() const override;
+public:
+    using multiverse::multiverse;
+    multiverse_even(std::string input, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
+    std::unique_ptr<multiverse> clone() const override
+    {
+        return std::make_unique<multiverse_even>(*this);
+    }
+};
 
 #endif /* MULTIVERSE_H */

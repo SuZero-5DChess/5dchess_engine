@@ -47,3 +47,12 @@ cmake .. -DTEST=on -G"Visual Studio 17 2022"
 ### Documentation
 
 For more detail, please read [this page](docs/index.md).
+
+### TODOs
+
+- &#9745; use generators to unify code that code that produces one incidence or more 
+- &#9744; hide UV coordinate details, deprecate numbers_activated 
+- &#9744; support even timeline game
+- &#9744; 5dpgn reader for simplified moves
+- &#9744; method to get check path
+- &#9744; test hypercuboid algorithm

@@ -16,7 +16,7 @@ HC_search HC_search::build_HC(const state& s)
     std::vector<std::set<int>> nonbranching_axes, branching_axes;
     auto [mandatory_timelines, optional_timelines, unplayable_timelines] = s.get_timeline_status();
     auto playable_timelines = concat_vectors(mandatory_timelines, optional_timelines);
-    auto [present_t, present_c] = s.m.get_present();
+    auto [present_t, present_c] = s.apparent_present();
     
     // generate all moves, then split them into cases
     // for departing moves, we merge the moves that depart from the same coordinate
@@ -31,7 +31,7 @@ HC_search HC_search::build_HC(const state& s)
         {
             bool has_depart = false;
             vec4 from(pos1, tl1);
-            for(const vec4 &to : s.m.gen_piece_move(from, s.player))
+            for(const vec4 &to : s.gen_piece_move(from))
             {
                 full_move m(from, to);
                 if(from.tl() != to.tl())
@@ -66,15 +66,15 @@ HC_search HC_search::build_HC(const state& s)
         {
             jump_indices[p] = static_cast<int>(locs.size());
             // store the departing board after move is made
-            std::shared_ptr<board> b_ptr = s.m.get_board(p.l(), p.t(), present_c)
+            std::shared_ptr<board> b_ptr = s.get_board(p.l(), p.t(), present_c)
                 ->replace_piece(p.xy(), NO_PIECE);
             locs.push_back(departing_move{p, b_ptr});
         }
         for(full_move m : arrives_to[l])
         {
             // store the arriving board after move is made
-            piece_t pic = s.m.get_piece(m.from, present_c);
-            std::shared_ptr<board> b_ptr = s.m.get_board(m.to.l(), m.to.t(), present_c)
+            piece_t pic = s.get_piece(m.from, present_c);
+            std::shared_ptr<board> b_ptr = s.get_board(m.to.l(), m.to.t(), present_c)
                 ->replace_piece(m.to.xy(), pic);
             // use a temporary idx of -1, will be filled later
             locs.push_back(arriving_move{m, b_ptr, -1});
@@ -114,8 +114,8 @@ HC_search HC_search::build_HC(const state& s)
         // simutaneously, collect all branching moves
         for(const full_move& m : arrives_to[l])
         {
-            piece_t pic = s.m.get_piece(m.from, present_c);
-            std::shared_ptr<board> b_ptr = s.m.get_board(m.to.l(), m.to.t(), present_c)
+            piece_t pic = s.get_piece(m.from, present_c);
+            std::shared_ptr<board> b_ptr = s.get_board(m.to.l(), m.to.t(), present_c)
                 ->replace_piece(m.to.xy(), pic);
             assert(jump_indices.contains(m.from));
             locs.push_back(arriving_move{m, b_ptr, jump_indices[m.from]});

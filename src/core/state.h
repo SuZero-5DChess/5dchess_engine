@@ -3,24 +3,38 @@
 
 #include "multiverse.h"
 #include "actions.h"
+#include <memory>
 #include <string>
 #include <set>
 #include <optional>
 #include <list>
 #include <iostream>
 
-struct state
+class state
 {
-    multiverse m;
+    std::unique_ptr<multiverse> m;
+public:
     /*
      `present` is in L,T coordinate (i.e. not u,v corrdinated).
      These numbers can be inherited from copy-construction; thus they are not necessarily equal to `m.get_present()`.
     */
     int present, player;
+    
+	//match_status_t match_status;
 
-	match_status_t match_status;
-
-    state(multiverse mtv);
+    state(multiverse &mtv);
+    
+    // standard copy-constructors
+    state(const state& other)
+        : m(other.m->clone()) {}
+    state(state&&) noexcept = default;
+    state& operator=(state other) noexcept {
+        swap(*this, other);
+        return *this;
+    }
+    friend void swap(state& a, state& b) noexcept {
+        std::swap(a.m, b.m);
+    }
 
     int new_line() const;
 
@@ -72,8 +86,20 @@ struct state
     std::vector<full_move>find_all_checks() const;
     template<bool C>
     std::vector<full_move> find_all_checks_impl(const std::list<int>& lines) const;
+
+    // wrappers for low-level functions
+    std::pair<int, int> apparent_present() const;
+    std::pair<int, int> get_lines_range() const;
+    std::pair<int, int> get_active_range() const;
+    std::pair<int, int> get_timeline_start(int l) const;
+    std::pair<int, int> get_timeline_end(int l) const;
+    piece_t get_piece(vec4 p, int color) const;
+    std::shared_ptr<board> get_board(int l, int t, int c) const;
+    std::vector<std::tuple<int,int,int,std::string>> get_boards() const;
+    generator<vec4> gen_piece_move(vec4 p) const;
+    std::string to_string() const;
 };
 
-std::ostream& operator<<(std::ostream& os, const match_status_t& status);
+//std::ostream& operator<<(std::ostream& os, const match_status_t& status);
 
 #endif //STATE_H

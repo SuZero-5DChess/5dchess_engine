@@ -58,7 +58,7 @@ game::game(std::string input)
     metadata.try_emplace("size", "8x8");
     auto [size_x, size_y] = get_board_size();
     
-    multiverse m(input, size_x, size_y);
+    multiverse_odd m(input, size_x, size_y);
     cached_states.push_back(state(m));
     now = cached_states.begin();
     
@@ -82,7 +82,7 @@ state game::get_current_state() const
 
 std::vector<std::tuple<int, int, int, std::string>> game::get_current_boards() const
 {
-    return get_current_state().m.get_boards();
+    return get_current_state().get_boards();
 }
 
 std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> game::get_current_timeline_status() const
@@ -96,7 +96,7 @@ std::vector<vec4> game::gen_move_if_playable(vec4 p)
     {
         const state& cs = get_current_state();
         std::vector<vec4> result;
-        for(const vec4& v : cs.m.gen_piece_move(p, cs.player))
+        for(const vec4& v : cs.gen_piece_move(p))
         {
             result.push_back(v);
         }
@@ -110,7 +110,7 @@ std::vector<vec4> game::gen_move_if_playable(vec4 p)
 
 match_status_t game::get_match_status() const
 {
-    return get_current_state().match_status;
+    return match_status_t();
 }
 
 std::vector<vec4> game::get_movable_pieces() const
@@ -134,11 +134,11 @@ bool game::is_playable(vec4 p) const
     if(std::ranges::contains(mandatory_timelines, p.l())
     || std::ranges::contains(optional_timelines, p.l()))
     {
-        int v1 = multiverse::tc_to_v(p.t(), cs.player);
-        int v2 = cs.m.timeline_end[multiverse::l_to_u(p.l())];
+        auto v1 = std::make_pair(p.t(), cs.player);
+        auto v2 = cs.get_timeline_end(p.l());
         if(v1 == v2)
         {
-            piece_t p_piece = cs.m.get_piece(p, cs.player);
+            piece_t p_piece = cs.get_piece(p, cs.player);
             if(p_piece != NO_PIECE && p_piece != WALL_PIECE)
             {
                 return cs.player == static_cast<int>(piece_color(p_piece));
