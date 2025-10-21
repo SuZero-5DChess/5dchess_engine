@@ -12,7 +12,8 @@ std::string t0_fen = ""
 
 int main()
 {
-    state s{multiverse(t0_fen)};
+    multiverse_odd m0(t0_fen);
+    state s{m0};
     std::cout << "starting_test:\n";
     auto w = HC_search(s);
     for(auto it = w.begin(); it != w.end(); ++it)

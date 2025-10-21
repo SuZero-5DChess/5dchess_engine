@@ -25,30 +25,27 @@ HC_search HC_search::build_HC(const state& s)
     // to track the corresponding departing moves for each arriving move
     std::map<vec4, int> jump_indices;
     
-    for(const auto &[tl1, bb1] : s.gen_movable_pieces())
+    for(vec4 from : s.gen_movable_pieces())
     {
-        for(int pos1 : marked_pos(bb1))
+        bool has_depart = false;
+        for(const vec4 &to : s.gen_piece_move(from))
         {
-            bool has_depart = false;
-            vec4 from(pos1, tl1);
-            for(const vec4 &to : s.gen_piece_move(from))
+            full_move m(from, to);
+            if(from.tl() != to.tl())
             {
-                full_move m(from, to);
-                if(from.tl() != to.tl())
+                if(!has_depart)
                 {
-                    if(!has_depart)
-                    {
-                        departs_from[from.l()].push_back(m.from);
-                    }
-                    has_depart = true;
-                    arrives_to[to.l()].push_back(m);
+                    departs_from[from.l()].push_back(m.from);
                 }
-                else
-                {
-                    stays_on[from.l()].push_back(m);
-                }
+                has_depart = true;
+                arrives_to[to.l()].push_back(m);
+            }
+            else
+            {
+                stays_on[from.l()].push_back(m);
             }
         }
+        
     }
     
     size_t estimate_size = 1 + arrives_to.size() + departs_from.size();

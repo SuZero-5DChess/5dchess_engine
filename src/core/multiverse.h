@@ -78,8 +78,8 @@ protected:
 public:
     // constructor and copy constructors
     multiverse(const std::string& input, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
-    multiverse(const multiverse& other);
-    multiverse& operator=(const multiverse& other);
+    multiverse(const multiverse&) = default;
+    multiverse& operator=(const multiverse&) = default;
     
     // modifiers
     void insert_board(int l, int t, int c, const std::shared_ptr<board>& b_ptr);

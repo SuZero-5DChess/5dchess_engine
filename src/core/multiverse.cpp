@@ -94,23 +94,6 @@ multiverse::multiverse(const std::string &input, int size_x, int size_y)
     }
 }
 
-multiverse::multiverse(const multiverse& other)
-    : boards(other.boards),
-      l_min(other.l_min),
-      l_max(other.l_max),
-      timeline_start(other.timeline_start),
-      timeline_end(other.timeline_end)
-{}
-
-multiverse& multiverse::operator=(const multiverse& other)
-{
-    if (this != &other)
-    {
-        boards = other.boards;
-    }
-    return *this;
-}
-
 std::tuple<int,int> multiverse::get_present() const
 {
     int present_v = std::numeric_limits<int>::max();
@@ -230,7 +213,9 @@ std::string multiverse::to_string() const
 {
     std::stringstream sstm;
     auto [present, player] = get_present();
-    sstm << "Present: T" << present << (player?'b':'w') << "\n";
+    sstm << "Multiverse present: T" << present << (player?'b':'w') << "\n";
+    sstm << "lines range:" << get_lines_range() << "\t";
+    sstm << "active range:" << get_active_range() << "\n";
     for(int u = 0; u < this->boards.size(); u++)
     {
         const auto& timeline = this->boards[u];
@@ -698,7 +683,11 @@ movegen_t multiverse::gen_moves_impl(vec4 p) const
     if constexpr (!ONLY_SP)
     {
         bitboard_t bb = gen_physical_moves_impl<P, C>(p);
-        co_yield std::make_pair(p.tl(), bb);
+        if(bb)
+        {
+            // only generate this entry when there is at least one physical move
+            co_yield std::make_pair(p.tl(), bb);
+        }
     }
     if constexpr (P == KING_W || P == KING_B || P == COMMON_KING_W || P == COMMON_KING_B || P == KING_UW || P == KING_UB)
     {

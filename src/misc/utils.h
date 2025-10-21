@@ -63,11 +63,17 @@ std::ostream& operator<<(std::ostream& os, const std::pair<A,B> x)
 /*
 The list printer function. (For debugging.)
 */
-void print_range(auto const rem, auto const& range)
+void print_range(auto const rem, auto range)
 {
     std::cout << rem << "{";
+    bool first = true;
     for(auto const& elem : range)
-        std::cout << elem << ", ";
+    {
+        if(!first)
+            std::cout << ", ";
+        first = false;
+        std::cout << elem;
+    }
     std::cout << "}\n";
 }
 

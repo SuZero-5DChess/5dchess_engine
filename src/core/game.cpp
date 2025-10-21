@@ -66,13 +66,31 @@ game::game(std::string input)
     std::vector<move5d> moves = pgn_to_moves(clean_input);
     for(const auto &move : moves)
     {
-        apply_move(move);
+//        std::cerr << "trying to apply move " << move << "\n";
+//        std::cerr << "before: " << now->get_present().first << ", ";
+        bool flag = apply_move(move);
+//        std::cerr << "present: " << now->get_present() << "\n";
+//        std::cerr << now->to_string();
+//        std::cerr << "apparent present: " << now->apparent_present() << "\n";
+        if(!flag)
+        {
+            state cs = get_current_state();
+            std::cerr << "game(): In state " << cs.to_string() << "\n";
+            std::cerr << "trying to apply move " << move << "\n";
+            print_range("The movable pieces are", cs.gen_movable_pieces());
+            if (std::holds_alternative<full_move>(move.data))
+            {
+                auto fm = std::get<full_move>(move.data);
+                print_range("the allowed moves are: \n", gen_move_if_playable(fm.from));
+            }
+            throw std::runtime_error("failed to apply move: " + move.to_string());
+        }
     }
 }
 
 std::tuple<int,int> game::get_current_present() const
 {
-    return std::make_tuple(get_current_state().present, get_current_state().player);
+    return get_current_state().get_present();
 }
 
 state game::get_current_state() const
@@ -96,7 +114,7 @@ std::vector<vec4> game::gen_move_if_playable(vec4 p)
     {
         const state& cs = get_current_state();
         std::vector<vec4> result;
-        for(const vec4& v : cs.gen_piece_move(p))
+        for(vec4 v : cs.gen_piece_move(p))
         {
             result.push_back(v);
         }
@@ -116,15 +134,7 @@ match_status_t game::get_match_status() const
 std::vector<vec4> game::get_movable_pieces() const
 {
     state s = get_current_state();
-    std::vector<vec4> v;
-    for(const auto &[p0, bb] : s.gen_movable_pieces())
-    {
-        for(int pos : marked_pos(bb))
-        {
-            v.push_back(vec4(pos, p0));
-        }
-    }
-    return v;
+    return s.gen_movable_pieces();
 }
 
 bool game::is_playable(vec4 p) const
@@ -134,14 +144,15 @@ bool game::is_playable(vec4 p) const
     if(std::ranges::contains(mandatory_timelines, p.l())
     || std::ranges::contains(optional_timelines, p.l()))
     {
-        auto v1 = std::make_pair(p.t(), cs.player);
+        auto [t, c] = cs.get_present();
+        auto v1 = std::make_pair(p.t(), c);
         auto v2 = cs.get_timeline_end(p.l());
         if(v1 == v2)
         {
-            piece_t p_piece = cs.get_piece(p, cs.player);
+            piece_t p_piece = cs.get_piece(p, c);
             if(p_piece != NO_PIECE && p_piece != WALL_PIECE)
             {
-                return cs.player == static_cast<int>(piece_color(p_piece));
+                return c == static_cast<int>(piece_color(p_piece));
             }
         }
     }
@@ -163,16 +174,20 @@ bool game::can_submit() const
     return get_current_state().can_submit().has_value();
 }
 
-void game::undo()
+bool game::undo()
 {
-    if(can_undo())
+    bool flag = can_undo();
+    if(flag)
         now--;
+    return flag;
 }
 
-void game::redo()
+bool game::redo()
 {
-    if(can_redo())
-        now++;
+    bool flag = can_undo();
+    if(flag)
+        now--;
+    return flag;
 }
 
 bool game::apply_move(move5d mv)
@@ -225,13 +240,13 @@ bool game::apply_move(move5d mv)
 
 bool game::currently_check() const
 {
-    return get_current_state().find_check();
+    return get_current_state().find_checks().first().has_value();
 }
 
 std::vector<std::pair<vec4, vec4>> game::get_current_checks() const
 {
     std::vector<std::pair<vec4, vec4>> result;
-    for(full_move fm : get_current_state().find_all_checks())
+    for(full_move fm : get_current_state().find_checks())
     {
         result.push_back(std::make_pair(fm.from, fm.to));
     }

@@ -44,6 +44,15 @@ On Windows, the last line should be:
 ```cmd
 cmake .. -DTEST=on -G"Visual Studio 17 2022"
 ```
+
+The performance of this code depends significantly on compiler optimizations. Without optimization, the plain (unoptimized) version may run x6 ~ x7 times slower compared to the same code compiled with `-O3` optimization.
+
+To enable optimizations, configure the build using:
+
+```
+cmake .. -DCMAKE_BUILD_TYPE=Release -DTEST=on
+```
+
 ### Documentation
 
 For more detail, please read [this page](docs/index.md).
@@ -51,8 +60,8 @@ For more detail, please read [this page](docs/index.md).
 ### TODOs
 
 - &#9745; use generators to unify code that code that produces one incidence or more 
-- &#9744; hide UV coordinate details, deprecate numbers_activated 
-- &#9744; support even timeline game
+- &#9745; hide UV coordinate details, deprecate numbers_activated 
+- &#9745; support even timeline game
 - &#9744; 5dpgn reader for simplified moves
 - &#9744; method to get check path
 - &#9744; test hypercuboid algorithm

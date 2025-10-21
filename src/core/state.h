@@ -3,6 +3,7 @@
 
 #include "multiverse.h"
 #include "actions.h"
+#include "generator.h"
 #include <memory>
 #include <string>
 #include <set>
@@ -13,20 +14,29 @@
 class state
 {
     std::unique_ptr<multiverse> m;
-public:
     /*
      `present` is in L,T coordinate (i.e. not u,v corrdinated).
      These numbers can be inherited from copy-construction; thus they are not necessarily equal to `m.get_present()`.
     */
     int present, player;
     
-	//match_status_t match_status;
+    template<bool C>
+    std::vector<vec4> gen_movable_pieces_impl(std::vector<int> lines) const;
+    
+    /*
+     find_check_impl<C>(lines)
+     For all boards on the end of timelines specified in `lines` with color `C`,
+     test if one of piece on that board with color `C` can capture an enermy royal piece.
+     */
+    template<bool C>
+    generator<full_move> find_checks_impl(std::vector<int> lines) const;
 
+public:
     state(multiverse &mtv);
     
     // standard copy-constructors
     state(const state& other)
-        : m(other.m->clone()) {}
+    : m{other.m->clone()}, present{other.present}, player{other.player} {}
     state(state&&) noexcept = default;
     state& operator=(state other) noexcept {
         swap(*this, other);
@@ -34,6 +44,8 @@ public:
     }
     friend void swap(state& a, state& b) noexcept {
         std::swap(a.m, b.m);
+        std::swap(a.present, b.present);
+        std::swap(a.player, b.player);
     }
 
     int new_line() const;
@@ -68,26 +80,13 @@ public:
      find_check()
      For the 'player' and 'present' that is told from the shape of the board (which might be newer than the states's present), test if that player is able to capture an enermy royal piece.
      */
-    bool find_check() const;
+    generator<full_move> find_checks() const;
     
-    /*
-     find_check_impl<C>(lines)
-     For all boards on the end of timelines specified in `lines` with color `C`,
-     test if one of piece on that board with color `C` can capture an enermy royal piece.
-     */
-    template<bool C>
-    bool find_check_impl(const std::list<int>& lines) const;
-    
-    std::map<vec4, bitboard_t> gen_movable_pieces() const;
-    std::map<vec4, bitboard_t> get_movable_pieces(std::vector<int> lines) const;
-    template<bool C>
-    std::map<vec4, bitboard_t> gen_movable_pieces_impl(const std::vector<int>& lines) const;
-    
-    std::vector<full_move>find_all_checks() const;
-    template<bool C>
-    std::vector<full_move> find_all_checks_impl(const std::list<int>& lines) const;
+    std::vector<vec4> gen_movable_pieces() const;
+    std::vector<vec4> get_movable_pieces(std::vector<int> lines) const;
 
     // wrappers for low-level functions
+    std::pair<int, int> get_present() const;
     std::pair<int, int> apparent_present() const;
     std::pair<int, int> get_lines_range() const;
     std::pair<int, int> get_active_range() const;
@@ -97,6 +96,7 @@ public:
     std::shared_ptr<board> get_board(int l, int t, int c) const;
     std::vector<std::tuple<int,int,int,std::string>> get_boards() const;
     generator<vec4> gen_piece_move(vec4 p) const;
+    generator<vec4> gen_piece_move(vec4 p, int c) const;
     std::string to_string() const;
 };
 

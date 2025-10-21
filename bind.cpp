@@ -73,7 +73,6 @@ PYBIND11_MODULE(engine, m) {
         .def("get_piece", &multiverse::get_piece)
         .def("gen_piece_move", &multiverse::gen_piece_move)
         .def_readwrite("metadata", &multiverse::metadata); // Expose `metadata` map directly
-    */
     py::class_<multiverse, std::shared_ptr<multiverse>>(m, "multiverse")
         // Bind the constructor
         .def(py::init<const std::string &>(), py::arg("input"))
@@ -86,7 +85,6 @@ PYBIND11_MODULE(engine, m) {
         .def("gen_piece_move", &multiverse::gen_piece_move, py::arg("p"), py::arg("board_color"));
         // // Bind public member variables
         // .def_readwrite("metadata", &multiverse::metadata);
-    /*
     py::class_<vec4>(m, "vec4")
         .def(py::init<int, int, int, int>(), py::arg("x"), py::arg("y"), py::arg("t"), py::arg("l"))
         .def("__repr__", &vec4::to_string);
@@ -126,10 +124,12 @@ PYBIND11_MODULE(engine, m) {
             os << fm;
             return os.str();
         });
+    /*
     py::class_<state>(m, "state")
         .def_readwrite("m", &state::m)
         .def(py::init<multiverse>())
         .def("apply_move", &state::apply_move<false>);
+    */
     py::class_<game>(m, "game")
         .def(py::init<std::string>())
         .def("get_current_boards", &game::get_current_boards)

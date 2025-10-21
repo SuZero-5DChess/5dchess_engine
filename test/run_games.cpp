@@ -166,8 +166,7 @@ void run_game(std::vector<move5d> mvs)
         }
         if constexpr(DETECT_CHECKS)
         {
-            bool checking = s.find_check();
-            if(checking)
+            if(s.find_checks().first())
             {
                 std::cerr << "In run_game:\n";
                 std::cerr << "current boards:\n";

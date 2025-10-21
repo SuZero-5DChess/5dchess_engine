@@ -7,6 +7,7 @@
 #include <concepts>
 #include <iterator>
 #include <optional>
+#include <exception>
 
 template<std::movable T>
 class generator
@@ -14,6 +15,9 @@ class generator
 public:
     struct promise_type
     {
+        //std::exception_ptr exception_;
+        std::optional<T> current_value;
+        
         generator<T> get_return_object()
         {
             return generator{Handle::from_promise(*this)};
@@ -34,10 +38,10 @@ public:
         void return_void() noexcept {}
         // Disallow co_await in generator coroutines.
         void await_transform() = delete;
-        [[noreturn]]
-        static void unhandled_exception() { throw; }
- 
-        std::optional<T> current_value;
+        void unhandled_exception() {
+            //exception_ = std::current_exception();
+            throw;
+        }
     };
  
     using Handle = std::coroutine_handle<promise_type>;
