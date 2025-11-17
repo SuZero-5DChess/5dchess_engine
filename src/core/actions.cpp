@@ -95,6 +95,11 @@ move5d::move5d(std::string str)
     data = full_move(str);
 }
 
+move5d::move5d(full_move fm)
+{
+    data = fm;
+}
+
 move5d move5d::submit() { return move5d(); }
 
 move5d move5d::move(const vec4& p, const vec4& d) { return move5d(p, d); }

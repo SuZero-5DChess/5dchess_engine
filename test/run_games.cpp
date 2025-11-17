@@ -39,16 +39,45 @@ std::vector<move5d> pgn_to_moves_(const std::string& input)
     std::string word;
     //remove the first "submit"
     result_stream >> word;
-    while (result_stream >> word)
+    
+    multiverse_odd m0(t0_fen);
+    state s(m0);
+    try {
+        while (result_stream >> word)
+        {
+            if(word.compare("submit") != 0)
+            {
+                std::optional<full_move> m = s.parse_pgn(word);
+                if(!m.has_value())
+                {
+                    std::cout << "Invalid pgn: " << word << "\n";
+                    throw 0;
+                }
+                result.push_back(move5d(*m));
+                bool flag = s.apply_move(*m);
+                if(!flag)
+                {
+                    throw 1;
+                }
+            }
+            else
+            {
+                result.push_back(move5d::submit());
+                bool flag = s.submit();
+                if(!flag)
+                {
+                    throw 2;
+                }
+            }
+        }
+    }
+    catch(int err)
     {
-        if(word.compare("submit") != 0)
-        {
-            result.push_back(move5d(word));
-        }
-        else
-        {
-            result.push_back(move5d::submit());
-        }
+        std::cout << "pgn_to_moves_:Error" << err << " from\n";
+        std::cout << input;
+        std::cout << "Cannot parse w.r.t. the current state:\n";
+        std::cout << s.to_string() << std::endl;
+        exit(1);
     }
     return result;
 }
@@ -393,6 +422,125 @@ int main()
 20.{1:16}(0T20)Re1e3 / {15:47}(0T20)Rd2d1 
 21.{1:17}(0T21)Kc1>>(0T20)b1 / {15:47}(1T20)Nb4d3 
 22.{1:04}(1T21)Kc1>>(0T20)b1 / {15:43}(1T21)Nd3b2 (0T21)Rd1e1 
+)", R"(
+1.e3/Nf6
+2.b4/e6
+3.Qf3/Bxb4
+4.Qg3/Bf8
+5.Nf3/d5
+6.Nc3/c6
+7.a4/Na6
+8.Bxa6/bxa6
+9.Ba3/g6
+10.Bxf8/Rxf8
+11.Qg5/Qe7
+12.Nd1/a5
+13.Nd4/Ba6
+14.Qe5/Rc8
+15.Rb1/Nd7
+16.Qg3/Qc5
+17.c3/Nf6
+18.Qf3/Ne4
+19.Qg4/Qd6
+20.Rb2/Nc5
+21.Rb6/Nd3
+22.Ke2/Ne5
+23.Rxa6/Nxg4
+24.Nxe6/Qxe6
+25.Rxc6/Rxc6
+26.Nb2/(0T26)Ng4>>(0T25)e4
+27.(0T27)Nb2>>(0T25)c2/(1T25)Qxe3
+)", R"(
+1.Nf3/Nf6
+2.d4/d5
+3.c3/c6
+4.Bf4/Bf5
+5.e3/e6
+6.Bd3/Bxd3
+7.Qxd3/Bd6
+8.Bxd6/Qxd6
+9.Nbd2/Nbd7
+10.a4/a6
+11.Ra3/c5
+12.dxc5/Nxc5
+13.Qd4/Rd8
+14.a5/Rd7
+15.Nb3/Nfe4
+16.Nxc5/Nxc5
+17.b4/Ne4
+18.Qa7/Rd8
+19.Qxb7/Kg8
+20.Ne5/Qxe5
+21.(0T21)Qb7>>(0T18)e7/(1T18)Kxe7
+22.(1T19)Qxg7/(0T21)Qe5>>x(0T18)h2
+23.(-1T19)Qb8/(-1T19)Ke8(0T18)f8
+24.(-2T19)Qb8
+)", R"(
+1.Nf3/Nf6
+2.b3/d5
+3.Bb2/Bg4
+4.e3/Nbd7
+5.Nc3/e6
+6.Bd3/Nc5
+7.Qe2/c6
+8.Qf1/Nce4
+9.h3/Bh5
+10.Bxe4/Nxe4
+11.Nxe4/dxe4
+12.Nd4/Qa5
+13.Bc3/Qc7
+14.Qc4/Qd7
+15.g4/Bg6
+16.Nf5/b5
+17.Qxe4/Qd5
+18.Qxd5/cxd5
+19.Rg1/Rc8
+20.Nxg7/Bxg7
+21.(0T21)Bc3>>x(0T18)c6/(1T18)Kd8
+22.(1T19)Ba5/(1T19)Kd8>>(0T19)d8
+23.(-1T20)Ba5 (1T20)Qxd5
+)",R"(
+1.e3/Nf6
+2.Nf3/d5
+3.c4/c6
+4.cxd5/Qxd5
+5.Nc3/Qh5
+6.Qb3/e6
+7.Nb5/Na6
+8.Nbd4/Nc5
+9.Qc4/Bd7
+10.Bd3/Nxd3
+11.Qxd3/Be7
+12.b3/a6
+13.Bb2/c5
+14.Ne2/Bb5
+15.Qc2/Qg6
+16.Qxg6/hxg6
+17.Ng3/Rd8
+18.a4/Bc6
+19.Rd1/Bd5
+20.Kg1/Bxb3
+21.Rde1/Bxa4
+22.e4/Bc6
+23.Be5/Bd6
+24.d4/Ng4
+25.Bxg7/Rg8
+26.e5/Rxg7
+27.exd6/Rxd6
+28.dxc5/Rd3
+29.h3/Bxf3
+30.gxf3/Nf6
+31.Re3/Rxe3
+32.fxe3/Nd5
+33.e4/Ne3
+34.Rc1/N>>xg3
+35.(0T35)Rc1>>(0T26)c1/(1T26)Rxg7
+36.(1T27)dxc5/(1T27)Bc7
+37.(1T28)h3/(1T28)Nf6
+38.(1T29)Red1/(1T29)Nxe4
+39.(1T30)Nxe4/(1T30)Bxe4
+40.(1T31)Rxd8/(1T31)Bxd8
+41.(1T32)Rce1
 )"
     };
     std::vector<std::vector<move5d>> mvss;

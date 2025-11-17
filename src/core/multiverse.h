@@ -104,6 +104,7 @@ public:
     std::tuple<int,int> get_present() const;
     
     // move generation
+    template<bool C> bitboard_t gen_physical_moves(vec4 p) const;
     template<bool C> movegen_t gen_superphysical_moves(vec4 p) const;
     template<bool C> movegen_t gen_moves(vec4 p) const;
     generator<vec4> gen_piece_move(vec4 p, int board_color) const;
@@ -112,6 +113,7 @@ public:
     // help functions
     bool inbound(vec4 a, int color) const;
     virtual std::unique_ptr<multiverse> clone() const = 0;
+    virtual std::string pretty_lt(vec4 p0) const = 0;
     virtual ~multiverse() = default;
 };
 
@@ -125,6 +127,10 @@ public:
     {
         return std::make_unique<multiverse_odd>(*this);
     }
+    std::string pretty_lt(vec4 p0) const override
+    {
+        return "(" + std::to_string(p0.l()) + "T" + std::to_string(p0.t()) + ")";
+    }
 };
 
 class multiverse_even : public multiverse
@@ -136,6 +142,12 @@ public:
     std::unique_ptr<multiverse> clone() const override
     {
         return std::make_unique<multiverse_even>(*this);
+    }
+    std::string pretty_lt(vec4 p0) const override
+    {
+        std::string sign = p0.t() >= 0 ? "+" : "-";
+        int t_abs = p0.t() >= 0 ? p0.t() : -p0.t()-1;
+        return "(" + std::to_string(p0.l()) + "T" + sign + std::to_string(t_abs) + ")";
     }
 };
 

@@ -262,7 +262,57 @@ bool multiverse::get_umove_flag(vec4 a, int color) const
 * ***     ***     **  ***   **     *****    ***       ***   **   ***     ***   ****  *
 * ***     ***     **   ******       ***     *******    *****     ******* ***    ***  *
 \************************************************************************************/
+template<bool C>
+bitboard_t multiverse::gen_physical_moves(vec4 p) const
+{
+    std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), C);
+    piece_t p_piece = b_ptr->get_piece(p.xy());
+    if (b_ptr->umove() & pmask(p.xy()))
+    {
+        p_piece = static_cast<piece_t>(p_piece | 0x80);
+    }
+    switch (p_piece)
+    {
+#define GENERATE_MOVES_CASE(PIECE) \
+        case PIECE: \
+            return gen_physical_moves_impl<PIECE, C>(p);
 
+        GENERATE_MOVES_CASE(KING_W)
+        GENERATE_MOVES_CASE(KING_B)
+        GENERATE_MOVES_CASE(KING_UW)
+        GENERATE_MOVES_CASE(KING_UB)
+        GENERATE_MOVES_CASE(COMMON_KING_W)
+        GENERATE_MOVES_CASE(COMMON_KING_B)
+        GENERATE_MOVES_CASE(ROOK_W)
+        GENERATE_MOVES_CASE(ROOK_B)
+        GENERATE_MOVES_CASE(ROOK_UW)
+        GENERATE_MOVES_CASE(ROOK_UB)
+        GENERATE_MOVES_CASE(BISHOP_W)
+        GENERATE_MOVES_CASE(BISHOP_B)
+        GENERATE_MOVES_CASE(QUEEN_W)
+        GENERATE_MOVES_CASE(QUEEN_B)
+        GENERATE_MOVES_CASE(PRINCESS_W)
+        GENERATE_MOVES_CASE(PRINCESS_B)
+        GENERATE_MOVES_CASE(PAWN_W)
+        GENERATE_MOVES_CASE(BRAWN_W)
+        GENERATE_MOVES_CASE(PAWN_B)
+        GENERATE_MOVES_CASE(BRAWN_B)
+        GENERATE_MOVES_CASE(PAWN_UW)
+        GENERATE_MOVES_CASE(BRAWN_UW)
+        GENERATE_MOVES_CASE(PAWN_UB)
+        GENERATE_MOVES_CASE(BRAWN_UB)
+        GENERATE_MOVES_CASE(KNIGHT_W)
+        GENERATE_MOVES_CASE(KNIGHT_B)
+        GENERATE_MOVES_CASE(UNICORN_W)
+        GENERATE_MOVES_CASE(UNICORN_B)
+        GENERATE_MOVES_CASE(DRAGON_W)
+        GENERATE_MOVES_CASE(DRAGON_B)
+#undef GENERATE_MOVES_CASE
+    default:
+        throw std::runtime_error("gen_superphysical_moves: Unknown piece " + std::string({ (char)piece_name(p_piece) }) + (p_piece & 0x80 ? "*" : "") + "\n");
+        break;
+    }
+}
 template<bool C>
 movegen_t multiverse::gen_superphysical_moves(vec4 p) const
 {
@@ -1064,6 +1114,9 @@ template void multiverse::gen_compound_moves<false, multiverse::axesmode::DIAGON
 template void multiverse::gen_compound_moves<true, multiverse::axesmode::DIAGONAL, multiverse::axesmode::DIAGONAL>(vec4 p, std::map<vec4, bitboard_t>& result) const;
 template void multiverse::gen_compound_moves<false, multiverse::axesmode::BOTH, multiverse::axesmode::BOTH>(vec4 p, std::map<vec4, bitboard_t>& result) const;
 template void multiverse::gen_compound_moves<true, multiverse::axesmode::BOTH, multiverse::axesmode::BOTH>(vec4 p, std::map<vec4, bitboard_t>& result) const;
+
+template bitboard_t multiverse::gen_physical_moves<true>(vec4 p) const;
+template bitboard_t multiverse::gen_physical_moves<false>(vec4 p) const;
 
 template movegen_t multiverse::gen_superphysical_moves<true>(vec4 p) const;
 template movegen_t multiverse::gen_superphysical_moves<false>(vec4 p) const;

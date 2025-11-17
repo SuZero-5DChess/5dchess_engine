@@ -31,7 +31,7 @@ void test_graph()
 
 void test_hc()
 {
-    HC hc {{{1,2},{2,3}, {1,2,3}}};
+    HC hc {{{1,2}, {2,3}, {1,2,3}}};
     std::cout << hc.to_string() << "\n";
     point a {1,2,3};
     std::cout << hc.contains(a) << "\n";
@@ -48,12 +48,12 @@ void test_hc()
 int main()
 {
     //test_graph();
-    //test_hc();
-    HC h2 = {{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}}};
-    point b = {20};
-    std::cout << h2.contains(b) << "\n";
-    search_space ss3 = h2.remove_point(b);
-    std::cout << ss3.to_string() << "\n";
+    test_hc();
+//    HC h2 = {{{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}}};
+//    point b = {20};
+//    std::cout << h2.contains(b) << "\n";
+//    search_space ss3 = h2.remove_point(b);
+//    std::cout << ss3.to_string() << "\n";
     std::cerr << "---= test_hcutils.cpp: all passed =---" << std::endl;
     return 0;
 }

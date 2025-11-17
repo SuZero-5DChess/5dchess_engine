@@ -9,6 +9,7 @@
 
 /*
  In this implementation, I use `full_move` instead of `move` to avoid confusion with `std::move`.
+ (In contrast, the class `semimove` is defined in hypercuboid.h)
  */
 struct full_move
 {
@@ -31,6 +32,7 @@ struct move5d {
     explicit move5d(const vec4& p, const vec4& d);
 
     move5d(std::string);
+    move5d(full_move);
 
     static move5d submit();
     static move5d move(const vec4& p, const vec4& d);

@@ -9,6 +9,19 @@ to download both this repository and the necessary submodules.
 
 If interaction with the [graphics interface](https://github.com/SuZero-5DChess/5dchess_client) is preferred, please install `flask` and `flask_socketio` via `pip`.
 
+### Features
+
+5dchess_engine is an engine for analysing 5D chess game. It can be used as a C++ library or a python library. There are two ways to present a game: via cli (no dependencies) or webpage (requires python, read "IMPORTANT NOTE" above).
+
+This program supports reading arbitary 5d chess variant specified by 5dfen. For moves, it supports long algebraic notation (which looks like `(0T13)b6b5` for physical moves and `(-1T19)e8(0T18)f8` for superphysical moves) or simplified 5dpgn notation specified in [docs/pgn-bnf.txt](docs/pgn-bnf.txt).
+
+
+The storage of a game state is based on [bitboards](https://www.chessprogramming.org/Bitboards). As a result, all boards are hard-coded to be no larger than `8x8`.
+
+Currently, the engine implements move generation and check detection using coroutine-based generators. Thus it won't work on compilers pre-C++20.
+
+There is a checkmate detection program using method from [here](https://github.com/penteract/cwmtt), but it still needs extensive testing.
+
 ### Usage (MacOS, etc.)
 
 ```sh
@@ -62,6 +75,11 @@ For more detail, please read [this page](docs/index.md).
 - &#9745; use generators to unify code that code that produces one incidence or more 
 - &#9745; hide UV coordinate details, deprecate numbers_activated 
 - &#9745; support even timeline game
-- &#9744; 5dpgn reader for simplified moves
-- &#9744; method to get check path
+- &#9745; 5dpgn reader for simplified moves
+- &#9745; ~~method~~ function to get check path
 - &#9744; test hypercuboid algorithm
+- &#9744; promotion
+- &#9744; integrate the function of reading simplified: implement an additional `parse_game` function for parser class
+- &#9744; refactor the `action` class as a sequence of moves sorted by the line of the destination board
+- &#9744; refactor the `game` class and correspondin python interface
+- &#9744; document for notation of 5dLAN and simplified 5dpgn

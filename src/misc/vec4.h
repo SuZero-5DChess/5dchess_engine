@@ -93,6 +93,10 @@ public:
     {
         return value <=> other.value;
     }
+    constexpr int dot(vec4 other) const
+    {
+        return x()*other.x() + y()*other.y() + t()*other.t() + l()*other.l();
+    }
     friend std::ostream& operator<<(std::ostream& os, const vec4& v)
     {
         os << "0x" << std::hex << std::setw(8) << std::setfill('0') << v.value << std::dec << std::setfill(' ') << std::setw(0);

@@ -15,10 +15,9 @@ int main()
     multiverse_odd m0(t0_fen);
     state s{m0};
     std::cout << "starting_test:\n";
-    auto w = HC_search(s);
-    for(auto it = w.begin(); it != w.end(); ++it)
+    auto [w, ss] = HC_info::build_HC(s);
+    for(auto x : w.search(ss))
     {
-        auto x = *it;
         if(x.size() == 0)
         {
             std::cout << "No avilable action in this turn";

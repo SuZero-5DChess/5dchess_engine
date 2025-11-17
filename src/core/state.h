@@ -66,6 +66,8 @@ public:
     template<bool UNSAFE = false>
     bool submit();
     
+    std::optional<full_move> parse_pgn(std::string move);
+    
     /*
      get_timeline_status() returns `std::make_tuple(mandatory_timelines, optional_timelines, unplayable_timelines)`
      where:
@@ -84,6 +86,9 @@ public:
     
     std::vector<vec4> gen_movable_pieces() const;
     std::vector<vec4> get_movable_pieces(std::vector<int> lines) const;
+    
+    template<bool RELATIVE=false>
+    std::string pretty_move(full_move fm, int c) const;
 
     // wrappers for low-level functions
     std::pair<int, int> get_present() const;

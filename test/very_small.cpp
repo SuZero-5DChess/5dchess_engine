@@ -1,5 +1,6 @@
 #include "game.h"
 #include <tuple>
+#include <ranges>
 
 std::string very_small_open = R"(
 [Size "4x4"]
@@ -16,6 +17,17 @@ int main()
     game g(very_small_open);
     std::cout << g.get_current_state().to_string();
     print_range("Checking moves: ", g.get_current_state().find_checks());
+    std::cout << "Checking moves: ";
+    auto [t, c] = g.get_current_present();
+    for(full_move fm : g.get_current_state().find_checks())
+    {
+        std::cout << g.get_current_state().pretty_move(fm, 1-c) << " ";
+        std::cout << static_cast<int>(g.get_current_state().get_piece(fm.to, 1-c));
+    }
+    std::cout << std::endl;
+    g.apply_move(move5d::submit());
+    auto mv = g.get_current_state().parse_pgn("a3");
+    std::cout << mv << std::endl;
 //    std::vector<int> v1{1}, v2{4,5,6,7};
 //    append_vectors(v1, v2);
 //    print_range("", v1);

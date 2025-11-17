@@ -7,6 +7,7 @@
 #include <set>
 #include <algorithm>
 #include <iterator>
+#include <optional>
 
 /*
 The append/concatenate functions.
@@ -111,6 +112,42 @@ std::set<T> set_minus(const std::set<T>& a, const std::set<T>& b)
     std::set_difference(a.begin(), a.end(), b.begin(), b.end(),
                         std::inserter(result, result.begin()));
     return result;
+}
+
+/*
+ signum function (which STL doesn't provide)
+ */
+
+template <typename T>
+constexpr int signum(T x) requires std::unsigned_integral<T> {
+    return T(0) < x;
+}
+
+template <typename T>
+constexpr int signum(T x) requires std::signed_integral<T> {
+    return (T(0) < x) - (x < T(0));
+}
+
+template <typename T>
+constexpr int signum(T x) requires std::floating_point<T> {
+    return (T(0) < x) - (x < T(0));
+}
+
+/*
+ The optional print function
+ */
+template<typename T>
+std::ostream &operator<<(std::ostream& os, std::optional<T> opt)
+{
+    if(opt.has_value())
+    {
+        os << "opt-value:" << *opt;
+    }
+    else
+    {
+        os << "nullopt";
+    }
+    return os;
 }
 
 #endif // UTILS_H

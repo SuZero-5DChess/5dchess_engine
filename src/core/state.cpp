@@ -3,6 +3,8 @@
 #include <cassert>
 #include "utils.h"
 
+#include "pgnparser.h"
+
 std::pair<int, int> next_tc(int t, int c)
 {
     int v = (t << 1 | c) + 1;
@@ -167,6 +169,98 @@ bool state::submit()
     return true;
 }
 
+std::optional<full_move> state::parse_pgn(std::string move)
+{
+    //parse as a physical move
+    auto parsed_physical_move = pgnparser(move).parse_physical_move();
+    std::vector<full_move> matched;
+    std::vector<full_move> pawn_move_matched;
+    std::optional<full_move> fm;
+    //if this is indeed a physical move
+    if(parsed_physical_move)
+    {
+        // for all physical moves avilable in current state
+        for(vec4 p : gen_movable_pieces())
+        {
+            char piece = to_white(piece_name(get_piece(p, player)));
+            bitboard_t bb = player ? m->gen_physical_moves<true>(p) : m->gen_physical_moves<false>(p);
+            for(int pos : marked_pos(bb))
+            {
+                vec4 q(pos, p.tl());
+                full_move fm(p,q);
+                // test if this physical move matches any of them
+                std::string full_notation = pretty_move(fm, player);
+                auto full = pgnparser(full_notation).parse_physical_move();
+                assert(full.has_value());
+                bool match = pgnparser::match_physical_move(*parsed_physical_move, *full);
+                if(match)
+                {
+                    matched.push_back(fm);
+                    if(piece == PAWN_W)
+                    {
+                        pawn_move_matched.push_back(fm);
+                    }
+                }
+            }
+        }
+        if(matched.size()==1)
+        {
+            // if there is exactly one match, we are good
+            fm = matched[0];
+        }
+        else if(pawn_move_matched.size() == 1)
+        {
+            /* if there are more than one match, test if it this can be
+             parsed as the unique pawn move
+             */
+            fm = pawn_move_matched[0];
+        }
+    }
+    else
+    {
+        // do the same for superphysical moves
+        auto parsed_sp_move = pgnparser(move).parse_superphysical_move();
+//        std::cerr << "original " << parsed_sp_move << std::endl;
+        for(vec4 p : gen_movable_pieces())
+        {
+            char piece = to_white(piece_name(get_piece(p, player)));
+            auto gen = player ? m->gen_superphysical_moves<true>(p) : m->gen_superphysical_moves<false>(p);
+            for(const auto& [p0, bb] : gen)
+            {
+                for(int pos : marked_pos(bb))
+                {
+                    vec4 q(pos, p0);
+                    full_move fm(p,q);
+                    // test if this physical move matches any of them
+                    std::string full_notation = pretty_move(fm, player);
+                    auto full = pgnparser(full_notation).parse_superphysical_move();
+                    assert(full.has_value());
+                    bool match = pgnparser::match_superphysical_move(*parsed_sp_move, *full);
+//                    std::cout << (match ? "match" : "no fit") << ":\t";
+//                    std::cout << full_notation << "\n" << *full << "\n";
+                    if(match)
+                    {
+                        matched.push_back(fm);
+                        if(piece == PAWN_W)
+                        {
+                            pawn_move_matched.push_back(fm);
+                        }
+                    }
+                }
+            }
+        }
+        if(matched.size()==1)
+        {
+            fm = matched[0];
+        }
+        else if(pawn_move_matched.size() == 1)
+        {
+            fm = pawn_move_matched[0];
+        }
+    }
+    return fm;
+}
+
 std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_timeline_status() const
 {
     return get_timeline_status(present, player);
@@ -319,6 +413,64 @@ std::vector<vec4> state::gen_movable_pieces_impl(std::vector<int> lines) const
     return result;
 }
 
+template<bool RELATIVE>
+std::string state::pretty_move(full_move fm, int c) const
+{
+    std::ostringstream oss;
+    vec4 p = fm.from, q = fm.to;
+    oss << m->pretty_lt(p.tl());
+    oss << to_white(piece_name(get_piece(p, c)));
+    oss << static_cast<char>(p.x() + 'a') << static_cast<char>(p.y() + '1');
+    if(p.tl() != q.tl())
+    {
+//        std::cout << "p=" << p << "\t q=" << q << "\t";        // superphysical move
+        if(std::pair{q.t(), player} < get_timeline_end(q.l()))
+        {
+            oss << ">>";
+        }
+        else
+        {
+            oss << ">";
+        }
+        if(get_piece(q, c) != NO_PIECE)
+        {
+            oss << "x";
+        }
+        if constexpr(RELATIVE)
+        {
+            vec4 d = q - p;
+            auto show_diff = [&oss](int w){
+                if(w>0)
+                    oss << "+" << w;
+                else if(w<0)
+                    oss << "-" << (-w);
+                else
+                    oss << "=";
+            };
+            oss << "$(L";
+            show_diff(d.x());
+            oss << "T";
+            show_diff(d.y());
+            oss << ")";
+        }
+        else
+        {
+            oss << m->pretty_lt(q.tl());
+        }
+    }
+    else
+    {
+        //physical move
+        if(get_piece(q, c) != NO_PIECE)
+        {
+            oss << "x";
+        }
+    }
+    oss << static_cast<char>(q.x() + 'a') << static_cast<char>(q.y() + '1');
+    //TODO: promotion
+    return oss.str();
+}
+
 std::pair<int, int> state::get_present() const
 {
     return std::make_pair(present, player);
@@ -390,3 +542,6 @@ template generator<full_move> state::find_checks_impl<false>(std::vector<int>) c
 template generator<full_move> state::find_checks_impl<true>(std::vector<int>) const;
 template std::vector<vec4> state::gen_movable_pieces_impl<false>(std::vector<int>) const;
 template std::vector<vec4> state::gen_movable_pieces_impl<true>(std::vector<int>) const;
+
+template std::string state::pretty_move<false>(full_move, int) const;
+template std::string state::pretty_move<true>(full_move, int) const;

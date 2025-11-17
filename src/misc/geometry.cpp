@@ -19,6 +19,16 @@ bool HC::contains(point loc) const
     return true;
 }
 
+bool slice::contains(const point &p) const
+{
+    for(auto [n, coords] : fixed_axes)
+    {
+        if(!coords.contains(p[n]))
+            return false;
+    }
+    return true;
+}
+
 bool search_space::contains(point loc) const
 {
     for(const auto& hc : hcs)
@@ -37,10 +47,12 @@ void search_space::concat(search_space &&other)
 search_space HC::remove_slice(const slice &s) const
 {
     search_space result;
+    HC remaining = *this;
     for(const auto& [i, fixed_coords] : s.fixed_axes)
     {
-        HC x = *this;
+        HC x = remaining;
         x.axes[i] = set_minus(x.axes[i], fixed_coords);
+        remaining.axes[i] = fixed_coords;
         result.hcs.push_back(std::move(x));
     }
     return result;
@@ -49,10 +61,13 @@ search_space HC::remove_slice(const slice &s) const
 search_space HC::remove_point(const point &p) const
 {
     search_space result;
+    HC remaining = *this;
     for(size_t i = 0; i < p.size(); i++)
     {
-        HC x = *this;
+        HC x = remaining;
         x.axes[i].erase(p[i]);
+        std::set<int> singleton = {p[i]};
+        remaining.axes[i] = singleton;
         result.hcs.push_back(std::move(x));
     }
     return result;
