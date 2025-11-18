@@ -238,6 +238,11 @@ bool game::apply_move(move5d mv)
 //     return true;
 // }
 
+void game::set_promotion_piece(piece_t pt)
+{
+    now->set_promotion_piece(pt);
+}
+
 bool game::currently_check() const
 {
     return get_current_state().find_checks().first().has_value();

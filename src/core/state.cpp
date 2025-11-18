@@ -2,8 +2,10 @@
 #include <algorithm>
 #include <cassert>
 #include "utils.h"
-
 #include "pgnparser.h"
+
+#define DEBUGMSG
+#include "debug.h"
 
 std::pair<int, int> next_tc(int t, int c)
 {
@@ -11,7 +13,7 @@ std::pair<int, int> next_tc(int t, int c)
     return std::make_pair(v >> 1, v & 1);
 }
 
-state::state(multiverse &mtv) : m(mtv.clone())//, match_status(match_status_t::PLAYING)
+state::state(multiverse &mtv) : m(mtv.clone()), promote_to{QUEEN_W}
 {
     std::tie(present, player) = m->get_present();
 }
@@ -56,15 +58,7 @@ std::optional<state> state::can_apply(full_move fm) const
 template<bool UNSAFE>
 bool state::apply_move(full_move fm)
 {
-//    if constexpr (!UNSAFE)
-//    {
-//        if(match_status != match_status_t::PLAYING)
-//        {
-//            std::cerr << "In apply_move<" << UNSAFE << ">(" << fm << "):\n";
-//            std::cerr << "Match has already ended with outcome " << match_status << "\n";
-//            throw std::runtime_error("Attempt to move finalized game.\n");
-//        }
-//    }
+    dprint("applying move", fm);
     vec4 p = fm.from;
     vec4 q = fm.to;
     vec4 d = q - p;
@@ -95,22 +89,31 @@ bool state::apply_move(full_move fm)
     if(d.l() == 0 && d.t() == 0)
     {
         const std::shared_ptr<board>& b_ptr = m->get_board(p.l(), p.t(), player);
-        piece_t pic = b_ptr->get_piece(p.xy());
+        bitboard_t z = pmask(p.xy());
+        const auto &[size_x, size_y] = m->get_board_size();
         // en passant
-        if(to_white(pic) == PAWN_W && d.x()!=0 && b_ptr->get_piece(q.xy()) == NO_PIECE)
+        if((b_ptr->lpawn()&z) && d.x()!=0 && b_ptr->get_piece(q.xy()) == NO_PIECE)
         {
-            //std::cout << " ... en passant";
-            m->append_board(p.l(),
-                            b_ptr->replace_piece(ppos(q.x(),p.y()), NO_PIECE)
+            dprint(" ... en passant");
+            m->append_board(p.l(), b_ptr
+                            ->replace_piece(ppos(q.x(),p.y()), NO_PIECE)
                             ->move_piece(p.xy(), q.xy()));
         }
-        // TODO: promotion
-        // castling
-        else if(to_white(pic) == KING_W && abs(d.x()) > 1)
+        // promotion
+        else if((b_ptr->lpawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
         {
-            //std::cout << " ... castling";
-            int rook_x1 = d.x() < 0 ? 0 : 7;
-            int rook_x2 = q.x() + (d.x() < 0 ? 1 : -1);
+            dprint(" ... promotion");
+            piece_t promoted = player ? to_black(promote_to) : promote_to;
+            m->append_board(p.l(), b_ptr
+                            ->replace_piece(p.xy(), NO_PIECE)
+                            ->replace_piece(q.xy(), promoted));
+        }
+        // castling
+        else if((b_ptr->king()&z) && abs(d.x()) > 1)
+        {
+            dprint(" ... castling");
+            int rook_x1 = d.x() < 0 ? 0 : (size_x - 1); //rook's original x coordinate
+            int rook_x2 = q.x() + (d.x() < 0 ? 1 : -1); //rook's new x coordinate
             m->append_board(p.l(),b_ptr
                             ->move_piece(ppos(rook_x1, p.y()), ppos(rook_x2,q.y()))
                             ->move_piece(p.xy(), q.xy()));
@@ -118,15 +121,14 @@ bool state::apply_move(full_move fm)
         // normal move
         else
         {
-            //std::cout << " ... normal move/capture";
+            dprint(" ... normal move/capture");
             m->append_board(p.l(), b_ptr->move_piece(p.xy(), q.xy()));
         }
     }
     // non-branching superphysical move
-    //else if(multiverse::tc_to_v(q.t(), player) == m->timeline_end[multiverse::l_to_u(q.l())])
     else if (std::make_pair(q.t(), player) == m->get_timeline_end(q.l()))
     {
-        //std::cout << " ... nonbranching move";
+        dprint(" ... nonbranching move");
         const std::shared_ptr<board>& b_ptr = m->get_board(p.l(), p.t(), player);
         const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
         m->append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
@@ -136,7 +138,7 @@ bool state::apply_move(full_move fm)
     //branching move
     else
     {
-        //std::cout << " ... branching move";
+        dprint(" ... branching move");
         const std::shared_ptr<board>& b_ptr = m->get_board(p.l(), p.t(), player);
         const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
         m->append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
@@ -169,97 +171,15 @@ bool state::submit()
     return true;
 }
 
-std::optional<full_move> state::parse_pgn(std::string move)
+
+void state::set_promotion_piece(piece_t pt)
 {
-    //parse as a physical move
-    auto parsed_physical_move = pgnparser(move).parse_physical_move();
-    std::vector<full_move> matched;
-    std::vector<full_move> pawn_move_matched;
-    std::optional<full_move> fm;
-    //if this is indeed a physical move
-    if(parsed_physical_move)
-    {
-        // for all physical moves avilable in current state
-        for(vec4 p : gen_movable_pieces())
-        {
-            char piece = to_white(piece_name(get_piece(p, player)));
-            bitboard_t bb = player ? m->gen_physical_moves<true>(p) : m->gen_physical_moves<false>(p);
-            for(int pos : marked_pos(bb))
-            {
-                vec4 q(pos, p.tl());
-                full_move fm(p,q);
-                // test if this physical move matches any of them
-                std::string full_notation = pretty_move(fm, player);
-                auto full = pgnparser(full_notation).parse_physical_move();
-                assert(full.has_value());
-                bool match = pgnparser::match_physical_move(*parsed_physical_move, *full);
-                if(match)
-                {
-                    matched.push_back(fm);
-                    if(piece == PAWN_W)
-                    {
-                        pawn_move_matched.push_back(fm);
-                    }
-                }
-            }
-        }
-        if(matched.size()==1)
-        {
-            // if there is exactly one match, we are good
-            fm = matched[0];
-        }
-        else if(pawn_move_matched.size() == 1)
-        {
-            /* if there are more than one match, test if it this can be
-             parsed as the unique pawn move
-             */
-            fm = pawn_move_matched[0];
-        }
-    }
-    else
-    {
-        // do the same for superphysical moves
-        auto parsed_sp_move = pgnparser(move).parse_superphysical_move();
-//        std::cerr << "original " << parsed_sp_move << std::endl;
-        for(vec4 p : gen_movable_pieces())
-        {
-            char piece = to_white(piece_name(get_piece(p, player)));
-            auto gen = player ? m->gen_superphysical_moves<true>(p) : m->gen_superphysical_moves<false>(p);
-            for(const auto& [p0, bb] : gen)
-            {
-                for(int pos : marked_pos(bb))
-                {
-                    vec4 q(pos, p0);
-                    full_move fm(p,q);
-                    // test if this physical move matches any of them
-                    std::string full_notation = pretty_move(fm, player);
-                    auto full = pgnparser(full_notation).parse_superphysical_move();
-                    assert(full.has_value());
-                    bool match = pgnparser::match_superphysical_move(*parsed_sp_move, *full);
-//                    std::cout << (match ? "match" : "no fit") << ":\t";
-//                    std::cout << full_notation << "\n" << *full << "\n";
-                    if(match)
-                    {
-                        matched.push_back(fm);
-                        if(piece == PAWN_W)
-                        {
-                            pawn_move_matched.push_back(fm);
-                        }
-                    }
-                }
-            }
-        }
-        if(matched.size()==1)
-        {
-            fm = matched[0];
-        }
-        else if(pawn_move_matched.size() == 1)
-        {
-            fm = pawn_move_matched[0];
-        }
-    }
-    return fm;
+    dprint("setting promotion piece to:", pt);
+    assert(to_white(pt) == pt && pt != KING_W && pt != ROYAL_QUEEN_W);
+    promote_to = pt;
 }
+
+
 
 std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_timeline_status() const
 {
@@ -530,7 +450,113 @@ std::string state::to_string() const
 {
     std::ostringstream ss;
     ss << "State(present=" << present << ", player=" << player << "):\n";
+    ss << "promotion piece=" << static_cast<int>(promote_to) << " '" << promote_to << "'\n";
     return ss.str() + m->to_string();
+}
+
+state::parse_pgn_res state::parse_pgn(const std::string &move) const
+{
+    //parse as a physical move
+    auto parsed_physical_move = pgnparser(move).parse_physical_move();
+    std::vector<full_move> matched;
+    std::vector<full_move> pawn_move_matched;
+    std::optional<full_move> fm;
+    std::optional<piece_t> promotion;
+    //if this is indeed a physical move
+    if(parsed_physical_move)
+    {
+        // for all physical moves avilable in current state
+        for(vec4 p : gen_movable_pieces())
+        {
+            char piece = to_white(piece_name(get_piece(p, player)));
+            bitboard_t bb = player ? m->gen_physical_moves<true>(p) : m->gen_physical_moves<false>(p);
+            for(int pos : marked_pos(bb))
+            {
+                vec4 q(pos, p.tl());
+                full_move fm(p,q);
+                // test if this physical move matches any of them
+                std::string full_notation = pretty_move(fm, player);
+                auto full = pgnparser(full_notation).parse_physical_move();
+                assert(full.has_value());
+                bool match = pgnparser::match_physical_move(*parsed_physical_move, *full);
+                if(match)
+                {
+                    matched.push_back(fm);
+                    if(piece == PAWN_W)
+                    {
+                        pawn_move_matched.push_back(fm);
+                    }
+                }
+            }
+        }
+        if(matched.size()==1)
+        {
+            // if there is exactly one match, we are good
+            fm = matched[0];
+        }
+        else if(pawn_move_matched.size() == 1)
+        {
+            /* if there are more than one match, test if it this can be
+             parsed as the unique pawn move
+             */
+            fm = pawn_move_matched[0];
+        }
+        if(fm.has_value())
+        {
+            promotion = parsed_physical_move->promote_to.transform([](char pt){
+                return static_cast<piece_t>(pt);
+            });
+        }
+    }
+    else
+    {
+        // do the same for superphysical moves
+        auto parsed_sp_move = pgnparser(move).parse_superphysical_move();
+//        std::cerr << "original " << parsed_sp_move << std::endl;
+        for(vec4 p : gen_movable_pieces())
+        {
+            char piece = to_white(piece_name(get_piece(p, player)));
+            auto gen = player ? m->gen_superphysical_moves<true>(p) : m->gen_superphysical_moves<false>(p);
+            for(const auto& [p0, bb] : gen)
+            {
+                for(int pos : marked_pos(bb))
+                {
+                    vec4 q(pos, p0);
+                    full_move fm(p,q);
+                    // test if this physical move matches any of them
+                    std::string full_notation = pretty_move(fm, player);
+                    auto full = pgnparser(full_notation).parse_superphysical_move();
+                    assert(full.has_value());
+                    bool match = pgnparser::match_superphysical_move(*parsed_sp_move, *full);
+//                    std::cout << (match ? "match" : "no fit") << ":\t";
+//                    std::cout << full_notation << "\n" << *full << "\n";
+                    if(match)
+                    {
+                        matched.push_back(fm);
+                        if(piece == PAWN_W)
+                        {
+                            pawn_move_matched.push_back(fm);
+                        }
+                    }
+                }
+            }
+        }
+        if(matched.size()==1)
+        {
+            fm = matched[0];
+        }
+        else if(pawn_move_matched.size() == 1)
+        {
+            fm = pawn_move_matched[0];
+        }
+        if(fm.has_value())
+        {
+            promotion = parsed_sp_move->promote_to.transform([](char pt){
+                return static_cast<piece_t>(pt);
+            });
+        }
+    }
+    return std::make_tuple(fm, promotion, matched);
 }
 
 template bool state::apply_move<false>(full_move);

@@ -34,6 +34,7 @@ public:
     bool undo();
     bool redo();
     bool apply_move(move5d fm);
+    void set_promotion_piece(piece_t pt);
     //bool apply_indicator_move(move5d fm);
     bool currently_check() const;
     std::vector<std::pair<vec4,vec4>> get_current_checks() const;

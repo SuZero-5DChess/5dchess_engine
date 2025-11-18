@@ -8,36 +8,27 @@ std::string very_small_open = R"(
 [Mode "5D"]
 [nbrk/3p*/P*3/KRBN:0:1:w]
 
-1. (0T1)c1b2 / (0T1)d3d2
+1. (0T1)d1c3 /
 
 )";
 
 int main()
 {
     game g(very_small_open);
+    g.set_promotion_piece(KNIGHT_W);
+    g.apply_move(move5d("(0T1)d3d1"));
     std::cout << g.get_current_state().to_string();
-    print_range("Checking moves: ", g.get_current_state().find_checks());
-    std::cout << "Checking moves: ";
-    auto [t, c] = g.get_current_present();
-    for(full_move fm : g.get_current_state().find_checks())
-    {
-        std::cout << g.get_current_state().pretty_move(fm, 1-c) << " ";
-        std::cout << static_cast<int>(g.get_current_state().get_piece(fm.to, 1-c));
-    }
-    std::cout << std::endl;
-    g.apply_move(move5d::submit());
-    auto mv = g.get_current_state().parse_pgn("a3");
-    std::cout << mv << std::endl;
-//    std::vector<int> v1{1}, v2{4,5,6,7};
-//    append_vectors(v1, v2);
-//    print_range("", v1);
-//    std::cout << std::get<3>(g.get_current_state().get_boards()[0]) << "\n";
-//    
-//    vec4 p(3,2,1,0);
-//    std::cout << g.get_current_state().get_piece(p, 1) << "\n";
-//    for(auto mv : g.get_current_state().gen_piece_move(p))
+//    print_range("Checking moves: ", g.get_current_state().find_checks());
+//    std::cout << "Checking moves: ";
+//    auto [t, c] = g.get_current_present();
+//    for(full_move fm : g.get_current_state().find_checks())
 //    {
-//        std::cout << mv << "\n";
+//        std::cout << g.get_current_state().pretty_move(fm, 1-c) << " ";
+//        std::cout << static_cast<int>(g.get_current_state().get_piece(fm.to, 1-c));
 //    }
+//    std::cout << std::endl;
+//    g.apply_move(move5d::submit());
+//    auto mv = g.get_current_state().parse_pgn("a3");
+//    std::cout << mv << std::endl;
     return 0;
 }

@@ -41,12 +41,6 @@ In the code, there are two coordinate systems: LTCXY (which is the coordinate fo
 
 -----
 
-For moves, the class `full_move` is basically a translation of this algebraic type:
-
-```haskell
-data FullMove = Submit | Move Vec4 Vec4
-```
-
 Initializer of `vec4` follows the order `(x,y,t,l)`. It supports addition, substraction, scalar multiplication and and comparation. I will talk more about the implementation of this class below.
 
 Movegen

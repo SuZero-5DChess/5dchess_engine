@@ -11,6 +11,8 @@
 #include <iostream>
 #include <variant>
 #include <optional>
+#include <memory>
+#include <vector>
 
 /*
  <move> ::= <physical-move> | <superphysical-move>
@@ -87,6 +89,18 @@ struct superphysical_move {
 struct move {
    std::variant<physical_move, superphysical_move> data;
    friend std::ostream& operator<<(std::ostream& os, const move& mv);
+};
+struct action {
+    std::vector<move> moves;
+    std::vector<std::string> comments;
+    friend std::ostream& operator<<(std::ostream& os, const action& ac);
+};
+struct gametree {
+    int turn;
+    bool color;
+    action act;
+    std::vector<gametree> variations; // variations for next action
+    friend std::ostream& operator<<(std::ostream& os, const gametree& gt);
 };
 
 } //namespace

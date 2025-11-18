@@ -78,7 +78,7 @@ For more detail, please read [this page](docs/index.md).
 - &#9745; 5dpgn reader for simplified moves
 - &#9745; ~~method~~ function to get check path
 - &#9744; test hypercuboid algorithm
-- &#9744; promotion
+- &#9745; promotion
 - &#9744; integrate the function of reading simplified: implement an additional `parse_game` function for parser class
 - &#9744; refactor the `action` class as a sequence of moves sorted by the line of the destination board
 - &#9744; refactor the `game` class and correspondin python interface

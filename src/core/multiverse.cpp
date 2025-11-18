@@ -41,7 +41,8 @@ constexpr static std::tuple<int, int> v_to_tc(int v)
     return std::tuple<int, int>(v >> 1, v & 1);
 }
 
-multiverse::multiverse(const std::string &input, int size_x, int size_y)
+multiverse::multiverse(const std::string &input, int size_x, int size_y) 
+    : size_x(size_x), size_y(size_y), l_min(0), l_max(0)
 {
     const static std::regex comment_pattern(R"(\{.*?\})");
     const static std::regex block_pattern(R"(\[[^\[\]]*\])");
@@ -49,7 +50,6 @@ multiverse::multiverse(const std::string &input, int size_x, int size_y)
 
     std::string clean_input = std::regex_replace(input, comment_pattern, "");
     std::smatch block_match;
-    l_min = l_max = 0;
     while(std::regex_search(clean_input, block_match, block_pattern))
     {
         std::smatch sm;
@@ -102,6 +102,11 @@ std::tuple<int,int> multiverse::get_present() const
         present_v = std::min(present_v, timeline_end[l_to_u(l)]);
     }
     return v_to_tc(present_v);
+}
+
+std::pair<int, int> multiverse::get_board_size() const
+{
+    return std::make_pair(size_x, size_y);
 }
 
 std::pair<int, int> multiverse::get_lines_range() const
@@ -574,7 +579,15 @@ bitboard_t multiverse::gen_physical_moves_impl(vec4 p) const
                     }
                     else if(w & urook)
                     {
-                        a |= pmask((p + d + d).xy());
+                        /*
+                        Consider the castling move valid only when the unmoved rook
+                          is at the edge of the board
+                        (this is because the state.apply_move only moves the rooks on edges)
+                        */
+                        if((q+d).outbound())
+                        {
+                            a |= pmask((p + d + d).xy());
+                        }
                         break;
                     }
                     else if(w & b_ptr->occupied())

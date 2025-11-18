@@ -30,6 +30,7 @@ using movegen_t = generator<std::pair<vec4, bitboard_t>>;
 class multiverse
 {
 private:
+    const int size_x, size_y;
     std::vector<std::vector<std::shared_ptr<board>>> boards;
     // the following data are derivated from boards:
     int l_min, l_max, active_min, active_max;
@@ -76,16 +77,15 @@ protected:
     virtual std::pair<int,int> calculate_active_range() const = 0;
     void update_active_range();
 public:
-    // constructor and copy constructors
+    // constructor
     multiverse(const std::string& input, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
-    multiverse(const multiverse&) = default;
-    multiverse& operator=(const multiverse&) = default;
     
     // modifiers
     void insert_board(int l, int t, int c, const std::shared_ptr<board>& b_ptr);
     void append_board(int l, const std::shared_ptr<board>& b_ptr);
 
     // getters
+    std::pair<int, int> get_board_size() const;
     std::pair<int, int> get_lines_range() const;
     std::pair<int, int> get_active_range() const;
     std::pair<int, int> get_timeline_start(int l) const;

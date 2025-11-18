@@ -1,15 +1,15 @@
 #ifndef STATE_H
 #define STATE_H
 
-#include "multiverse.h"
-#include "actions.h"
-#include "generator.h"
 #include <memory>
 #include <string>
 #include <set>
 #include <optional>
-#include <list>
+#include <tuple>
 #include <iostream>
+#include "multiverse.h"
+#include "actions.h"
+#include "generator.h"
 
 class state
 {
@@ -19,6 +19,7 @@ class state
      These numbers can be inherited from copy-construction; thus they are not necessarily equal to `m.get_present()`.
     */
     int present, player;
+    piece_t promote_to;
     
     template<bool C>
     std::vector<vec4> gen_movable_pieces_impl(std::vector<int> lines) const;
@@ -36,7 +37,7 @@ public:
     
     // standard copy-constructors
     state(const state& other)
-    : m{other.m->clone()}, present{other.present}, player{other.player} {}
+    : m{other.m->clone()}, present{other.present}, player{other.player}, promote_to(other.promote_to) {}
     state(state&&) noexcept = default;
     state& operator=(state other) noexcept {
         swap(*this, other);
@@ -46,9 +47,9 @@ public:
         std::swap(a.m, b.m);
         std::swap(a.present, b.present);
         std::swap(a.player, b.player);
+        std::swap(a.promote_to, b.promote_to);
     }
 
-    int new_line() const;
 
     /*
      can_apply: Check if the move can be applied to the current state. If yes, return the new state after applying the move; otherwise return std::nullopt.
@@ -65,8 +66,19 @@ public:
     bool apply_move(full_move fm);
     template<bool UNSAFE = false>
     bool submit();
-    
-    std::optional<full_move> parse_pgn(std::string move);
+
+
+
+    /*
+     set_promotion_piece: set the piece type to promote to when a pawn promotion happens.
+     The piece type `pt` must be a white non-royal piece type (i.e., not KING_W nor ROYAL_QUEEN_W).
+    */
+    void set_promotion_piece(piece_t pt);
+
+    /*
+     new_line(): return the index of a new line to be created by this->player.
+    */
+    int new_line() const;
     
     /*
      get_timeline_status() returns `std::make_tuple(mandatory_timelines, optional_timelines, unplayable_timelines)`
@@ -103,6 +115,14 @@ public:
     generator<vec4> gen_piece_move(vec4 p) const;
     generator<vec4> gen_piece_move(vec4 p, int c) const;
     std::string to_string() const;
+    
+    /*
+    parse_move: Given a state `s` and a move in string format `move`, try to parse the move and match it to a unique full_move in the context of state `s`.
+    - If successful, return a tuple with first index set to the matched full_move and second index set to the promotion piece if any.
+    - If failed, return a tuple with first two indices set to nullopt and the third indices containing all possible matching full_moves. (.size()>1 ~> ambiguous; .size()==0 ~> no match)
+    */
+    using parse_pgn_res = std::tuple<std::optional<full_move>, std::optional<piece_t>, std::vector<full_move>>;
+    parse_pgn_res parse_pgn(const std::string &move) const;
 };
 
 //std::ostream& operator<<(std::ostream& os, const match_status_t& status);

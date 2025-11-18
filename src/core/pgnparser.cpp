@@ -1,29 +1,8 @@
 #include "pgnparser.h"
-
+#include "utils.h"
 
 //#define DEBUGMSG
-
-template <typename T>
-void debug_print_impl(T t)
-{
-    std::cerr << t << "\n";
-}
-
-template<typename T, typename ...Args>
-void debug_print_impl(T t, Args... args)
-{
-    std::cerr << t << " ";
-    debug_print_impl(args...);
-}
-
-template<typename ...Args>
-void dprint(Args... args)
-{
-#ifdef DEBUGMSG
-    std::cerr << "[DEBUG] ";
-    debug_print_impl(args...);
-#endif
-}
+#include "debug.h"
 
 template <typename T>
 bool match_opt(const std::optional<T> &simple, const std::optional<T> &full)
@@ -93,6 +72,25 @@ std::ostream &operator<<(std::ostream &os, const move &mv)
         os << std::get<physical_move>(mv.data);
     else
         os << std::get<superphysical_move>(mv.data);
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const action &ac)
+{
+    os << "action{moves:";
+    os << range_to_string(ac.moves, "[", "]");
+    os << ", comments:";
+    os << range_to_string(ac.comments, "[", "]");
+    os << "}";
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const gametree &gt)
+{
+    os << "gametree{turn:" << gt.turn << ",color:" << (gt.color ? "W" : "B") << ",act:" << gt.act;
+    os << ", variations:";
+    os << range_to_string(gt.variations, "[", "]");
+    os << "}";
     return os;
 }
 
@@ -597,6 +595,7 @@ bool pgnparser::match_superphysical_move(superphysical_move a, superphysical_mov
         && a.to_rank == b.to_rank
         && match_opt(a.promote_to, b.promote_to);
 }
+
 bool pgnparser::match_move(move a, move b)
 {
     dprint("match_move");

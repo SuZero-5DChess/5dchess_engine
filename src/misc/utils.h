@@ -4,6 +4,7 @@
 #include <vector>
 #include <tuple>
 #include <iostream>
+#include <sstream>
 #include <set>
 #include <algorithm>
 #include <iterator>
@@ -76,6 +77,22 @@ void print_range(auto const rem, auto range)
         std::cout << elem;
     }
     std::cout << "}\n";
+}
+
+std::string range_to_string(const auto range, std::string prefix = "{", std::string suffix = "}", std::string separator = ", ")
+{
+    std::ostringstream oss;
+    oss << prefix;
+    bool first = true;
+    for(auto const& elem : range)
+    {
+        if(!first)
+            oss << separator;
+        first = false;
+        oss << elem;
+    }
+    oss << suffix;
+    return oss.str();
 }
 
 #define SHOW(s) std::cout << #s << ": " << (s) << std::endl;
