@@ -4,7 +4,7 @@
 #include "utils.h"
 #include "pgnparser.h"
 
-#define DEBUGMSG
+//#define DEBUGMSG
 #include "debug.h"
 
 std::pair<int, int> next_tc(int t, int c)
@@ -334,6 +334,12 @@ std::vector<vec4> state::gen_movable_pieces_impl(std::vector<int> lines) const
 }
 
 template<bool RELATIVE>
+std::string state::pretty_move(full_move fm) const
+{
+    return pretty_move(fm, player);
+}
+
+template<bool RELATIVE>
 std::string state::pretty_move(full_move fm, int c) const
 {
     std::ostringstream oss;
@@ -569,5 +575,7 @@ template generator<full_move> state::find_checks_impl<true>(std::vector<int>) co
 template std::vector<vec4> state::gen_movable_pieces_impl<false>(std::vector<int>) const;
 template std::vector<vec4> state::gen_movable_pieces_impl<true>(std::vector<int>) const;
 
+template std::string state::pretty_move<false>(full_move) const;
+template std::string state::pretty_move<true>(full_move) const;
 template std::string state::pretty_move<false>(full_move, int) const;
 template std::string state::pretty_move<true>(full_move, int) const;

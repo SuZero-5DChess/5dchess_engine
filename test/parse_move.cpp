@@ -1,17 +1,7 @@
 #include <iostream>
 #include <vector>
 #include "pgnparser.h"
-
-
-template <typename T>
-std::ostream& operator<<(std::ostream &os, const std::optional<T> &opt)
-{
-    if (opt)
-        os << "just:" << *opt;
-    else
-        os << "nullopt";
-    return os;
-}
+#include "utils.h"
 
 void test_match()
 {
@@ -29,6 +19,7 @@ void test_match()
         {"(-1T10)Qc7>(1T10)e5", "(0T13)Qa3>>(0T9)e7", false},
         {"(-1T10)Qc7>(1T10)e5", "(-1T10)Qc7>x(1T10)e5", true},
         {"(-1T10)Qc7>(1T10)e5", "(-1T10)Qc7>(1T10)a5", false},
+        {"(0T8)Qd8b6", "(0T8)Qd8d6", false},
     };
     for(auto [simple, full, expected] : tests)
     {

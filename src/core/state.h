@@ -100,6 +100,8 @@ public:
     std::vector<vec4> get_movable_pieces(std::vector<int> lines) const;
     
     template<bool RELATIVE=false>
+    std::string pretty_move(full_move fm) const;
+    template<bool RELATIVE=false>
     std::string pretty_move(full_move fm, int c) const;
 
     // wrappers for low-level functions

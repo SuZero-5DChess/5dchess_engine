@@ -1,3 +1,12 @@
+ <game-tree> ::= <actions> <space-comment>* {'(' <space-comment>* <game-tree>')' <space-comment>*}* [<game-tree> <space-comment>*]
+
+<actions> ::= <turn-serial> <space-comment>* <move> {<space-comment>+ <move>}* <space-comment>*
+<turn-serial> ::= <number> ['w' | 'b'] '.' |  '/'
+<space-comment> ::= <whitespace> | <comment>
+<comment> ::= '{' <comment-text> '}' <whitespace>*
+<comment-text> ::= any sequence of words not containing '{' or '}'
+<whitespace> ::= {' ' | '\t' | '\n' | '\r'}+
+
 <move> ::= <physical-move> | <superphysical-move>
 <physical-move> ::= [<absolute-board>] ([<piece-name>] [<file>] [<rank>] ['x'] <file> <rank> ['=' <promote-to>] | 'O-O' | 'O-O-O')
 <superphysical-move> ::= [<absolute-board>] [<piece-name>] [<file>] [<rank>] (<jump-indicator> ['x'] | [<jump-indicator>] ['x'] <to-board>) <file> <rank> ['=' <promote-to>]

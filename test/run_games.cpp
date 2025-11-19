@@ -50,13 +50,13 @@ std::vector<move5d> pgn_to_moves_(const std::string& input)
                 auto [m, pt, candidates] = s.parse_pgn(word);
                 if(!m.has_value())
                 {
-                    std::cout << "pgn: " << word << "is ";
+                    std::cout << "pgn: " << word << " is ";
                     if(candidates.size() > 0)
                     {
                         std::cout << "ambiguious, possible candidates are:\n";
-                        for(full_move c : candidates)
+                        for(full_move fm : candidates)
                         {
-                            std::cout << "  " << c << "\n";
+                            std::cout << "  " << s.pretty_move(fm) << "\n";
                         }
                     }
                     else

@@ -13,6 +13,8 @@
 #include <optional>
 #include <memory>
 #include <vector>
+#include <string>
+#include <string_view>
 
 /*
  <move> ::= <physical-move> | <superphysical-move>
@@ -36,6 +38,8 @@
 namespace pgnparser_defs {
 typedef enum {
     NIL,
+    WHITE_SPACE, COMMENT,
+    TURN,
     LINE, TIME, RELATIVE_SYM, CAPTURE,
     PIECE, CASTLE_KINGSIDE, CASTLE_QUEENSIDE,
     FILE_CHAR,
@@ -45,10 +49,8 @@ typedef enum {
     LEFT_PAREN, RIGHT_PAREN,
     END
 } token_t;
-inline bool is_move_separator(token_t t)
-{
-    return t==END;
-}
+
+using turn_t = std::pair<int,bool>;
 
 struct relative_board {
    std::optional<int> line_difference;
@@ -90,15 +92,13 @@ struct move {
    std::variant<physical_move, superphysical_move> data;
    friend std::ostream& operator<<(std::ostream& os, const move& mv);
 };
-struct action {
+struct actions {
     std::vector<move> moves;
     std::vector<std::string> comments;
-    friend std::ostream& operator<<(std::ostream& os, const action& ac);
+    friend std::ostream& operator<<(std::ostream& os, const actions& ac);
 };
 struct gametree {
-    int turn;
-    bool color;
-    action act;
+    actions act;
     std::vector<gametree> variations; // variations for next action
     friend std::ostream& operator<<(std::ostream& os, const gametree& gt);
 };
@@ -108,6 +108,7 @@ struct gametree {
 class pgnparser
 {
 private:
+    const bool check_turn_number;
     std::string input;
     struct {
         std::string::iterator current;
@@ -115,6 +116,8 @@ private:
         char piece;
         char file;
         unsigned number;
+        pgnparser_defs::turn_t turn;
+        std::string_view comment;
     } buffer;
 public:
     class parse_error : public std::runtime_error {
@@ -123,20 +126,29 @@ public:
             : std::runtime_error(message) {}
     };
     
-    pgnparser(std::string msg);
+    pgnparser(std::string msg, bool check_turn_number=true, pgnparser_defs::turn_t start_turn=std::make_pair(1,false));
     void next_token();
+    void test_lexer();
      
     using relative_board = pgnparser_defs::relative_board;
     using absolute_board = pgnparser_defs::absolute_board;
     using physical_move = pgnparser_defs::physical_move;
     using superphysical_move = pgnparser_defs::superphysical_move;
     using move= pgnparser_defs::move;
+    using actions = pgnparser_defs::actions;
+    using gametree = pgnparser_defs::gametree;
     
     std::optional<relative_board> parse_relative_board();
     std::optional<absolute_board> parse_absolute_board();
     std::optional<physical_move> parse_physical_move();
     std::optional<superphysical_move> parse_superphysical_move();
     std::optional<move> parse_move();
+private:
+    // made private because the return value relies on the lifetime of this->input
+    std::vector<std::string_view> parse_comments();
+public:
+    std::optional<actions> parse_actions();
+    std::optional<gametree> parse_gametree();
     
     static bool match_absolute_board(absolute_board simple, absolute_board full);
     static bool match_relative_board(relative_board simple, relative_board full);
