@@ -47,7 +47,7 @@ std::vector<move5d> pgn_to_moves_(const std::string& input)
         {
             if(word.compare("submit") != 0)
             {
-                auto [m, pt, candidates] = s.parse_pgn(word);
+                auto [m, pt, candidates] = s.parse_move(word);
                 if(!m.has_value())
                 {
                     std::cout << "pgn: " << word << " is ";

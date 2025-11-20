@@ -28,7 +28,7 @@ int main()
 //    }
 //    std::cout << std::endl;
 //    g.apply_move(move5d::submit());
-//    auto mv = g.get_current_state().parse_pgn("a3");
+//    auto mv = g.get_current_state().parse_move("a3");
 //    std::cout << mv << std::endl;
     return 0;
 }

@@ -124,7 +124,7 @@ public:
     - If failed, return a tuple with first two indices set to nullopt and the third indices containing all possible matching full_moves. (.size()>1 ~> ambiguous; .size()==0 ~> no match)
     */
     using parse_pgn_res = std::tuple<std::optional<full_move>, std::optional<piece_t>, std::vector<full_move>>;
-    parse_pgn_res parse_pgn(const std::string &move) const;
+    parse_pgn_res parse_move(const std::string &move) const;
 };
 
 //std::ostream& operator<<(std::ostream& os, const match_status_t& status);

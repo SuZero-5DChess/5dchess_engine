@@ -29,7 +29,11 @@ std::string str = R"(
 
 int main()
 {
-    game g(str);
-    std::cout << g.get_current_state().to_string();
+    //game g(str);
+    //std::cout << g.get_current_state().to_string();
+    std::map<std::string,std::string> headers;
+    headers.insert({"Mode", "5D"});
+    auto [_, success] = headers.insert({"Mode", "6D"});
+    std::cout << success << "\n";
     return 0;
 }

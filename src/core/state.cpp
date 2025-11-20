@@ -460,7 +460,7 @@ std::string state::to_string() const
     return ss.str() + m->to_string();
 }
 
-state::parse_pgn_res state::parse_pgn(const std::string &move) const
+state::parse_pgn_res state::parse_move(const std::string &move) const
 {
     //parse as a physical move
     auto parsed_physical_move = pgnparser(move).parse_physical_move();

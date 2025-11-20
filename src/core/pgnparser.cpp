@@ -14,90 +14,7 @@ bool match_opt(const std::optional<T> &simple, const std::optional<T> &full)
         return true;
 }
 
-namespace pgnparser_defs {
-
-std::ostream &operator<<(std::ostream &os, const relative_board &rb)
-{
-    return os << "rb{ld:" << (rb.line_difference ? std::to_string(*rb.line_difference) : "?")
-                << ",td:" << (rb.time_difference ? std::to_string(*rb.time_difference) : "?") << "}";
-}
-
-std::ostream &operator<<(std::ostream &os, const absolute_board &ab)
-{
-    return os << "ab{s:" << (ab.sign == POSITIVE ? "+" : ab.sign == NEGATIVE ? "-" : std::to_string(ab.sign))
-                << ",l:" << (ab.line ? std::to_string(*ab.line) : "?")
-                << ",t:" << (ab.time ? std::to_string(*ab.time) : "?") << "}";
-}
-
-std::ostream &operator<<(std::ostream &os, const physical_move &pm)
-{
-    os << "pm{b:";
-    if(pm.board) {os << *pm.board;} else {os << "?";}
-    if(pm.castle==CASTLE_KINGSIDE) return os << ",castle_kingside}";
-    if(pm.castle==CASTLE_QUEENSIDE) return os << ",castle_queenside}";
-    os << ",pn:" << (pm.piece_name ? *pm.piece_name : '?');
-    os << ",ff:" << (pm.from_file ? *pm.from_file : '?');
-    os << ",fr:" << (pm.from_rank ? std::to_string(*pm.from_rank) : "?");
-    os << ",cp:" << (pm.capture ? "yes" : "no");
-    os << ",tf:" << pm.to_file << ",tr:" << static_cast<int>(pm.to_rank);
-    os << ",pt:" << (pm.promote_to ? *pm.promote_to : '?')  << "}";
-    return os;
-}
-
-std::ostream &operator<<(std::ostream &os, const superphysical_move &sm)
-{
-    os << "sm{fb:";
-    if(sm.from_board) {os << *sm.from_board;} else {os << "?";}
-    os << ",pn:" << (sm.from_file ? *sm.from_file : '?');
-    os << ",ff:" << (sm.from_file ? *sm.from_file : '?');
-    os << ",fr:" << (sm.from_rank ? std::to_string(*sm.from_rank) : "?");
-    os << ",ji:" << (sm.jump_indicater == NON_BRANCH_JUMP ? ">" :
-                        sm.jump_indicater == BRANCHING_JUMP ? ">>" : "?");
-    os << ",cp:" << (sm.capture ? "yes" : "no");
-    os << ",tb:";
-    if(std::holds_alternative<absolute_board>(sm.to_board))
-        os << std::get<absolute_board>(sm.to_board);
-    else if(std::holds_alternative<relative_board>(sm.to_board))
-        os << std::get<relative_board>(sm.to_board);
-    else
-        os << "?";
-    os << ",tf:" << sm.to_file << ",tr:" << static_cast<int>(sm.to_rank);
-    os << ",pt:" << (sm.promote_to ? *sm.promote_to : '?')  << "}";
-    return os;
-}
-
-std::ostream &operator<<(std::ostream &os, const move &mv)
-{
-    os << "mv:";
-    if(std::holds_alternative<physical_move>(mv.data))
-        os << std::get<physical_move>(mv.data);
-    else
-        os << std::get<superphysical_move>(mv.data);
-    return os;
-}
-
-std::ostream &operator<<(std::ostream &os, const actions &ac)
-{
-    os << "action{moves:";
-    os << range_to_string(ac.moves, "[", "]");
-    os << ", comments:";
-    os << range_to_string(ac.comments, "[", "]");
-    os << "}";
-    return os;
-}
-
-std::ostream &operator<<(std::ostream &os, const gametree &gt)
-{
-    os << "gametree{act:" << gt.act;
-    os << ", var:";
-    os << range_to_string(gt.variations, "[", "]");
-    os << "}";
-    return os;
-}
-
-} // namespace
-
-using namespace pgnparser_defs;
+using namespace pgnparser_ast;
 
 inline turn_t next_turn(turn_t t)
 {
@@ -129,6 +46,8 @@ pgnparser::pgnparser(std::string msg, bool ck, turn_t start_turn) : check_turn_n
     buffer.turn = previous_turn(start_turn);
     next_token();
 }
+
+/* ***LEXER*** */
 
 void pgnparser::next_token()
 {
@@ -281,6 +200,24 @@ void pgnparser::next_token()
             buffer.token = POSITIVE; dprint("token:POSITIVE"); buffer.current++; break;
         case '-':
             buffer.token = NEGATIVE; dprint("token:NEGATIVE"); buffer.current++; break;
+        case '*':
+            buffer.token = SOFTMATE; dprint("token:SOFTMATE"); buffer.current++; break;
+        case '#':
+            buffer.token = CHECKMATE; dprint("token:CHECKMATE"); buffer.current++; break;
+        case '~':
+            buffer.token = PRESENT_MOVED; dprint("token:PRESENT_MOVED"); buffer.current++; break;
+        case '!':
+        case '?':
+        {
+            std::string::iterator start = buffer.current;
+            buffer.token = EVALUATION_SYM;
+            buffer.current++;
+            while(*buffer.current == '?' || *buffer.current == '!')
+                buffer.current++;
+            buffer.comment = std::string_view(start, buffer.current+1);
+            dprint("token:EVALUATION_SYM", buffer.comment);
+            break;
+        }
         case '>':
             buffer.current++;
             if(*buffer.current == '>')
@@ -299,6 +236,21 @@ void pgnparser::next_token()
             buffer.token = LEFT_PAREN; dprint("token:LEFT_PAREN"); buffer.current++; break;
         case ')':
             buffer.token = RIGHT_PAREN; dprint("token:RIGHT_PAREN"); buffer.current++; break;
+        case '[':
+        {
+            std::string::iterator start = buffer.current;
+            while(*buffer.current != ']')
+            {
+                buffer.current++;
+                if(buffer.current==input.end())
+                    throw parse_error("next_token(): expect ']' after '[': "+ std::string(start, buffer.current));
+            }
+            buffer.comment = std::string_view(start+1, buffer.current);
+            buffer.token = METADATA;
+            dprint("token:METADATA", buffer.comment);
+            buffer.current++;
+            break;
+        }
         case '{':
         {
             std::string::iterator start = buffer.current;
@@ -350,6 +302,8 @@ void pgnparser::test_lexer()
     while(buffer.token != END)
         next_token();
 }
+
+/* ***PARSER*** */
 
 /*
  <relative-to-board> ::= '$(' (['L'] <difference> 'T' <difference> | 'L' <difference> | 'T' <difference>) ')'
@@ -510,7 +464,7 @@ std::optional<absolute_board> pgnparser::parse_absolute_board()
 }
 
 /*
- <physical-move> ::= [<absolute-board>] ([<piece-name>] [<file>] [<rank>] ['x'] <file> <rank> ['=' <promote-to>] | 'O-O' | 'O-O-O')
+ <physical-move> ::= [<absolute-board>] ([<piece-name>] [<file>] [<rank>] ['x'] <file> <rank> ['=' <promote-to>] | 'O-O' | 'O-O-O') [<check-symbol>] [<evaluation-symbol>]
  <to-board> ::= <absote-board> | <relative-board>
  throw an excption if '=' found in the end but no promotion piece given
 */
@@ -578,15 +532,60 @@ std::optional<physical_move> pgnparser::parse_physical_move()
     {
         next_token();
         if(buffer.token != PIECE)
-            throw parse_error("parse_physical_move(): expect promotion piece after '=': " + PARSED_MSG);
+            throw parse_error("parse_physical_move(): Expect promotion piece after '=': " + PARSED_MSG);
         promote_to = buffer.piece;
         next_token();
     }
+    if(buffer.token == POSITIVE || buffer.token == SOFTMATE || buffer.token == CHECKMATE)
+        next_token();
+    if(buffer.token == EVALUATION_SYM)
+        next_token();
     return physical_move{board, NIL, piece_name, from_file, from_rank, capture, to_file, to_rank, promote_to};
 }
 
 /*
- <superphysical-move> ::= [<absolute-board>] [<piece-name>] [<file>] [<rank>] (<jump-indicator> ['x'] | [<jump-indicator>] ['x'] <to-board>) <file> <rank>
+ <timeline-comment> ::= <whitespace> '(' {'>L' <line> | '~T' <time>} ')'
+ throws exception if parsed (>L or (~T but the rest is not <timeline-comment> syntax
+ */
+std::optional<std::monostate> pgnparser::parse_timeline_comment()
+{
+    PARSE_START;
+    dprint("parse_timeline_comment()");
+    if(buffer.token == WHITE_SPACE)
+        next_token();
+    if(buffer.token != LEFT_PAREN) PARSE_FAIL;
+    next_token();
+    switch(buffer.token)
+    {
+        case NON_BRANCH_JUMP:
+            next_token();
+            if(buffer.token != LINE) PARSE_FAIL;
+            next_token();
+            if(buffer.token == POSITIVE || buffer.token == NEGATIVE)
+                next_token();
+            if(buffer.token != ZERO && buffer.token != POSITIVE_NUMBER)
+                throw parse_error("parse_timeline_comment(): Expect line after '(>L': " + PARSED_MSG);
+            next_token();
+            break;
+        case PRESENT_MOVED:
+            next_token();
+            if(buffer.token != TIME) PARSE_FAIL;
+            next_token();
+            if(buffer.token != ZERO && buffer.token != POSITIVE_NUMBER)
+                throw parse_error("parse_timeline_comment(): Expect number after '(>T': " + PARSED_MSG);
+            next_token();
+            break;
+        default:
+            PARSE_FAIL;
+    }
+    if(buffer.token != RIGHT_PAREN)
+        throw parse_error("parse_timeline_comment(): Expect ')': " + PARSED_MSG);
+    next_token();
+    return std::monostate();
+}
+
+/*
+ <superphysical-move> ::= [<absolute-board>] [<piece-name>] [<file>] [<rank>] (<jump-indicator> ['x'] | [<jump-indicator>] ['x'] <to-board>) <file> <rank> ['=' <promote-to>] [<check-symbol>] [<present-moved-symbol>] [<evaluation-symbol>] <timeline-comment>*
  <to-board> ::= <absote-board> | <relative-board>
  throw an excption if there parsed through and found one of <jump-indicator> or <to-board>
  but the rest is not <superphysical-move> syntax
@@ -594,7 +593,7 @@ std::optional<physical_move> pgnparser::parse_physical_move()
 std::optional<superphysical_move> pgnparser::parse_superphysical_move()
 {
     PARSE_START;
-    dprint("parse superphysical move");
+    dprint("parse_superphysical_move()");
     std::optional<absolute_board> from_board;
     std::optional<char> piece_name;
     std::optional<char> from_file;
@@ -652,26 +651,34 @@ std::optional<superphysical_move> pgnparser::parse_superphysical_move()
     }
     else
     {
-        throw parse_error("parse_superphysical_move(): expect destination board/squre after '>'/'>>': " + PARSED_MSG);
+        throw parse_error("parse_superphysical_move(): Expect destination board/squre after '>'/'>>': " + PARSED_MSG);
     }
     // if parsing does not fail before this position, we believe this shouldn't be something
     // other than a superphysical move
     if(buffer.token != FILE_CHAR)
-        throw parse_error("parse_superphysical_move(): expect destination file: " + PARSED_MSG);
+        throw parse_error("parse_superphysical_move(): Expect destination file: " + PARSED_MSG);
     to_file = buffer.file;
     next_token();
     if(buffer.token != POSITIVE_NUMBER)
-        throw parse_error("parse_superphysical_move(): expect destination rank: " + PARSED_MSG);
+        throw parse_error("parse_superphysical_move(): Expect destination rank: " + PARSED_MSG);
     to_rank = buffer.number;
     next_token();
     if(buffer.token == EQUAL)
     {
         next_token();
         if(buffer.token != PIECE)
-            throw parse_error("parse_superphysical_move(): expect promotion piece after '=': " + PARSED_MSG);
+            throw parse_error("parse_superphysical_move(): Expect promotion piece after '=': " + PARSED_MSG);
         promote_to = buffer.piece;
         next_token();
     }
+    if(buffer.token == POSITIVE || buffer.token == SOFTMATE || buffer.token == CHECKMATE)
+        next_token();
+    if(buffer.token == PRESENT_MOVED)
+        next_token();
+    if(buffer.token == EVALUATION_SYM)
+        next_token();
+    while(parse_timeline_comment())
+        ;
     return superphysical_move{from_board, piece_name, from_file, from_rank, jump_indicater, capture, to_board, to_file, to_rank, promote_to};
 }
 
@@ -708,7 +715,9 @@ std::vector<std::string_view> pgnparser::parse_comments()
     return comments;
 }
 
-//<actions> ::= <turn-serial> <space-comment>* <move> {<space-comment>+ <move>}* <space-comment>*
+/*
+ <actions> ::= <turn-serial> <space-comment>* <move> {<space-comment>+ <move>}* <space-comment>*
+ */
 std::optional<actions> pgnparser::parse_actions()
 {
     PARSE_START;
@@ -747,6 +756,7 @@ std::optional<actions> pgnparser::parse_actions()
 std::optional<gametree> pgnparser::parse_gametree()
 {
     PARSE_START;
+    dprint("parse_gametree()");
     std::optional<actions> act_opt = parse_actions();
     std::vector<gametree> variations;
     std::optional<gametree> var_buffer;
@@ -759,9 +769,9 @@ std::optional<gametree> pgnparser::parse_gametree()
         parse_comments();
         var_buffer = parse_gametree();
         if(!var_buffer.has_value())
-            throw parse_error("parse_gametree(): invalid game tree branch: " + PARSED_MSG);
+            throw parse_error("parse_gametree(): Invalid game tree branch: " + PARSED_MSG);
         else if(buffer.token != RIGHT_PAREN)
-            throw parse_error("parse_gametree(): expect ')':" + PARSED_MSG);
+            throw parse_error("parse_gametree(): Expect ')':" + PARSED_MSG);
         else
             variations.push_back(*var_buffer);
         buffer.turn = branch_start_turn; //last branch is over, reset turn number
@@ -775,6 +785,134 @@ std::optional<gametree> pgnparser::parse_gametree()
         variations.push_back(*var_buffer);
     }
     return gametree{*act_opt, variations};
+}
+
+/*
+ <game> ::= {<space-comment>* <header>}* {<space-comment>* <board-fen>}* <space-comment>* <game-tree>
+ <header> ::= '[' <header-key> <whitespace>+ '"' <header-value> '"]'
+ <header-key> ::= 'Size' | 'Promotion' | 'Date' | 'Round' | 'White' | 'Black' | 'Result' | any sequence of words not containing whitespace or '"'
+ <header-value> ::= any sequence of words not containing '"'
+ <board-fen> ::= '[' <fen-string> ':' <line> ':' <time> ':' {'w' | 'b'} ']'
+ <fen-string> ::= any sequence of words not containing ':' or ']' ;to be parsed separately
+ */
+
+std::optional<game> pgnparser::parse_game()
+{
+    PARSE_START;
+    dprint("parse_game()");
+    std::map<std::string, std::string> headers;
+    std::vector<std::tuple<std::string, token_t, int, int, bool>> boards;
+    parse_comments();
+    while(buffer.token == METADATA)
+    {
+        const std::string s(buffer.comment);
+        const int len = static_cast<int>(s.size());
+        bool saw_colon = false;
+        for(auto c:s)
+        {
+            if(c==':')
+            {
+                saw_colon = true;
+                break;
+            }
+        }
+        if(saw_colon)
+        {
+            // parse as <board-fen>
+            int now = 0, prev;
+            auto next_colon = [&s, &now, len]() -> void {
+                while(now<len && s[now] != ':')
+                    now++;
+            };
+            next_colon();
+            std::string fen(s.begin(), s.begin()+now);
+            token_t sign;
+            int l, t;
+            bool c;
+            now++;
+            switch(s[now])
+            {
+                case '+':
+                    sign = POSITIVE;
+                    now++;
+                    break;
+                case '-':
+                    sign = NEGATIVE;
+                    now++;
+                    break;
+                default:
+                    sign = NIL;
+            }
+            prev = now;
+            try {
+                next_colon();
+                if(now == len)
+                    throw parse_error("parse_game(): Expect line in board string:" + s);
+                l = stoi(std::string(s.begin() + prev, s.begin() + now));
+                now++; prev = now;
+                next_colon();
+                if(now == len)
+                    throw parse_error("parse_game(): Expect time in board string:" + s);
+                t = stoi(std::string(s.begin() + prev, s.begin() + now));
+            }
+            catch(std::invalid_argument e)
+            {
+                throw parse_error("parse_game(): Expect number after ':': " + s + "\n" + e.what());
+            }
+            now++;
+            if(now == len)
+                throw parse_error("parse_game(): Expect color in board string:" + s);
+            switch(s[now])
+            {
+                case 'w':
+                case 'W':
+                    c = false;
+                    break;
+                case 'b':
+                case 'B':
+                    c = true;
+                    break;
+                default:
+                    throw parse_error(std::string("parse_game(): Unknown color:") + s[now] + " in " + s);
+            }
+            if(now+1 != len)
+                throw parse_error("parse_game(): Too many arguments in board string:" + s);
+            boards.push_back(std::make_tuple(fen, sign, l, t, c));
+        }
+        else
+        {
+            // parse as <header>
+            std::string key, value;
+            int now = 0, prev;
+            while(now<len && !isspace(s[now]))
+                now++;
+            if(now == len)
+                throw parse_error("parse_game(): Expect space in header:" + s);
+            key = std::string(s.begin(), s.begin() + now);
+            now++;
+            if(now == len || s[now] != '"')
+                throw parse_error("parse_game(): Expect '\"' in header:" + s);
+            now++; prev = now;
+            while(now<len && s[now] != '"')
+                now++;
+            if(now == len)
+                throw parse_error("parse_game(): '\"' not closed:" + s);
+            value = std::string(s.begin() + prev, s.begin() + now);
+            if(now+1 != len)
+                throw parse_error("parse_game(): Too many arguments in header:" + s);
+            auto [_, success] = headers.insert({key, value});
+            if(!success)
+                throw parse_error("parse_game(): Duplicate header key: " + key);
+        }
+        next_token();
+        parse_comments();
+        if(buffer.token == END)
+            PARSE_FAIL;
+    }
+    parse_comments();
+    auto gt_opt = parse_gametree();
+    if(!gt_opt) PARSE_FAIL;
+    return game{headers, boards, *gt_opt};
 }
 
 /* ***MATCHER*** */
