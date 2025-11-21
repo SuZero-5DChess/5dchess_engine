@@ -98,7 +98,7 @@ state game::get_current_state() const
     return *now;
 }
 
-std::vector<std::tuple<int, int, int, std::string>> game::get_current_boards() const
+std::vector<std::tuple<int, int, bool, std::string>> game::get_current_boards() const
 {
     return get_current_state().get_boards();
 }

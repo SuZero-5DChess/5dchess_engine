@@ -751,40 +751,43 @@ std::optional<actions> pgnparser::parse_actions()
 }
 
 /*
- <game-tree> ::= <actions> <space-comment>* {'(' <space-comment>* <game-tree>')' <space-comment>*}* [<game-tree> <space-comment>*]
+ <game-tree> ::= {'(' <space-comment>* <actions> <space-comment>* <game-tree>')' <space-comment>*}* [<actions> <space-comment>* <game-tree> <space-comment>*]
  */
 std::optional<gametree> pgnparser::parse_gametree()
 {
     PARSE_START;
     dprint("parse_gametree()");
-    std::optional<actions> act_opt = parse_actions();
-    std::vector<gametree> variations;
-    std::optional<gametree> var_buffer;
-    if(!act_opt.has_value()) PARSE_FAIL;
-    parse_comments();
+    std::optional<actions> act_buffer;
+    std::vector<std::pair<actions,gametree>> variations;
+    std::optional<gametree> gt_buffer;
     turn_t branch_start_turn = buffer.turn;
     while (buffer.token == LEFT_PAREN)
     {
         next_token();
         parse_comments();
-        var_buffer = parse_gametree();
-        if(!var_buffer.has_value())
+        act_buffer = parse_actions();
+        if(!act_buffer.has_value()) PARSE_FAIL;
+        gt_buffer = parse_gametree();
+        if(!gt_buffer.has_value())
             throw parse_error("parse_gametree(): Invalid game tree branch: " + PARSED_MSG);
         else if(buffer.token != RIGHT_PAREN)
             throw parse_error("parse_gametree(): Expect ')':" + PARSED_MSG);
         else
-            variations.push_back(*var_buffer);
+            variations.push_back({*act_buffer, *gt_buffer});
         buffer.turn = branch_start_turn; //last branch is over, reset turn number
         dprint("turn reset to:", buffer.turn.first, buffer.turn.second?"b":"w");
         next_token();
         parse_comments();
     }
-    var_buffer = parse_gametree();
-    if(var_buffer)
+    act_buffer = parse_actions();
+    if(act_buffer)
     {
-        variations.push_back(*var_buffer);
+        gt_buffer = parse_gametree();
+        if(!gt_buffer)
+            throw parse_error("parse_gametree(): !!This should not happen!! Invalid game tree continuation: " + PARSED_MSG);
+        variations.push_back({*act_buffer, *gt_buffer});
     }
-    return gametree{*act_opt, variations};
+    return gametree{variations};
 }
 
 /*

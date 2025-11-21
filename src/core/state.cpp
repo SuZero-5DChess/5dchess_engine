@@ -1,10 +1,11 @@
 #include "state.h"
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include "utils.h"
 #include "pgnparser.h"
 
-//#define DEBUGMSG
+#define DEBUGMSG
 #include "debug.h"
 
 std::pair<int, int> next_tc(int t, int c)
@@ -13,9 +14,189 @@ std::pair<int, int> next_tc(int t, int c)
     return std::make_pair(v >> 1, v & 1);
 }
 
-state::state(multiverse &mtv) : m(mtv.clone()), promote_to{QUEEN_W}
+
+state::state(multiverse &mtv) noexcept : m(mtv.clone()), promote_to{QUEEN_W}
 {
     std::tie(present, player) = m->get_present();
+}
+
+state::state(const pgnparser_ast::game &g)
+{
+    auto &metadata = g.headers;
+    // parse size
+    auto find_or_default = [](const std::map<std::string, std::string>& m, const std::string& key, const std::string& def) -> std::string {
+        auto it = m.find(key);
+        if (it != m.end()) {
+            return it->second;
+        } else {
+            return def;
+        }
+    };
+    std::string size_str = find_or_default(metadata, "size", "8x8");
+    int size_x, size_y;
+    auto pos = size_str.find('x');
+    if (pos == std::string::npos)
+        throw std::runtime_error("state(): Invalid board size format: " + size_str);
+    try {
+        size_x = std::stoi(size_str.substr(0, pos));
+        size_y = std::stoi(size_str.substr(pos + 1));
+        if(size_x <= 0 || size_y <= 0 || size_x > BOARD_LENGTH || size_y > BOARD_LENGTH)
+        {
+            throw std::out_of_range("");
+        }
+    } catch (const std::invalid_argument&) {
+        throw std::runtime_error("state(): Expect number in size value: " + size_str);
+    } catch (const std::out_of_range&) {
+        throw std::runtime_error("state(): Number out of range in size value: " + size_str + " (max board size allowed: " + std::to_string(BOARD_LENGTH) + ")");
+    }
+    // parse board
+    using board_t = std::vector<std::tuple<std::string, pgnparser_ast::token_t, int, int, bool>>;
+    board_t boards = g.boards;
+    std::optional<bool> is_even_timelines;
+    auto it = metadata.find("Board");
+    if(it != metadata.end())
+    {
+        std::string board_str = it->second;
+        // none of the default variants should be named as "Custom[...]"
+        const static std::map<std::string, std::tuple<bool, board_t>> default_variants = {
+            {
+                "Standard",
+                {
+                    false, // Odd timelines
+                    {
+                        std::make_tuple("r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*", pgnparser_ast::NIL, 0, 1, false)
+                    }
+                }
+            },
+            {
+                "Standard - Turn Zero",
+                {
+                    false, // Odd timelines
+                    {
+                        std::make_tuple("r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*", pgnparser_ast::NIL, 0, 0, true),
+                        std::make_tuple("r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*", pgnparser_ast::NIL, 0, 1, false),
+                    }
+                }
+            },
+        };
+        
+        // Custom variant, can specify even/odd timelines here
+        if(board_str == "Custom - Even" || board_str == "Even")
+        {
+            is_even_timelines = true;
+        }
+        else if(board_str == "Custom - Odd" || board_str == "Odd")
+        {
+            is_even_timelines = false;
+        }
+        else if(board_str.starts_with("Custom"))
+        {
+            // do nothing
+        }
+        else if(boards.empty())
+        {
+            // if g.board is not empty, any description in "Board" header is ignored
+            try {
+                bool even;
+                std::tie(even, boards) = default_variants.at(board_str);
+                is_even_timelines = even;
+            } catch (const std::out_of_range&) {
+                throw std::runtime_error("state(): Unknown variant: " + board_str);
+            }
+        }
+    }
+    if(boards.empty())
+    {
+        throw std::runtime_error("state(): Variant is unspecific: no Board header or 5DFEN given");
+    }
+    if(!is_even_timelines.has_value())
+    {
+        bool even = false;
+        for(const auto& [fen, sign, l, t, c] : boards)
+        {
+            even |= (sign == pgnparser_ast::POSITIVE && l == 0);
+            even |= (sign == pgnparser_ast::NEGATIVE && l == 0);
+            if(even) break;
+        }
+        is_even_timelines = even;
+    }
+    // construct multiverse
+    std::vector<boards_info_t> boards_info(boards.size());
+    if(*is_even_timelines)
+    {
+        std::transform(boards.begin(), boards.end(), boards_info.begin(), [](const auto& tup) {
+            const auto& [fen, sign, l, t, c] = tup;
+            int sgn = sign == pgnparser_ast::NEGATIVE ? -1 : 1;
+            int offset = sign == pgnparser_ast::NEGATIVE ? -1 : 0;
+            return std::make_tuple(l*sgn+offset, t, c, fen);
+        });
+        m = std::make_unique<multiverse_even>(boards_info, size_x, size_y);
+    }
+    else
+    {
+        std::transform(boards.begin(), boards.end(), boards_info.begin(), [](const auto& tup) {
+            const auto& [fen, sign, l, t, c] = tup;
+            int sgn = sign == pgnparser_ast::NEGATIVE ? -1 : 1;
+            return std::make_tuple(l*sgn, t, c, fen);
+        });
+        m = std::make_unique<multiverse_odd>(boards_info, size_x, size_y);
+    }
+    std::tie(present, player) = m->get_present();
+    // parse moves
+    std::reference_wrapper<const pgnparser_ast::gametree> gt = g.gt;
+    while(!gt.get().variations.empty())
+    {
+        const auto &[act, last_gt] = *(gt.get().variations.end() - 1);
+        //std::cout << act;
+        for(const auto& mv: act.moves)
+        {
+            auto [fm_opt, pt_opt, candidates] = parse_move(mv);
+            if(!fm_opt.has_value())
+            {
+                if(candidates.empty())
+                {
+                    std::ostringstream oss;
+                    dprint(to_string());
+                    oss << "state(): Invalid move: " << mv;
+                    throw std::runtime_error(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    dprint(to_string());
+                    oss << "state(): Ambiguous move: " << mv << "; candidates: ";
+                    oss << range_to_string(candidates, "", "");
+                    throw std::runtime_error(oss.str());
+                }
+            }
+            else
+            {
+                full_move fm = fm_opt.value();
+                if(pt_opt.has_value())
+                {
+                    set_promotion_piece(player ? to_white(pt_opt.value()) : pt_opt.value());
+                }
+                bool flag = apply_move<false>(fm);
+                if(!flag)
+                {
+                    std::ostringstream oss;
+                    oss << "state(): Illegal move: " << mv << " (parsed as: " << fm << ")";
+                    throw std::runtime_error(oss.str());
+                }
+            }
+        }
+        if(!last_gt.variations.empty())
+        {
+            bool flag = submit();
+            if(!flag)
+            {
+                std::ostringstream oss;
+                oss << "state(): Cannot submit after parsing these moves: " << act;
+                throw std::runtime_error(oss.str());
+            }
+        }
+        gt = last_gt;
+    }
 }
 
 int state::new_line() const
@@ -437,7 +618,7 @@ std::shared_ptr<board> state::get_board(int l, int t, int c) const
     return m->get_board(l, t, c);
 }
 
-std::vector<std::tuple<int, int, int, std::string>> state::get_boards() const
+std::vector<std::tuple<int, int, bool, std::string>> state::get_boards() const
 {
     return m->get_boards();
 }
@@ -460,17 +641,16 @@ std::string state::to_string() const
     return ss.str() + m->to_string();
 }
 
-state::parse_pgn_res state::parse_move(const std::string &move) const
+state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
 {
-    //parse as a physical move
-    auto parsed_physical_move = pgnparser(move).parse_physical_move();
     std::vector<full_move> matched;
     std::vector<full_move> pawn_move_matched;
     std::optional<full_move> fm;
     std::optional<piece_t> promotion;
-    //if this is indeed a physical move
-    if(parsed_physical_move)
+    //dprint("parse_move(",move,")");
+    if(std::holds_alternative<pgnparser_ast::physical_move>(move.data))
     {
+        auto mv = std::get<pgnparser_ast::physical_move>(move.data);
         // for all physical moves avilable in current state
         for(vec4 p : gen_movable_pieces())
         {
@@ -484,7 +664,7 @@ state::parse_pgn_res state::parse_move(const std::string &move) const
                 std::string full_notation = pretty_move(fm, player);
                 auto full = pgnparser(full_notation).parse_physical_move();
                 assert(full.has_value());
-                bool match = pgnparser::match_physical_move(*parsed_physical_move, *full);
+                bool match = pgnparser::match_physical_move(mv, *full);
                 if(match)
                 {
                     matched.push_back(fm);
@@ -509,16 +689,15 @@ state::parse_pgn_res state::parse_move(const std::string &move) const
         }
         if(fm.has_value())
         {
-            promotion = parsed_physical_move->promote_to.transform([](char pt){
+            promotion = mv.promote_to.transform([](char pt){
                 return static_cast<piece_t>(pt);
             });
         }
     }
-    else
+    else if(std::holds_alternative<pgnparser_ast::superphysical_move>(move.data))
     {
         // do the same for superphysical moves
-        auto parsed_sp_move = pgnparser(move).parse_superphysical_move();
-//        std::cerr << "original " << parsed_sp_move << std::endl;
+        auto spm = std::get<pgnparser_ast::superphysical_move>(move.data);
         for(vec4 p : gen_movable_pieces())
         {
             char piece = to_white(piece_name(get_piece(p, player)));
@@ -533,9 +712,7 @@ state::parse_pgn_res state::parse_move(const std::string &move) const
                     std::string full_notation = pretty_move(fm, player);
                     auto full = pgnparser(full_notation).parse_superphysical_move();
                     assert(full.has_value());
-                    bool match = pgnparser::match_superphysical_move(*parsed_sp_move, *full);
-//                    std::cout << (match ? "match" : "no fit") << ":\t";
-//                    std::cout << full_notation << "\n" << *full << "\n";
+                    bool match = pgnparser::match_superphysical_move(spm, *full);
                     if(match)
                     {
                         matched.push_back(fm);
@@ -557,12 +734,22 @@ state::parse_pgn_res state::parse_move(const std::string &move) const
         }
         if(fm.has_value())
         {
-            promotion = parsed_sp_move->promote_to.transform([](char pt){
+            promotion = spm.promote_to.transform([](char pt){
                 return static_cast<piece_t>(pt);
             });
         }
     }
     return std::make_tuple(fm, promotion, matched);
+}
+
+state::parse_pgn_res state::parse_move(const std::string &move) const
+{
+    auto parsed_move = pgnparser(move).parse_move();
+    if(!parsed_move.has_value())
+    {
+        return std::make_tuple(std::nullopt, std::nullopt, std::vector<full_move>{});
+    }
+    return parse_move(*parsed_move);
 }
 
 template bool state::apply_move<false>(full_move);

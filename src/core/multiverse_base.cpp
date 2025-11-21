@@ -1,4 +1,4 @@
-#include "multiverse.h"
+#include "multiverse_base.h"
 #include "utils.h"
 #include "magic.h"
 #include <regex>
@@ -41,7 +41,32 @@ constexpr static std::tuple<int, int> v_to_tc(int v)
     return std::tuple<int, int>(v >> 1, v & 1);
 }
 
-multiverse::multiverse(const std::string &input, int size_x, int size_y) 
+multiverse::multiverse(std::vector<std::tuple<int, int, bool, std::string>> bds, int size_x, int size_y)
+    : size_x(size_x), size_y(size_y), l_min(0), l_max(0)
+{
+    if(bds.empty())
+        throw std::runtime_error("multiverse(): Empty input");
+    for(const auto& [l, t, c, fen] : bds)
+    {
+        insert_board_impl(l, t, c ? 1 : 0, std::make_shared<board>(fen, size_x, size_y));
+    }
+    for(int l = l_min; l <= l_max; l++)
+    {
+        int u = l_to_u(l);
+        if(boards[u].empty())
+            throw std::runtime_error("multiverse(): There is a gap between timelines.");
+        for(int v = timeline_start[u]; v <= timeline_end[u]; v++)
+        {
+            if(boards[u][v] == nullptr)
+            {
+                throw std::runtime_error("multiverse(): There is a gap between boards on timeline L"
+                    + std::to_string(u_to_l(u)) + ".");
+            }
+        }
+    }
+}
+
+multiverse::multiverse(const std::string &input, int size_x, int size_y)
     : size_x(size_x), size_y(size_y), l_min(0), l_max(0)
 {
     const static std::regex comment_pattern(R"(\{.*?\})");
@@ -176,7 +201,11 @@ void multiverse::insert_board_impl(int l, int t, int c, const std::shared_ptr<bo
     }
     else if(v < 0)
     {
-        throw std::runtime_error("Negative time is not supported.");
+        throw std::runtime_error("multiverse::insert_board_impl(): Negative time is not supported.");
+    }
+    if(timeline[v] != nullptr)
+    {
+        throw std::runtime_error("multiverse::insert_board_impl(): Duplicate definition of the board on L="+std::to_string(l)+" (plain notation), T="+std::to_string(t)+" C="+std::string(c?"b":"w"));
     }
     timeline[v] = b_ptr;
     timeline_start[u] = std::min(timeline_start[u], v);
@@ -195,9 +224,9 @@ void multiverse::update_active_range()
     std::tie(active_min, active_max) = calculate_active_range();
 }
 
-std::vector<std::tuple<int,int,int,std::string>> multiverse::get_boards() const
+std::vector<std::tuple<int,int,bool,std::string>> multiverse::get_boards() const
 {
-    std::vector<std::tuple<int,int,int,std::string>> result;
+    std::vector<std::tuple<int,int,bool,std::string>> result;
     for(int u = 0; u < this->boards.size(); u++)
     {
         const auto& timeline = this->boards[u];
@@ -230,7 +259,8 @@ std::string multiverse::to_string() const
             const auto [t, c] = v_to_tc(v);
             if(timeline[v] != nullptr)
             {
-                sstm << "L" << l << "T" << t << (c ? 'b' : 'w') << "\n";
+                sstm << "L" << l << "T" << t << (c ? 'b' : 'w');
+                sstm << "  aka." << pretty_lt(vec4(0,0,t,l)) << "\n";
                 sstm << timeline[v]->to_string();
             }
         }
@@ -1136,38 +1166,3 @@ template movegen_t multiverse::gen_superphysical_moves<false>(vec4 p) const;
 
 template movegen_t multiverse::gen_moves<true>(vec4 p) const;
 template movegen_t multiverse::gen_moves<false>(vec4 p) const;
-
-multiverse_odd::multiverse_odd(std::string input, int size_x, int size_y)
-    : multiverse(std::move(input), size_x, size_y)
-{
-    update_active_range();
-}
-
-std::pair<int, int> multiverse_odd::calculate_active_range() const
-{
-    auto [l_min, l_max] = multiverse::get_lines_range();
-    int tmp = std::min(-l_min, l_max);
-    int l = tmp + ((tmp < std::max(-l_min, l_max)) ? 1 : 0);
-    int active_min = std::max(l_min, -l);
-    int active_max = std::min(l_max, l);
-    return std::make_pair(active_min, active_max);
-}
-
-std::pair<int, int> multiverse_even::calculate_active_range() const
-{
-    auto [l_min0, l_max] = multiverse::get_lines_range();
-    int l_min = l_min0 + 1; // the only difference
-    int tmp = std::min(-l_min, l_max);
-    int l = tmp + ((tmp < std::max(-l_min, l_max)) ? 1 : 0);
-    int active_min = std::max(l_min, -l);
-    int active_max = std::min(l_max, l);
-    return std::make_pair(active_min, active_max);
-}
-
-multiverse_even::multiverse_even(std::string input, int size_x, int size_y)
-    : multiverse(std::move(input), size_x, size_y)
-{
-    //TODO: allow +0 and -0 lines
-    // current behavior: -0 needs to be written as -1 in the input
-    update_active_range();
-}

@@ -10,6 +10,7 @@
 #include "multiverse.h"
 #include "actions.h"
 #include "generator.h"
+#include "ast.h"
 
 class state
 {
@@ -33,7 +34,9 @@ class state
     generator<full_move> find_checks_impl(std::vector<int> lines) const;
 
 public:
-    state(multiverse &mtv);
+    state(multiverse &mtv) noexcept;
+    state(const pgnparser_ast::game &g);
+    virtual ~state() = default;
     
     // standard copy-constructors
     state(const state& other)
@@ -113,7 +116,7 @@ public:
     std::pair<int, int> get_timeline_end(int l) const;
     piece_t get_piece(vec4 p, int color) const;
     std::shared_ptr<board> get_board(int l, int t, int c) const;
-    std::vector<std::tuple<int,int,int,std::string>> get_boards() const;
+    std::vector<std::tuple<int,int,bool,std::string>> get_boards() const;
     generator<vec4> gen_piece_move(vec4 p) const;
     generator<vec4> gen_piece_move(vec4 p, int c) const;
     std::string to_string() const;
@@ -121,9 +124,10 @@ public:
     /*
     parse_move: Given a state `s` and a move in string format `move`, try to parse the move and match it to a unique full_move in the context of state `s`.
     - If successful, return a tuple with first index set to the matched full_move and second index set to the promotion piece if any.
-    - If failed, return a tuple with first two indices set to nullopt and the third indices containing all possible matching full_moves. (.size()>1 ~> ambiguous; .size()==0 ~> no match)
+    - If failed, return a tuple with first two indices set to nullopt and the third indices containing all possible matching full_moves. (.size()>1 ~> ambiguous; .size()==0 ~> cannot parse/no match)
     */
     using parse_pgn_res = std::tuple<std::optional<full_move>, std::optional<piece_t>, std::vector<full_move>>;
+    parse_pgn_res parse_move(const pgnparser_ast::move &move) const;
     parse_pgn_res parse_move(const std::string &move) const;
 };
 

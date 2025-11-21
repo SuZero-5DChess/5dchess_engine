@@ -35,5 +35,10 @@ int main()
     headers.insert({"Mode", "5D"});
     auto [_, success] = headers.insert({"Mode", "6D"});
     std::cout << success << "\n";
+    
+    std::cout << sizeof(multiverse) << "\n";
+    std::cout << sizeof(std::unique_ptr<multiverse>) << "\n";
+    
+    std::cout << sizeof(state) << "\n";
     return 0;
 }

@@ -75,10 +75,8 @@ std::ostream &operator<<(std::ostream &os, const actions &ac)
 
 std::ostream &operator<<(std::ostream &os, const gametree &gt)
 {
-    os << "gametree{act:" << gt.act;
-    os << ", var:";
+    os << "gametree";
     os << range_to_string(gt.variations, "[", "]");
-    os << "}";
     return os;
 }
 

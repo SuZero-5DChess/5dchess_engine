@@ -5,7 +5,7 @@
 <board-fen> ::= '[' <fen-string> ':' <line> ':' <time> ':' {'w' | 'b'} ']'
 <fen-string> ::= any sequence of words not containing ':' or ']' ;to be parsed separately
 
- <game-tree> ::= <actions> <space-comment>* {'(' <space-comment>* <game-tree>')' <space-comment>*}* [<game-tree> <space-comment>*]
+ <game-tree> ::= {'(' <space-comment>* <actions> <space-comment>* <game-tree>')' <space-comment>*}* [<actions> <space-comment>* <game-tree> <space-comment>*]
 
 <actions> ::= <turn-serial> <space-comment>* <move> {<space-comment>+ <move>}* <space-comment>*
 <turn-serial> ::= <number> ['w' | 'b'] '.' |  '/'

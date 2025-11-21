@@ -2,6 +2,7 @@
 #include <vector>
 #include "pgnparser.h"
 #include "utils.h"
+#include "state.h"
 
 void test_actions()
 {
@@ -39,13 +40,22 @@ void test_game()
 {
     std::string str = R"(
 [Mode "5D"]
-[Board "Custom"]
-[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:+0:0:b]
-[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:-0:0:b]
-1.e3 {/ e6
-2.Nf3 / Nf6}
+[Board "Standard"]
+1. e3 / Nf6
+2w. Bb5 {Beware!}
+(2b. d5 {The right response})
+2b. c6
+3. c3 / cxb5
+4. Qb3 / Qa5
+5. Q>>xf7+~ (~T1) (>L1) {f7-sacrifice!} / (1T1)Kxf7
+6. (1T2)Nh3 / (1T2)e6
+7. (1T3)e3 / (1T3)Qf6
+8. (1T4)Qh5*
 )";
-    std::cout << pgnparser(str).parse_game() << std::endl;
+    pgnparser_ast::game g = *pgnparser(str).parse_game();
+    std::cout << g << "\n\n" << std::endl;
+    state s(g);
+    std::cout << s.to_string();
 }
 
 int main()
