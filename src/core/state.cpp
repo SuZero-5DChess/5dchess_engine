@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "pgnparser.h"
 
-#define DEBUGMSG
+//#define DEBUGMSG
 #include "debug.h"
 
 std::pair<int, int> next_tc(int t, int c)
@@ -15,7 +15,7 @@ std::pair<int, int> next_tc(int t, int c)
 }
 
 
-state::state(multiverse &mtv) noexcept : m(mtv.clone()), promote_to{QUEEN_W}
+state::state(multiverse &mtv) noexcept : m(mtv.clone())
 {
     std::tie(present, player) = m->get_present();
 }
@@ -53,7 +53,7 @@ state::state(const pgnparser_ast::game &g)
     using board_t = std::vector<std::tuple<std::string, pgnparser_ast::token_t, int, int, bool>>;
     board_t boards = g.boards;
     std::optional<bool> is_even_timelines;
-    auto it = metadata.find("Board");
+    auto it = metadata.find("board");
     if(it != metadata.end())
     {
         std::string board_str = it->second;
@@ -126,9 +126,8 @@ state::state(const pgnparser_ast::game &g)
     {
         std::transform(boards.begin(), boards.end(), boards_info.begin(), [](const auto& tup) {
             const auto& [fen, sign, l, t, c] = tup;
-            int sgn = sign == pgnparser_ast::NEGATIVE ? -1 : 1;
-            int offset = sign == pgnparser_ast::NEGATIVE ? -1 : 0;
-            return std::make_tuple(l*sgn+offset, t, c, fen);
+            int signed_l = sign == pgnparser_ast::NEGATIVE ? ~l : l;
+            return std::make_tuple(signed_l, t, c, fen);
         });
         m = std::make_unique<multiverse_even>(boards_info, size_x, size_y);
     }
@@ -172,11 +171,16 @@ state::state(const pgnparser_ast::game &g)
             else
             {
                 full_move fm = fm_opt.value();
+                bool flag;
                 if(pt_opt.has_value())
                 {
-                    set_promotion_piece(player ? to_white(pt_opt.value()) : pt_opt.value());
+                    piece_t pt = player ? to_white(*pt_opt) : *pt_opt;
+                    flag = apply_move<false>(fm, pt);
                 }
-                bool flag = apply_move<false>(fm);
+                else
+                {
+                    flag = apply_move<false>(fm);
+                }
                 if(!flag)
                 {
                     std::ostringstream oss;
@@ -193,6 +197,15 @@ state::state(const pgnparser_ast::game &g)
                 std::ostringstream oss;
                 oss << "state(): Cannot submit after parsing these moves: " << act;
                 throw std::runtime_error(oss.str());
+            }
+        }
+        else
+        {
+            bool flag = submit();
+            if(!flag)
+            {
+                std::ostringstream oss;
+                oss << "[WARNING]state(): Cannot submit after parsing these moves: " << act;
             }
         }
         gt = last_gt;
@@ -222,7 +235,7 @@ std::optional<state> state::can_submit() const
     }
 }
 
-std::optional<state> state::can_apply(full_move fm) const
+std::optional<state> state::can_apply(full_move fm, piece_t promote_to) const
 {
     state new_state = *this;
     bool flag = new_state.apply_move<false>(fm);
@@ -237,7 +250,7 @@ std::optional<state> state::can_apply(full_move fm) const
 }
 
 template<bool UNSAFE>
-bool state::apply_move(full_move fm)
+bool state::apply_move(full_move fm, piece_t promote_to)
 {
     dprint("applying move", fm);
     vec4 p = fm.from;
@@ -245,6 +258,8 @@ bool state::apply_move(full_move fm)
     vec4 d = q - p;
     if constexpr (!UNSAFE)
     {
+        auto te = m->get_timeline_end(p.l());
+        assert(std::make_pair(p.t(), player) == te && "moves must be made on an active board");
         auto mvs = player ? m->gen_moves<true>(p) : m->gen_moves<false>(p);
         //auto it = mvbbs.find(q.tl());
         const auto &res = mvs.find([&q](const auto &pair){
@@ -352,13 +367,13 @@ bool state::submit()
     return true;
 }
 
-
-void state::set_promotion_piece(piece_t pt)
-{
-    dprint("setting promotion piece to:", pt);
-    assert(to_white(pt) == pt && pt != KING_W && pt != ROYAL_QUEEN_W);
-    promote_to = pt;
-}
+//
+//void state::set_promotion_piece(piece_t pt)
+//{
+//    dprint("setting promotion piece to:", pt);
+//    assert(to_white(pt) == pt && pt != KING_W && pt != ROYAL_QUEEN_W);
+//    promote_to = pt;
+//}
 
 
 
@@ -409,15 +424,23 @@ std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_time
  **
  */
 
-generator<full_move> state::find_checks() const
+generator<full_move> state::find_checks(bool c) const
 {
-    auto [t, c] = next_tc(present, player);
-    auto [lines, optional_timelines, unplayable_timelines] = get_timeline_status(t, c);
-    append_vectors(lines, optional_timelines);
-//    print_range("playable: ", lines);
-//    print_range("unplayable: ", unplayable_timelines);
+    // cannot use get_timeline_status() directly because it only works for current player
+    auto [l_min, l_max] = m->get_lines_range();
+    auto [active_min, active_max] = m->get_active_range();
+    std::vector<int> lines;
+    auto [p_min, p_max] = c ? std::make_pair(active_min, l_max) : std::make_pair(l_min, active_max);
+    for(int i = p_min; i <= p_max; i++)
+    {
+        auto [t, col] = m->get_timeline_end(i);
+        if(col == c)
+        {
+            lines.push_back(i);
+        }
+    }
     // find checks on the opponents timelines
-    if (player == 0)
+    if (c)
     {
         return find_checks_impl<true>(lines);
     }
@@ -435,7 +458,7 @@ generator<full_move> state::find_checks_impl(std::vector<int> lines) const
     {
         // take the active board
         auto [t, c] = m->get_timeline_end(l);
-//        assert(c == C);
+        assert(c == C);
         std::shared_ptr<board> b_ptr = m->get_board(l, t, C);
         bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->wall();
         // for each friendly piece on this board
@@ -457,6 +480,7 @@ generator<full_move> state::find_checks_impl(std::vector<int> lines) const
                         for(int dst_pos : marked_pos(c_pieces))
                         {
                             vec4 q = vec4(dst_pos, q0);
+                            dprint("found check", full_move(p,q), "source:", p);
                             co_yield full_move(p, q);
                         }
                     }
@@ -489,6 +513,7 @@ std::vector<vec4> state::get_movable_pieces(std::vector<int> lines) const
 template <bool C>
 std::vector<vec4> state::gen_movable_pieces_impl(std::vector<int> lines) const
 {
+    dprint("gen_movable_pieces_impl()");
     std::vector<vec4> result;
     for (int l : lines)
     {
@@ -511,6 +536,7 @@ std::vector<vec4> state::gen_movable_pieces_impl(std::vector<int> lines) const
             }
         }
     }
+    dprint(range_to_string(result));
     return result;
 }
 
@@ -637,7 +663,6 @@ std::string state::to_string() const
 {
     std::ostringstream ss;
     ss << "State(present=" << present << ", player=" << player << "):\n";
-    ss << "promotion piece=" << static_cast<int>(promote_to) << " '" << promote_to << "'\n";
     return ss.str() + m->to_string();
 }
 
@@ -647,7 +672,7 @@ state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
     std::vector<full_move> pawn_move_matched;
     std::optional<full_move> fm;
     std::optional<piece_t> promotion;
-    //dprint("parse_move(",move,")");
+    dprint("parse_move(",move,")");
     if(std::holds_alternative<pgnparser_ast::physical_move>(move.data))
     {
         auto mv = std::get<pgnparser_ast::physical_move>(move.data);
@@ -660,6 +685,7 @@ state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
             {
                 vec4 q(pos, p.tl());
                 full_move fm(p,q);
+                dprint("matching", fm);
                 // test if this physical move matches any of them
                 std::string full_notation = pretty_move(fm, player);
                 auto full = pgnparser(full_notation).parse_physical_move();
@@ -667,6 +693,7 @@ state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
                 bool match = pgnparser::match_physical_move(mv, *full);
                 if(match)
                 {
+                    dprint("matched");
                     matched.push_back(fm);
                     if(piece == PAWN_W)
                     {
@@ -708,6 +735,7 @@ state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
                 {
                     vec4 q(pos, p0);
                     full_move fm(p,q);
+                    dprint("matching", fm);
                     // test if this physical move matches any of them
                     std::string full_notation = pretty_move(fm, player);
                     auto full = pgnparser(full_notation).parse_superphysical_move();
@@ -715,6 +743,7 @@ state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
                     bool match = pgnparser::match_superphysical_move(spm, *full);
                     if(match)
                     {
+                        dprint("matched");
                         matched.push_back(fm);
                         if(piece == PAWN_W)
                         {
@@ -752,8 +781,8 @@ state::parse_pgn_res state::parse_move(const std::string &move) const
     return parse_move(*parsed_move);
 }
 
-template bool state::apply_move<false>(full_move);
-template bool state::apply_move<true>(full_move);
+template bool state::apply_move<false>(full_move, piece_t);
+template bool state::apply_move<true>(full_move, piece_t);
 template bool state::submit<false>();
 template bool state::submit<true>();
 

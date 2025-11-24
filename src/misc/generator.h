@@ -9,6 +9,56 @@
 #include <optional>
 #include <exception>
 
+// for debugging exceptions in coroutine
+
+// Detect C++23 <stacktrace>
+#if __has_include(<stacktrace>) && defined(__cpp_lib_stacktrace) && __cpp_lib_stacktrace >= 202011
+    #include <stacktrace>
+    #define HAS_STD_STACKTRACE 1
+#else
+    #define HAS_STD_STACKTRACE 0
+#endif
+
+// Detect <execinfo.h>
+#if __has_include(<execinfo.h>)
+    #include <execinfo.h>
+    #define HAS_EXECINFO 1
+#else
+    #define HAS_EXECINFO 0
+#endif
+
+
+// ==================================== //
+//  Capture stack trace implementation  //
+// ==================================== //
+static inline std::string capture_stacktrace()
+{
+#if HAS_STD_STACKTRACE
+    // -------- C++23 version ---------
+    std::ostringstream oss;
+    oss << std::stacktrace::current();
+    return oss.str();
+
+#elif HAS_EXECINFO
+    // -------- execinfo.h version (Linux/macOS) ---------
+    void* buf[64];
+    int n = ::backtrace(buf, 64);
+    char** symbols = ::backtrace_symbols(buf, n);
+
+    std::ostringstream oss;
+    for (int i = 0; i < n; ++i)
+        oss << symbols[i] << '\n';
+
+    free(symbols);
+    return oss.str();
+
+#else
+    // -------- Fallback ---------
+    return "<stacktrace unavailable>";
+#endif
+}
+
+
 template<std::movable T>
 class generator
 {
@@ -40,6 +90,8 @@ public:
         void await_transform() = delete;
         void unhandled_exception() {
             //exception_ = std::current_exception();
+            std::string stack = capture_stacktrace();
+            std::cerr << "\n" << stack << std::endl;
             throw;
         }
     };

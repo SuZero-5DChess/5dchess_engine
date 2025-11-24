@@ -20,7 +20,6 @@ class state
      These numbers can be inherited from copy-construction; thus they are not necessarily equal to `m.get_present()`.
     */
     int present, player;
-    piece_t promote_to;
     
     template<bool C>
     std::vector<vec4> gen_movable_pieces_impl(std::vector<int> lines) const;
@@ -40,7 +39,7 @@ public:
     
     // standard copy-constructors
     state(const state& other)
-    : m{other.m->clone()}, present{other.present}, player{other.player}, promote_to(other.promote_to) {}
+    : m{other.m->clone()}, present{other.present}, player{other.player} {}
     state(state&&) noexcept = default;
     state& operator=(state other) noexcept {
         swap(*this, other);
@@ -50,7 +49,6 @@ public:
         std::swap(a.m, b.m);
         std::swap(a.present, b.present);
         std::swap(a.player, b.player);
-        std::swap(a.promote_to, b.promote_to);
     }
 
 
@@ -58,7 +56,7 @@ public:
      can_apply: Check if the move can be applied to the current state. If yes, return the new state after applying the move; otherwise return std::nullopt.
      Note that this function is different from `apply_move` in that it does not change the current state as a side effect.
     */
-    std::optional<state> can_apply(full_move fm) const;
+    std::optional<state> can_apply(full_move fm, piece_t promote_to = QUEEN_W) const;
     std::optional<state> can_submit() const;
     
     /*
@@ -66,17 +64,9 @@ public:
      Parameter `UNSAFE=true`: unsafe mode, does not check whether the pending move is pseudolegal. If it is indeed not pseudolegal, the outcome may be unexpected.
      */
     template<bool UNSAFE = false>
-    bool apply_move(full_move fm);
+    bool apply_move(full_move fm, piece_t promote_to = QUEEN_W);
     template<bool UNSAFE = false>
     bool submit();
-
-
-
-    /*
-     set_promotion_piece: set the piece type to promote to when a pawn promotion happens.
-     The piece type `pt` must be a white non-royal piece type (i.e., not KING_W nor ROYAL_QUEEN_W).
-    */
-    void set_promotion_piece(piece_t pt);
 
     /*
      new_line(): return the index of a new line to be created by this->player.
@@ -94,10 +84,9 @@ public:
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_timeline_status(int present_t, int present_c) const;
     
     /*
-     find_check()
-     For the 'player' and 'present' that is told from the shape of the board (which might be newer than the states's present), test if that player is able to capture an enermy royal piece.
+     find_checks(): Test if that player with color `c` is able to capture an enermy royal piece.
      */
-    generator<full_move> find_checks() const;
+    generator<full_move> find_checks(bool c) const;
     
     std::vector<vec4> gen_movable_pieces() const;
     std::vector<vec4> get_movable_pieces(std::vector<int> lines) const;

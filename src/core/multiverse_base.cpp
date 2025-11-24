@@ -48,7 +48,7 @@ multiverse::multiverse(std::vector<std::tuple<int, int, bool, std::string>> bds,
         throw std::runtime_error("multiverse(): Empty input");
     for(const auto& [l, t, c, fen] : bds)
     {
-        insert_board_impl(l, t, c ? 1 : 0, std::make_shared<board>(fen, size_x, size_y));
+        insert_board_impl(l, t, c, std::make_shared<board>(fen, size_x, size_y));
     }
     for(int l = l_min; l <= l_max; l++)
     {
@@ -178,7 +178,7 @@ void multiverse::append_board(int l, const std::shared_ptr<board>& b_ptr)
     timeline_end[u]++;
 }
 
-void multiverse::insert_board_impl(int l, int t, int c, const std::shared_ptr<board>& b_ptr)
+void multiverse::insert_board_impl(int l, int t, bool c, const std::shared_ptr<board>& b_ptr)
 {
     int u = l_to_u(l);
     int v = tc_to_v(t, c);
@@ -212,7 +212,7 @@ void multiverse::insert_board_impl(int l, int t, int c, const std::shared_ptr<bo
     timeline_end[u]   = std::max(timeline_end[u],   v);
 }
 
-void multiverse::insert_board(int l, int t, int c, const std::shared_ptr<board> &b_ptr)
+void multiverse::insert_board(int l, int t, bool c, const std::shared_ptr<board> &b_ptr)
 {
     insert_board_impl(l, t, c, b_ptr);
     // recalculate active range since there is probably a new line

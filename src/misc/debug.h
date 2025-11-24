@@ -30,6 +30,7 @@ void debug_print(Args... args)
 }
 } // namespace
 
+#define adprint(...) (dprint_detail::debug_print(__VA_ARGS__))
 
 #ifdef DEBUGMSG
 #define dprint(...) (dprint_detail::debug_print(__VA_ARGS__))

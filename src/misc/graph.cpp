@@ -151,21 +151,35 @@ std::optional<std::vector<std::pair<int, int>>> graph::find_matching(std::vector
 std::string graph::to_string() const
 {
     std::ostringstream oss;
-    oss << "Graph with " << n_vertices << " vertices:\n";
+    oss << "Graph with vertices "; // << n_vertices << " vertices:\n";
+    if (n_vertices <= 3) {
+        oss << "{";
+        for (int i = 0; i < n_vertices; ++i)
+            oss << (i ? "," : "") << i;
+        oss << "}";
+    } else {
+        oss << "{0,1,...," << (n_vertices - 1) << "}";
+    }
+    oss << " and edges:\n";
     for(int i = 0; i < n_vertices; i++)
     {
-        if(std::any_of(adj[i].begin(), adj[i].begin()+i, [](bool x){return x;}))
+//        if(std::any_of(adj[i].begin(), adj[i].begin()+i, [](bool x){return x;}))
+//        {
+//            oss << i << " -- ";
+//            for(int j = 0; j < i; j++)
+//            {
+//                if(adj[i][j])
+//                {
+//                    oss << j << ", ";
+//                }
+//            }
+//            oss << "\n";
+//        }
+        for(int j = 0; j < n_vertices; j++)
         {
-            oss << i << " -- ";
-            for(int j = 0; j < i; j++)
-            {
-                if(adj[i][j])
-                {
-                    oss << j << ", ";
-                }
-            }
-            oss << "\n";
+            oss << adj[i][j];
         }
+        oss << "\n";
     }
     return oss.str();
 }

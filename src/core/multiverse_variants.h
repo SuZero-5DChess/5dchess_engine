@@ -34,7 +34,7 @@ public:
     std::string pretty_lt(vec4 p0) const override
     {
         std::string sign = p0.l() >= 0 ? "+" : "-";
-        int l_abs = p0.l() >= 0 ? p0.l() : -p0.l()-1;
+        int l_abs = p0.l() >= 0 ? p0.l() : ~p0.l();
         return "(" + sign + std::to_string(l_abs) + "T" + std::to_string(p0.t()) + ")";
     }
 };

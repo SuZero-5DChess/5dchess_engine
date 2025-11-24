@@ -53,7 +53,10 @@ search_space HC::remove_slice(const slice &s) const
         HC x = remaining;
         x.axes[i] = set_minus(x.axes[i], fixed_coords);
         remaining.axes[i] = fixed_coords;
-        result.hcs.push_back(std::move(x));
+        if(!x.axes[i].empty()) // do not include empty hc
+        {
+            result.hcs.push_back(std::move(x));
+        }
     }
     return result;
 }
@@ -68,7 +71,10 @@ search_space HC::remove_point(const point &p) const
         x.axes[i].erase(p[i]);
         std::set<int> singleton = {p[i]};
         remaining.axes[i] = singleton;
-        result.hcs.push_back(std::move(x));
+        if(!x.axes[i].empty()) // do not include empty hc
+        {
+            result.hcs.push_back(std::move(x));
+        }
     }
     return result;
 }
@@ -82,13 +88,9 @@ std::string HC::to_string(bool verbose) const
     }
     for(size_t i = 0; i < axes.size(); i++)
     {
-        oss << " Axis " << i << ": {";
-        for(int v : axes[i])
-        {
-            oss << v << ", ";
-        }
-        oss.seekp(-2, oss.cur);
-        oss << "}\n";
+        oss << " Axis " << i << ": ";
+        oss << range_to_string(axes[i]);
+        oss << "\n";
     }
     return oss.str();
 }
@@ -99,13 +101,8 @@ std::string slice::to_string() const
     oss << "Slice with " << fixed_axes.size() << " axes fixed: \n";
     for(const auto& [k, v] : fixed_axes)
     {
-        oss << "On axis " << k << ", fixing {";
-        for(int i : v)
-        {
-            oss << i << ", ";
-        }
-        oss.seekp(-2, oss.cur);
-        oss << "}\n";
+        oss << "On axis " << k << ", fixing ";
+        oss << range_to_string(v) << "\n";
     }
     return oss.str();
 }

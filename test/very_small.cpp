@@ -15,7 +15,6 @@ std::string very_small_open = R"(
 int main()
 {
     game g(very_small_open);
-    g.set_promotion_piece(KNIGHT_W);
     g.apply_move(move5d("(0T1)d3d1"));
     std::cout << g.get_current_state().to_string();
 //    print_range("Checking moves: ", g.get_current_state().find_checks());

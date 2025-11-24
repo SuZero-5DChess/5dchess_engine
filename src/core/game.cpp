@@ -238,20 +238,17 @@ bool game::apply_move(move5d mv)
 //     return true;
 // }
 
-void game::set_promotion_piece(piece_t pt)
-{
-    now->set_promotion_piece(pt);
-}
-
 bool game::currently_check() const
 {
-    return get_current_state().find_checks().first().has_value();
+    auto [t, c] = get_current_state().get_present();
+    return get_current_state().find_checks(!c).first().has_value();
 }
 
 std::vector<std::pair<vec4, vec4>> game::get_current_checks() const
 {
+    auto [t, c] = get_current_state().get_present();
     std::vector<std::pair<vec4, vec4>> result;
-    for(full_move fm : get_current_state().find_checks())
+    for(full_move fm : get_current_state().find_checks(!c))
     {
         result.push_back(std::make_pair(fm.from, fm.to));
     }

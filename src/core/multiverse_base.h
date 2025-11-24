@@ -72,7 +72,7 @@ private:
     template<bool C>
     std::vector<std::pair<vec4, bitboard_t>> gen_purely_sp_knight_moves(vec4 p0) const;
 
-    void insert_board_impl(int l, int t, int c, const std::shared_ptr<board>& b_ptr);
+    void insert_board_impl(int l, int t, bool c, const std::shared_ptr<board>& b_ptr);
 protected:
     virtual std::pair<int,int> calculate_active_range() const = 0;
     void update_active_range();
@@ -82,7 +82,7 @@ public:
     multiverse(const std::string& input, int size_x, int size_y);
     
     // modifiers
-    void insert_board(int l, int t, int c, const std::shared_ptr<board>& b_ptr);
+    void insert_board(int l, int t, bool c, const std::shared_ptr<board>& b_ptr);
     void append_board(int l, const std::shared_ptr<board>& b_ptr);
 
     // getters

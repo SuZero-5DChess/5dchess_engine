@@ -903,14 +903,16 @@ std::optional<game> pgnparser::parse_game()
             value = std::string(s.begin() + prev, s.begin() + now);
             if(now+1 != len)
                 throw parse_error("parse_game(): Too many arguments in header:" + s);
+            for(auto &c: key) // keys are not case-sensitive, convert to lower cases
+                c = tolower(c);
             auto [_, success] = headers.insert({key, value});
             if(!success)
                 throw parse_error("parse_game(): Duplicate header key: " + key);
         }
         next_token();
         parse_comments();
-        if(buffer.token == END)
-            PARSE_FAIL;
+//        if(buffer.token == END)
+//            PARSE_FAIL;
     }
     parse_comments();
     auto gt_opt = parse_gametree();

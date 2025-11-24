@@ -58,6 +58,29 @@ struct null_move
 //AxisLoc
 using semimove = std::variant<physical_move, arriving_move, departing_move, null_move>;
 
+static std::string show_semimove(semimove loc)
+{
+    std::ostringstream oss;
+    std::visit(overloads {
+        [&oss](physical_move ll) {
+            oss << "physical_move{m:" << ll.m << ",b:\n";
+            oss << ll.b->to_string() << "\n}";
+        },
+        [&oss](arriving_move ll) {
+            oss << "arrriving_move{m:" << ll.m << ",idx=" << ll.idx << ",b:\n";
+            oss << ll.b->to_string() << "\n}";
+        },
+        [&oss](departing_move ll) {
+            oss << "departing_move{from:" << ll.from << ",b:\n";
+            oss << ll.b->to_string() << "\n}";
+        },
+        [&oss](null_move ll) {
+            oss << "null_move{tl:" << ll.tl << "}";
+        }
+    }, loc);
+    return oss.str();
+}
+
 class HC_info
 {
     // local variables
@@ -69,6 +92,7 @@ class HC_info
     const int new_axis, dimension; // axes 0, 1, ..., new_axis-1 are playable lines
     // whereas new_axis, new_axis+1, ..., dimension-1 are the possible branching lines
     // identity: num_axes = universe.axes.size() = axis_coords.size()
+    const std::vector<int> mandatory_lines;
     
     std::optional<point> take_point(const HC& hc) const;
     // find_problem functions essentially just find the problem of p
@@ -80,12 +104,13 @@ class HC_info
     moveseq to_action(const point& p) const;
     
     //private aggregate constructor
-    HC_info(state s, std::map<int, int> lm, std::vector<std::vector<semimove>> crds, HC uni, int sg, int ax, int dim)
-        : s(std::move(s)), line_to_axis(std::move(lm)), axis_coords(std::move(crds)), universe(std::move(uni)), sign(sg), new_axis(ax), dimension(dim) {}
+    HC_info(state s, std::map<int, int> lm, std::vector<std::vector<semimove>> crds, HC uni, int sg, int ax, int dim, const std::vector<int> pl)
+        : s(std::move(s)), line_to_axis(std::move(lm)), axis_coords(std::move(crds)), universe(std::move(uni)), sign(sg), new_axis(ax), dimension(dim), mandatory_lines(pl) {}
 
 public:
     static std::tuple<HC_info, search_space> build_HC(const state& s);
     generator<moveseq> search(search_space ss) const;
+    std::vector<moveseq> search1(search_space ss) const;
 };
 
 #endif /* HYPERCUBOID_H */

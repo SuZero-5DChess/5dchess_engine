@@ -52,7 +52,13 @@ void test_game()
 7. (1T3)e3 / (1T3)Qf6
 8. (1T4)Qh5*
 )";
-    pgnparser_ast::game g = *pgnparser(str).parse_game();
+    std::string str2 = R"(
+[Size "4x4"]
+[Board "Custom"]
+[Mode "5D"]
+[nbrk/3p*/P*3/KRBN:0:1:w]
+)";
+    pgnparser_ast::game g = *pgnparser(str2).parse_game();
     std::cout << g << "\n\n" << std::endl;
     state s(g);
     std::cout << s.to_string();
