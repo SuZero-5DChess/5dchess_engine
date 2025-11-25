@@ -94,7 +94,7 @@ class HC_info
     // identity: num_axes = universe.axes.size() = axis_coords.size()
     const std::vector<int> mandatory_lines;
     
-    std::optional<point> take_point(const HC& hc) const;
+    std::optional<point> take_point(HC& hc) const;
     // find_problem functions essentially just find the problem of p
     // but it also try to remove more points in the sub-hypercuboid that contains p
     std::optional<slice> find_problem(const point& p, const HC& hc) const;

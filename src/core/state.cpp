@@ -8,12 +8,6 @@
 //#define DEBUGMSG
 #include "debug.h"
 
-std::pair<int, int> next_tc(int t, int c)
-{
-    int v = (t << 1 | c) + 1;
-    return std::make_pair(v >> 1, v & 1);
-}
-
 
 state::state(multiverse &mtv) noexcept : m(mtv.clone())
 {

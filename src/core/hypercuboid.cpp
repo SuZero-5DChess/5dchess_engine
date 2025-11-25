@@ -101,7 +101,7 @@ bool has_physical_check(const board &b, bool c, vec4 p = {0,0,0,0})
         if([[maybe_unused]] auto x = b.is_under_attack(pos, c))
         {
             dprint("physical check", full_move(vec4(marked_pos(x)[0],p.tl()),vec4(pos, p.tl())));
-            dprint(b.to_string());
+//            dprint(b.to_string());
             return true;
         }
     }
@@ -123,7 +123,6 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
     auto playable_timelines = concat_vectors(mandatory_timelines, optional_timelines);
     assert(!s.can_submit());
     auto [present_t, present_c] = s.get_present();
-//    std::set<int> playable_timelines;
     
     // generate all moves, then split them into cases
     // for departing moves, we merge the moves that depart from the same coordinate
@@ -138,7 +137,6 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
         for(const vec4 &to : s.gen_piece_move(from))
         {
             full_move m(from, to);
-            //playable_timelines.insert(from.l()); //TODO: optimize
             if(from.tl() != to.tl())
             {
                 if(!has_depart)
@@ -172,21 +170,28 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
                 ->replace_piece(p.xy(), NO_PIECE)
                 ->replace_piece(q.xy(), pic);
             // filter physical checks in the very begining
+            dprint(locs.size(), "physical", m);
             bool flag = has_physical_check(*b_ptr, present_c, p);
             if(!flag)
             {
+                dprint(b_ptr->to_string());
                 locs.push_back(physical_move{m, b_ptr});
             }
         }
         for(vec4 p : departs_from[l])
         {
-            jump_indices[p] = static_cast<int>(locs.size());
+            assert(!jump_indices.contains(p));
             // store the departing board after move is made
             std::shared_ptr<board> b_ptr = s.get_board(p.l(), p.t(), present_c)
                 ->replace_piece(p.xy(), NO_PIECE);
+            dprint(locs.size(), "depart", p);
             bool flag = has_physical_check(*b_ptr, present_c, p);
             if(!flag)
+            {
+                dprint(b_ptr->to_string());
+                jump_indices[p] = static_cast<int>(locs.size());
                 locs.push_back(departing_move{p, b_ptr});
+            }
         }
         for(full_move m : arrives_to[l])
         {
@@ -199,40 +204,26 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
                 piece_t pic = s.get_piece(m.from, present_c);
                 std::shared_ptr<board> b_ptr = s.get_board(m.to.l(), m.to.t(), present_c)
                 ->replace_piece(m.to.xy(), pic);
+                dprint(locs.size(), "arrive", m);
                 //adprint("Was:", pic, "\n", s.get_board(m.to.l(), m.to.t(), present_c)->to_string());
                 //adprint("After applying:", m, "\n", b_ptr->to_string());
                 // use a temporary idx of -1, will be filled later
                 bool flag = has_physical_check(*b_ptr, present_c);
                 //adprint("Has physical check for",present_c,":",flag);
                 if(!flag)
+                {
+                    dprint(b_ptr->to_string());
                     locs.push_back(arriving_move{m, b_ptr, -1});
+                }
             }
         }
         // save this axis
         locs.shrink_to_fit();
         line_to_axis[l] = static_cast<int>(axis_coords.size());
+        dprint("above in axis", line_to_axis[l]);
         axis_coords.push_back(std::move(locs));
     }
-    // fill the idx of arriving moves 
-    for(int n = 0; n < axis_coords.size(); n++)
-    {
-        for(int i = 0; i < axis_coords[n].size(); i++)
-        {
-            semimove& loc = axis_coords[n][i];
-            if(auto* p = std::get_if<arriving_move>(&loc))
-            {
-                if(jump_indices.contains(p->m.from))
-                {
-                    p->idx = jump_indices[p->m.from];
-                }
-                else
-                {
-                    dprint("removing ghost arrive at axis:", n, "no:", i);
-                    axis_coords[n].erase(axis_coords[n].begin() + i);
-                }
-            }
-        }
-    }
+    
     
     new_axis = static_cast<int>(axis_coords.size());
 
@@ -253,10 +244,18 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
             piece_t pic = s.get_piece(m.from, present_c);
             std::shared_ptr<board> b_ptr = s.get_board(m.to.l(), m.to.t(), present_c)
                 ->replace_piece(m.to.xy(), pic);
-            assert(jump_indices.contains(m.from));
-            bool flag = has_physical_check(*b_ptr, present_c);
-            if(!flag)
-                locs.push_back(arriving_move{m, b_ptr, jump_indices[m.from]});
+            if(jump_indices.contains(m.from))
+            {
+                /* only add this arriving move when the corresponding departing move
+                 is legal (Otherwise, it shouldn't have been registered in jump_map) */
+                bool flag = has_physical_check(*b_ptr, present_c);
+                dprint(locs.size(), "branching:", m);
+                if(!flag)
+                {
+                    dprint(b_ptr->to_string());
+                    locs.push_back(arriving_move{m, b_ptr, jump_indices[m.from]});
+                }
+            }
         }
     }
     // replicate this axis max_branch times
@@ -282,6 +281,32 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
         }
         universe.axes.push_back(std::move(coords));
     }
+    
+    // fill the idx of arriving moves
+    for(int n = 0; n < axis_coords.size(); n++)
+    {
+        for(int i = 0; i < axis_coords[n].size(); i++)
+        {
+            semimove& loc = axis_coords[n][i];
+            if(auto* p = std::get_if<arriving_move>(&loc))
+            {
+                if(jump_indices.contains(p->m.from))
+                {
+                    p->idx = jump_indices[p->m.from];
+                    int nfrom = line_to_axis[p->m.from.l()];
+                    assert(p->m.from == std::get<departing_move>(axis_coords[nfrom][p->idx]).from);
+                }
+                else
+                {
+                    dprint("ghost arrive at axis:", n, ";no:", i,";move pruned:", p->m);
+                    auto flag = universe.axes[n].erase(i);
+                    assert(flag);
+                    //axis_coords[n].erase(axis_coords[n].begin() + i);
+                }
+            }
+        }
+    }
+    
     HC_info info(s, line_to_axis, axis_coords, universe, sign, new_axis, dimension, mandatory_timelines);
     
     // split the search space by number of branches
@@ -308,7 +333,7 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
 }
 
 
-std::optional<point> HC_info::take_point(const HC &hc) const
+std::optional<point> HC_info::take_point(HC &hc) const
 {
     dprint("take_point()", hc.to_string());
     graph g(dimension);
@@ -321,6 +346,7 @@ std::optional<point> HC_info::take_point(const HC &hc) const
     for(int n = 0; n < dimension; n++)
     {
         bool has_nonjump = false;
+        std::set<int> ghost_arrive_indices;
         for(int i : hc[n])
         {
             const semimove& loc = axis_coords[n][i];
@@ -334,12 +360,16 @@ std::optional<point> HC_info::take_point(const HC &hc) const
                 },
                 [&](const arriving_move& loc) {
                     int from_axis = line_to_axis.at(loc.m.from.l());
-                    if(!hc.axes[from_axis].contains(loc.idx))
+                    auto it = hc.axes[from_axis].find(loc.idx);
+                    if(it == hc.axes[from_axis].end())
                     {
+                        ghost_arrive_indices.insert(i);
+                        dprint("ghost arriving move",n,i, "(source", from_axis, loc.idx,")\n");//,show_semimove(loc));
                         return;
                     }
                     if(!edge_refs.contains(std::make_pair(from_axis, n)))
                     {
+                        dprint("new edge", from_axis, n, show_semimove(loc));
                         g.add_edge(from_axis, n);
 //                        std::cout << loc.m << "\n";
 //                        std::cout << g.to_string();
@@ -359,11 +389,16 @@ std::optional<point> HC_info::take_point(const HC &hc) const
                 },
             }, loc);
         }
+        for(int i : ghost_arrive_indices)
+        {
+            hc.axes[n].erase(i);
+        }
         if(!has_nonjump)
         {
             must_include.push_back(n);
         }
     }
+    dprint("after prune:", hc.to_string());
     dprint("constructed", g.to_string());
     dprint("must include: ", range_to_string(must_include));
     dprint("intermediate result:", range_to_string(result));
@@ -529,131 +564,115 @@ std::optional<slice> HC_info::jump_order_consistent(const point &p, const HC& hc
 std::optional<slice> HC_info::test_present(const point &p, const HC& hc) const
 {
     dprint("test_present()");
-    const auto [old_present, c] = s.get_present();
+    if(p == std::vector<int>{0, 35, 18, 0})
+    {
+        std::cout << "kashliwhod\n";
+    }
+    const auto old_tc = s.get_present();
+    const auto [old_present, c] = old_tc;
     const auto [l_min, l_max] = s.get_lines_range();
     auto [active_min, active_max] = s.get_active_range();
     // step one: find the new present
-    int new_present = old_present;
+    int mint = old_present; // mint is the new present
+    std::optional<std::pair<int,int>> pass_coord = std::nullopt; // record the axis of the problematic pass
+    for(int n = 0; n < new_axis; n++)
+    {
+        if(std::holds_alternative<null_move>(axis_coords[n][p[n]]))
+        {
+            // if there is a pass in playable line, then it could be problematic
+            pass_coord = {n, p[n]};
+        }
+    }
     for(int n = new_axis; n < dimension; n++)
     {
-        // for all beanching moves
+        // for all branching moves
         int i = p[n];
         // present may need to move to the time of this arrive
         semimove loc = axis_coords[n][i];
         if(std::holds_alternative<null_move>(loc))
-            continue; // null_move's don't change present
-        auto [t, l] = extract_tl(loc);
-        if(t < new_present)
         {
-            new_present = t;
+            continue; // null_move's don't change present
+        }
+        auto [t, l] = extract_tl(loc);
+        if(t < mint)
+        {
+            mint = t;
+            // if the move jumps backward, the previous threat is eliminated
+            pass_coord = std::nullopt;
         }
         // there is probably a newly activated line after this branching move
         // which moves the present
-        auto check_newline = [&](int &active, int limit, int delta) -> bool
+        auto check_reactivate = [&](int &active, int limit, int delta)
         {
             if ((delta < 0 && limit < active) || (delta > 0 && limit > active))
             {
                 active += delta;
                 const auto [newline_t, newline_c] = s.get_timeline_end(active);
-                if (newline_t < new_present)
+                if(newline_t < mint && newline_c == c)
                 {
-                    /* if the newly activated line is prior to current present
-                     and belongs to the opponent, then we have already shifted
-                     the present; no problem
-                     */
-                    if (newline_c != c)
+                    mint = newline_t;
+                    // could be a problem if played a pass on reactivated line
+                    assert(line_to_axis.contains(active));
+                    int n1 = line_to_axis.at(active);
+                    if(std::holds_alternative<null_move>(axis_coords[n1][p[n1]]))
                     {
-                        return false; // trigger early return outside
+                        pass_coord = {n1, p[n1]};
                     }
-                    new_present = newline_t;
                 }
             }
-            return true;
         };
 
-        if(c) // white is playing //TODO: REALLY?
+        if(c) // black is playing, white's new lines are active_max -- l_max
         {
-            if (!check_newline(active_min, l_min, -1))
-            {
-                dprint("shifted present; no problem");
-                return std::nullopt;
-            }
+            check_reactivate(active_max, l_max, 1);
         }
         else // black is playing
         {
-            if (!check_newline(active_max, l_max, 1))
-            {
-                dprint("shifted present; no problem");
-                return std::nullopt;
-            }
+            check_reactivate(active_min, l_min, -1);
         }
     }
-    // step two: identify pass
-    // the present cannot be shifted because `null_move` is played on a playable line
-    // (that playable line becomes active after performing other moves)
-    std::optional<int> pass_axis = std::nullopt;
-    for(int l : mandatory_lines)
+    if(pass_coord)
     {
-        int n = line_to_axis.at(l);
-        semimove loc = axis_coords[n][p[n]];
-        if(std::holds_alternative<null_move>(loc))
+        slice problem;
+        /* on the axis for pass, ban this pass */
+        const auto [pass_n, pass_i] = *pass_coord;
+        problem.fixed_axes[pass_n] = {pass_i};
+        /* on lines created prior to pass_n, ban every move that makes pass_n active
+         (there shouldn't be a pass because we already separated search
+         space by number of new lines)
+         */
+        
+        for(int n = new_axis; n < dimension; n++)
         {
-            pass_axis = n;
-            break;
+            std::set<int> s;
+            for(int i : hc[n])
+            {
+                semimove loc = axis_coords[n][i];
+                if(std::holds_alternative<null_move>(loc))
+                {
+                    s.insert(i);
+                }
+                else
+                {
+                    auto am = std::get<arriving_move>(loc);
+                    if(am.m.to.t() >= mint)
+                    {
+                        s.insert(i);
+                    }
+                }
+            }
+            problem.fixed_axes[n] = s;
         }
+        
+        dprint("point:", range_to_string(p));
+        dprint("problem", problem.to_string());
+        assert(problem.contains(p));
+        return problem;
     }
-    if(!pass_axis.has_value())
+    else
     {
-        dprint("no problem");
         return std::nullopt;
     }
-    // step three: generate problem
-    /* ban these combinations:
-     - on pass_axis: null_move
-     - on other axes: not a branching move that travels further back than new_present
-        track them by iterating all arrives on new line and deal with their idx
-     */
-    slice problem {{{pass_axis.value(), {0}}}};
-    std::vector<std::set<int>> early_jump_indices(new_axis);
-    for(int n = new_axis; n < dimension; n++)
-    {
-        if(n==pass_axis) [[unlikely]]
-            continue;
-        std::set<int> late_jump = hc.axes[n];
-        for(int i : hc.axes[n])
-        {
-            semimove loc = axis_coords[n][i];
-            auto [t, l] = extract_tl(loc);
-            if(t < new_present) [[unlikely]] // early jump
-            {
-                late_jump.erase(i);
-                assert(std::holds_alternative<arriving_move>(loc));
-                arriving_move am = std::get<arriving_move>(loc);
-                int from_axis = line_to_axis.at(am.m.from.l());
-                early_jump_indices[from_axis].insert(am.idx);
-            }
-        }
-        if(late_jump.size() < hc.axes[n].size())
-        {
-            // only need to fix this axis when not all coordinates are removed
-            dprint("on axis", n, "remove late jump", range_to_string(late_jump));
-            problem.fixed_axes[n] = late_jump;
-        }
-    }
-//    // handle the departures corresponding to leaves
-//    for(int n = 0; n < new_axis; n++)
-//    {
-//        if(early_jump_indices[n].size() > 0)
-//        {
-//            std::set<int> removed = set_minus(hc.axes[n], early_jump_indices[n]);
-//
-//            problem.fixed_axes[n] = removed;
-//        }
-//    }
-    dprint("point:", range_to_string(p));
-    dprint("problem", problem.to_string());
-    assert(problem.contains(p));
-    return problem;
 }
 
 std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
@@ -693,8 +712,8 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
         dprint("found check: ", check);
         assert(check.from.tl() != check.to.tl() && "physical checks should have already removed");
         auto [path, sliding_type] = get_move_path(newstate, check, !c);
-//        std::cout << std::endl;
-//        dprint(s.get_board(check.from.l(), check.from.t(), !c));
+        //        std::cout << std::endl;
+        //        dprint(s.get_board(check.from.l(), check.from.t(), !c));
         /* on axis for check.from.l():
          ban all moves that allows the same piece hostile piece remain in that position
          */
@@ -741,68 +760,83 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
                 dprint("axis", n1, "not taking (untouched)", i);
                 not_taking.insert(i);
             }
-            //TODO: debug here
         }
+        slice problem = {{{n1, not_taking}}};
         /* on axis for check.to.l():
-         ban all moves that leave a royal piece on check.to
+         if the board of checks.to is what just played, ban all moves that leave
+         a royal piece on check.to.
+         Otherwise, don't alter that axis futher.
          */
-        int n2 = line_to_axis.at(check.to.l());
-        std::set<int> expose_royal;
-        for(int i : hc.axes[n2])
+        int l2 = check.to.l();
+        int n2 = line_to_axis.at(l2);
+        // next line rely on the default value of null_move
+        auto [t2, _]  = extract_tl(axis_coords[n2][p[n2]]);
+        if(next_tc(t2, c) == std::make_pair(check.to.t(), !c))
         {
-            semimove loc = axis_coords[n2][i];
-            std::shared_ptr<board> newboard;
-            if(std::holds_alternative<null_move>(loc))
+            std::set<int> expose_royal;
+            for(int i : hc.axes[n2])
             {
-                continue;
+                semimove loc = axis_coords[n2][i];
+                std::shared_ptr<board> newboard;
+                if(std::holds_alternative<null_move>(loc))
+                {
+                    continue;
+                }
+                else
+                {
+                    newboard = extract_board(loc);
+                }
+                //dprint(n2, i, show_semimove(loc));
+                bool is_royal = pmask(check.to.xy()) & newboard->royal();
+                if(is_royal)
+                {
+                    dprint("axis", n2, "expose royal", i);
+                    expose_royal.insert(i);
+                }
             }
-            else
-            {
-                newboard = extract_board(loc);
-            }
-            //dprint(n2, i, show_semimove(loc));
-            bool is_royal = pmask(check.to.xy()) & newboard->royal();
-            if(is_royal)
-            {
-                dprint("axis", n2, "expose royal", i);
-                expose_royal.insert(i);
-            }
+            problem.fixed_axes.insert({n2, expose_royal});
         }
-        slice problem = {{{n1, not_taking}, {n2, expose_royal}}};
-        dprint(n1, range_to_string(not_taking), n2, range_to_string(expose_royal));
-        /* on axes for checking path crossings: ban all moves, except for
-         those (physical or arriving) brings a non-royal piece blocking the crossed square
+//        dprint(n1, range_to_string(not_taking), n2, range_to_string(expose_royal));
+        /* on axes for checking path crossings:
+         if passing board is prone to change, then ban all moves, except for
+         those (physical or arriving) brings a non-royal piece blocking the
+         crossed square. Otherwise, do nothing as before
          */
         for(vec4 crossed : path)
         {
             int n = line_to_axis.at(crossed.l());
-            bitboard_t z = pmask(crossed.xy());
-            std::set<int> not_blocking;
-            for(int i : hc.axes[n])
+            auto [tc, _]  = extract_tl(axis_coords[n][p[n]]);
+            if(next_tc(tc, c) == std::make_pair(crossed.t(), !c))
             {
-                semimove loc = axis_coords[n][i];
-                if(std::holds_alternative<physical_move>(loc))
+                bitboard_t z = pmask(crossed.xy());
+                std::set<int> not_blocking;
+                for(int i : hc.axes[n])
                 {
-                    if(std::get<physical_move>(loc).m.to == crossed)
+                    semimove loc = axis_coords[n][i];
+                    if(std::holds_alternative<physical_move>(loc))
                     {
-                        bool is_royal = z & std::get<physical_move>(loc).b->royal();
-                        if(!is_royal)
-                            continue;
+                        if(std::get<physical_move>(loc).m.to == crossed)
+                        {
+                            bool is_royal = z & std::get<physical_move>(loc).b->royal();
+                            if(!is_royal)
+                                continue;
+                        }
                     }
-                }
-                else if (std::holds_alternative<arriving_move>(loc))
-                {
-                    if(std::get<arriving_move>(loc).m.to == crossed)
+                    else if (std::holds_alternative<arriving_move>(loc))
                     {
-                        bool is_royal = z & std::get<arriving_move>(loc).b->royal();
-                        if(!is_royal)
-                            continue;
+                        if(std::get<arriving_move>(loc).m.to == crossed)
+                        {
+                            bool is_royal = z & std::get<arriving_move>(loc).b->royal();
+                            if(!is_royal)
+                                continue;
+                        }
                     }
+                    dprint("axis", n, "not blocking", i);
+                    not_blocking.insert(i);
                 }
-                dprint("axis", n, "not blocking", i);
-                not_blocking.insert(i);
+                dprint(problem.to_string());
+                problem.fixed_axes[n] = not_blocking;
             }
-            problem.fixed_axes[n] = not_blocking;
         }
         dprint("point:", range_to_string(p));
         dprint("problem", problem.to_string());
