@@ -18,6 +18,7 @@ public:
     std::map<std::string, std::string> metadata;
     
     game(std::string str);
+    game(std::string str, bool sfm);
     state get_current_state() const;
     std::tuple<int,int> get_current_present() const;
     std::vector<std::tuple<int,int,bool,std::string>> get_current_boards() const;

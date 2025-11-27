@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cassert>
 #include <variant>
+#include "pgnparser.h"
 
 std::vector<move5d> pgn_to_moves(const std::string& input)
 {
@@ -31,7 +32,7 @@ std::vector<move5d> pgn_to_moves(const std::string& input)
     return result;
 }
 
-game::game(std::string input)
+game::game(std::string input, bool sfm)
 {
     const static std::regex comment_pattern(R"(\{.*?\})");
     const static std::regex metadata_pattern(R"%(\[([^:]*)\s"([^:]*)"\])%");
@@ -86,6 +87,16 @@ game::game(std::string input)
             throw std::runtime_error("failed to apply move: " + move.to_string());
         }
     }
+}
+
+game::game(std::string input)
+{
+    auto ag = pgnparser(input).parse_game();
+    if(!ag.has_value())
+        throw std::runtime_error("Bad input, parse failed");
+    cached_states.push_back(state(*ag));
+    now = cached_states.begin();
+    metadata = ag->headers;
 }
 
 std::tuple<int,int> game::get_current_present() const

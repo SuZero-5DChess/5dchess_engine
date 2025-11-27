@@ -207,7 +207,8 @@ void run_game(std::vector<move5d> mvs)
         }
         if constexpr(DETECT_CHECKS)
         {
-            if(s.find_checks().first())
+            auto [t,c] = s.get_present();
+            if(s.find_checks(!c).first())
             {
                 std::cerr << "In run_game:\n";
                 std::cerr << "current boards:\n";
@@ -596,7 +597,7 @@ int main()
 40.  (2T34)Ra6h6 (1T34)Rh3h1   (-2T34)Rg4h4 (-3T34)Rg2h2 (-4T32)Rb1b3 / (2T34)Ra8b8 (1T34)Ra8b8 (-2T34)Ra8b8 (-3T34)Ra8b8 (-4T32)Kg7g8
 41. (-4T33)Rb3g3 / (3T33)Kh8 (0T33)Kh8 (-1T33)Kh8 (-4T33)Kh8
 42. (3T34)Rf2h2 (0T34)Rf1h1 (-1T34)Rf1h1 (-4T34)Rf2h2
-)"
+)", 
     };
     std::vector<std::vector<move5d>> mvss;
     int count = 0;

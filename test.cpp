@@ -1,6 +1,8 @@
-#include "game.h"
+#include "state.h"
+#include "pgnparser.h"
 #include <tuple>
 #include <ranges>
+#include <cassert>
 
 std::string str = R"(
 [Board "custom"]
@@ -8,37 +10,30 @@ std::string str = R"(
 [r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:0:b]
 [r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:1:w]
 
-1.(0T1)Ng1f3 / (0T1)Ng8f6 
-2.(0T2)d2d4 / (0T2)d7d5 
-3.(0T3)Bc1d2 / (0T3)c7c6 
-4.(0T4)c2c4 / (0T4)Bc8f5 
-5.(0T5)e2e3 / (0T5)e7e6 
-6.(0T6)Nb1c3 / (0T6)Bf8b4 
-7.(0T7)Qd1b3 / (0T7)Bb4c3 
-8.(0T8)Bd2c3 / (0T8)Qd8b6 
-9.(0T9)Qb3a3 / (0T9)Qb6c7 
-10.(0T10)Bc3a5 / (0T10)b7b6 
-11.(0T11)Nf3g5 / (0T11)b6a5 
-12.(0T12)Ng5e6 / (0T12)f7e6 
-13.(0T13)Qa3>>(0T9)e7 / (0T13)Qc7>>(0T8)h2 
-14.(-1T9)Rh1h2 / (-1T9)Qd8c7 (1T9)Ke8e7 
-15.(1T10)Nf3e5 (-1T10)Qb3b7 / (-1T10)Qc7>(1T10)e5 
-16.(-1T11)Qb7c8 (1T11)Bc3b4 / (1T11)Ke7>>(1T10)d6 
-17.(-2T11)Bc3b4
+1.(0T1)Ng1f3 / (0T1)e7e6 
+2.(0T2)b2b3 / (0T2)c7c6 
+3.(0T3)e2e3 / (0T3)Qd8b6 
+4.(0T4)Nf3g5 / (0T4)Qb6>>(0T0)f2
+5.(-1T1)Ke1f2 / (-1T1)Ng8f6 
+6.(-1T2)e2e3 / (-1T2)Nf6>>(-1T1)f4 
+7.(-1T3)Kf2e1 / (-1T3)Ke8>>(0T4)d8 
+8.(-1T4)Qd1f3 / (-1T4)f7f6 
+9.(0T5)Qd1f3 (-1T5)Ng1h3
 )";
 
 int main()
 {
-    //game g(str);
-    //std::cout << g.get_current_state().to_string();
-    std::map<std::string,std::string> headers;
-    headers.insert({"Mode", "5D"});
-    auto [_, success] = headers.insert({"Mode", "6D"});
-    std::cout << success << "\n";
     
-    std::cout << sizeof(multiverse) << "\n";
-    std::cout << sizeof(std::unique_ptr<multiverse>) << "\n";
-    
-    std::cout << sizeof(state) << "\n";
+    state s(*pgnparser(str).parse_game());
+    std::cout << s.to_string();
+    bool c = s.apply_move(full_move("(0T5)Ke8>>(0T4)d8"));
+    assert(c);
+    vec4 p = vec4(5,5,5,-1);
+    std::cout << s.get_piece(p, 1) << "\n";
+    for(vec4 q : s.gen_piece_move(p))
+    {
+        std::cout << full_move(p, q) << "\n";
+    }
+//    s.gen_piece_move(<#vec4 p#>)
     return 0;
 }

@@ -35,7 +35,7 @@ std::ostream &operator<<(std::ostream &os, const superphysical_move &sm)
 {
     os << "sm{fb:";
     if(sm.from_board) {os << *sm.from_board;} else {os << "?";}
-    os << ",pn:" << (sm.from_file ? *sm.from_file : '?');
+    os << ",pn:" << (sm.piece_name ? *sm.piece_name : '?');
     os << ",ff:" << (sm.from_file ? *sm.from_file : '?');
     os << ",fr:" << (sm.from_rank ? std::to_string(*sm.from_rank) : "?");
     os << ",ji:" << (sm.jump_indicater == NON_BRANCH_JUMP ? ">" :
