@@ -268,18 +268,6 @@ std::vector<std::pair<vec4, vec4>> game::get_current_checks() const
 
 std::tuple<int, int> game::get_board_size() const
 {
-    int size_x, size_y;
-    const static std::regex size_regex(R"(^\s*(\d+)\s*x\s*(\d+)\s*$)");
-    std::smatch size_sm;
-    if(std::regex_search(metadata.at("size"), size_sm, size_regex))
-    {
-        size_x = std::stoi(size_sm[1]);
-        size_y = std::stoi(size_sm[2]);
-    }
-    else
-    {
-        throw std::runtime_error("game::get_board_size(): "
-                                 "Invalid size in metadata: " + metadata.at("size"));
-    }
+    const auto [size_x, size_y] = get_current_state().get_board_size();
     return std::make_tuple(size_x, size_y);
 }

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <utility>
 #include <initializer_list>
+#include <cassert>
 
 /*
  The following static functions describe the correspondence between two coordinate systems: L,T and u,v
@@ -41,8 +42,8 @@ constexpr static std::tuple<int, int> v_to_tc(int v)
     return std::tuple<int, int>(v >> 1, v & 1);
 }
 
-multiverse::multiverse(std::vector<std::tuple<int, int, bool, std::string>> bds, int size_x, int size_y)
-    : size_x(size_x), size_y(size_y), l_min(0), l_max(0)
+multiverse::multiverse(std::vector<std::tuple<int, int, bool, std::string>> bds, int size_x, int size_y, int l0_min, int l0_max)
+: size_x(size_x), size_y(size_y), l0_min(l0_min), l0_max(l0_max), l_min(l0_min), l_max(l0_max)
 {
     if(bds.empty())
         throw std::runtime_error("multiverse(): Empty input");
@@ -66,8 +67,8 @@ multiverse::multiverse(std::vector<std::tuple<int, int, bool, std::string>> bds,
     }
 }
 
-multiverse::multiverse(const std::string &input, int size_x, int size_y)
-    : size_x(size_x), size_y(size_y), l_min(0), l_max(0)
+multiverse::multiverse(const std::string &input, int size_x, int size_y, int l0_min, int l0_max)
+: size_x(size_x), size_y(size_y), l0_min(l0_min), l0_max(l0_max), l_min(l0_min), l_max(l0_max)
 {
     const static std::regex comment_pattern(R"(\{.*?\})");
     const static std::regex block_pattern(R"(\[[^\[\]]*\])");
@@ -132,6 +133,11 @@ std::tuple<int,int> multiverse::get_present() const
 std::pair<int, int> multiverse::get_board_size() const
 {
     return std::make_pair(size_x, size_y);
+}
+
+std::pair<int, int> multiverse::get_initial_lines_range() const
+{
+    return std::make_pair(l0_min, l0_max);
 }
 
 std::pair<int, int> multiverse::get_lines_range() const
@@ -216,7 +222,25 @@ void multiverse::insert_board(int l, int t, bool c, const std::shared_ptr<board>
 {
     insert_board_impl(l, t, c, b_ptr);
     // recalculate active range since there is probably a new line
-    update_active_range();
+    int whites_lines = l_max - l0_max;
+    int blacks_lines = l0_min - l_min;
+    if(l > l0_max && whites_lines <= blacks_lines + 1 && l > active_max)
+    {
+        active_max++;
+        if(l_min < active_min) // check reactivate
+        {
+            active_min--;
+        }
+    }
+    else if(l < l0_min && blacks_lines <= whites_lines + 1 && l < active_min)
+    {
+        active_min--;
+        if(l_max > active_max)
+        {
+            active_max++;
+        }
+    }
+    assert(std::make_pair(active_min, active_max) == calculate_active_range());
 }
 
 void multiverse::update_active_range()
@@ -884,73 +908,6 @@ movegen_t multiverse::gen_moves_impl(vec4 p) const
     {
         bitboard_t z = pmask(p.xy());
         // pawn capture
-        static std::vector<vec4> pawn_w_cap_tl_delta = {vec4(0, 0, 1, 1), vec4(0, 0, -1, 1)};
-        for(vec4 d : pawn_w_cap_tl_delta)
-        {
-            vec4 q = p + d;
-            if(inbound(q, C))
-            {
-                std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
-                bitboard_t bb = z & b_ptr->hostile<C>();
-                if(bb)
-                {
-                    co_yield std::make_pair(q.tl(), bb);
-                }
-            }
-        }
-        // normal pawn movement -- bitboard saved in the very end of the if block
-        vec4 q = p + vec4(0,0,0,1);
-        if(inbound(q, C))
-        {
-            std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
-            bitboard_t bb = z & ~b_ptr->occupied();
-            if(bb)
-            {
-                // unmoved pawn movement
-                if constexpr(P == PAWN_UW || P == BRAWN_UW)
-                {
-                    vec4 r = q + vec4(0,0,0,1);
-                    if(inbound(r,C))
-                    {
-                        std::shared_ptr<board> b1_ptr = get_board(r.l(), r.t(), C);
-                        bitboard_t bc = z & ~b_ptr->occupied();
-                        if(bc)
-                        {
-                            //result[r.tl()] |= bc;
-                            co_yield std::make_pair(r.tl(), bc);
-                        }
-                    }
-                }
-            }
-            // brawn capture
-            if constexpr(P == BRAWN_W || P == BRAWN_UW)
-            {
-                bitboard_t mask = shift_north(z) | shift_west(z) | shift_east(z);
-                bb |= mask & b_ptr->hostile<C>();
-            }
-            if(bb)
-            {
-                co_yield std::make_pair(q.tl(), bb);
-            }
-        }
-        if constexpr(P == BRAWN_W || P == BRAWN_UW)
-        {
-            vec4 s = p + vec4(0,1,-1,0);
-            if(inbound(s, C))
-            {
-                std::shared_ptr<board> b2_ptr = get_board(s.l(), s.t(), C);
-                bitboard_t bd = shift_north(z) & ~b2_ptr->occupied();
-                if(bd)
-                {
-                    co_yield std::make_pair(s.tl(), bd);
-                }
-            }
-        }
-    }
-    else if constexpr (P == PAWN_B || P == BRAWN_B || P == PAWN_UB || P == BRAWN_UB)
-    {
-        bitboard_t z = pmask(p.xy());
-        // pawn capture
         static std::vector<vec4> pawn_w_cap_tl_delta = {vec4(0, 0, 1, -1), vec4(0, 0, -1, -1)};
         for(vec4 d : pawn_w_cap_tl_delta)
         {
@@ -983,6 +940,78 @@ movegen_t multiverse::gen_moves_impl(vec4 p) const
                         bitboard_t bc = z & ~b_ptr->occupied();
                         if(bc)
                         {
+                            //result[r.tl()] |= bc;
+                            co_yield std::make_pair(r.tl(), bc);
+                        }
+                    }
+                }
+            }
+            // brawn capture
+            if constexpr(P == BRAWN_W || P == BRAWN_UW)
+            {
+                bitboard_t mask = shift_north(z) | shift_west(z) | shift_east(z);
+                bb |= mask & b_ptr->hostile<C>();
+            }
+            if(bb)
+            {
+                co_yield std::make_pair(q.tl(), bb);
+            }
+        }
+        if constexpr(P == BRAWN_W || P == BRAWN_UW)
+        {
+            static std::vector<vec4> brawn_w_cap_tl_delta = {vec4(1, 0, 0, -1), vec4(-1, 0, 0, -1), vec4(0, 1, 0, -1), vec4(0, 1, -1, 0)};
+            for(vec4 d : brawn_w_cap_tl_delta)
+            {
+                vec4 s = p + d;
+                if(inbound(s, C))
+                {
+                    std::shared_ptr<board> b2_ptr = get_board(s.l(), s.t(), C);
+                    bitboard_t bd = shift_north(z) & ~b2_ptr->occupied();
+                    if(bd)
+                    {
+                        co_yield std::make_pair(s.tl(), bd);
+                    }
+                }
+            }
+        }
+    }
+    else if constexpr (P == PAWN_B || P == BRAWN_B || P == PAWN_UB || P == BRAWN_UB)
+    {
+        bitboard_t z = pmask(p.xy());
+        // pawn capture
+        static std::vector<vec4> pawn_b_cap_tl_delta = {vec4(0, 0, 1, 1), vec4(0, 0, -1, 1)};
+        for(vec4 d : pawn_b_cap_tl_delta)
+        {
+            vec4 q = p + d;
+            if(inbound(q, C))
+            {
+                std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
+                bitboard_t bb = z & b_ptr->hostile<C>();
+                if(bb)
+                {
+                    co_yield std::make_pair(q.tl(), bb);
+                }
+            }
+        }
+        // normal pawn movement -- bitboard saved in the very end of the if block
+        vec4 q = p + vec4(0,0,0,1);
+//        std::cout << p << " " << q << inbound(q,C) << "\n";
+        if(inbound(q, C))
+        {
+            std::shared_ptr<board> b_ptr = get_board(q.l(), q.t(), C);
+            bitboard_t bb = z & ~b_ptr->occupied();
+            if(bb)
+            {
+                // unmoved pawn movement
+                if constexpr(P == PAWN_UW || P == BRAWN_UW)
+                {
+                    vec4 r = q + vec4(0,0,0,1);
+                    if(inbound(r,C))
+                    {
+                        std::shared_ptr<board> b1_ptr = get_board(r.l(), r.t(), C);
+                        bitboard_t bc = z & ~b_ptr->occupied();
+                        if(bc)
+                        {
                             co_yield std::make_pair(r.tl(), bc);
                         }
                     }
@@ -1001,14 +1030,18 @@ movegen_t multiverse::gen_moves_impl(vec4 p) const
         }
         if constexpr(P == BRAWN_W || P == BRAWN_UW)
         {
-            vec4 s = p + vec4(0,1,-1,0);
-            if(inbound(s, C))
+            static std::vector<vec4> brawn_w_cap_tl_delta = {vec4(1, 0, 0, 1), vec4(-1, 0, 0, 1), vec4(0, 1, 0, 1), vec4(0, -1, -1, 0)};
+            for(vec4 d : brawn_w_cap_tl_delta)
             {
-                std::shared_ptr<board> b2_ptr = get_board(s.l(), s.t(), C);
-                bitboard_t bd = shift_north(z) & ~b2_ptr->occupied();
-                if(bd)
+                vec4 s = p + d;
+                if(inbound(s, C))
                 {
-                    co_yield std::make_pair(s.tl(), bd);
+                    std::shared_ptr<board> b2_ptr = get_board(s.l(), s.t(), C);
+                    bitboard_t bd = shift_north(z) & ~b2_ptr->occupied();
+                    if(bd)
+                    {
+                        co_yield std::make_pair(s.tl(), bd);
+                    }
                 }
             }
         }

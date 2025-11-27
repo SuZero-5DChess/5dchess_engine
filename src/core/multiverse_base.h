@@ -31,7 +31,8 @@ using boards_info_t = std::tuple<int,int,bool,std::string>; // l, t, color, fen
 class multiverse
 {
 private:
-    const int size_x, size_y;
+    const int size_x, size_y; // board size
+    const int l0_min, l0_max; // initial timeline range
     std::vector<std::vector<std::shared_ptr<board>>> boards;
     // the following data are derivated from boards:
     int l_min, l_max, active_min, active_max;
@@ -75,11 +76,11 @@ private:
     void insert_board_impl(int l, int t, bool c, const std::shared_ptr<board>& b_ptr);
 protected:
     virtual std::pair<int,int> calculate_active_range() const = 0;
-    void update_active_range();
+    void update_active_range(); // for initialization of derived classes only
 public:
     // constructor
-    multiverse(std::vector<boards_info_t> boards, int size_x, int size_y);
-    multiverse(const std::string& input, int size_x, int size_y);
+    multiverse(std::vector<boards_info_t> boards, int size_x, int size_y, int l0_min, int l0_max);
+    multiverse(const std::string& input, int size_x, int size_y, int l0_min, int l0_max);
     
     // modifiers
     void insert_board(int l, int t, bool c, const std::shared_ptr<board>& b_ptr);
@@ -87,6 +88,7 @@ public:
 
     // getters
     std::pair<int, int> get_board_size() const;
+    std::pair<int, int> get_initial_lines_range() const;
     std::pair<int, int> get_lines_range() const;
     std::pair<int, int> get_active_range() const;
     std::pair<int, int> get_timeline_start(int l) const;

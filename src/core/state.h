@@ -97,8 +97,10 @@ public:
     std::string pretty_move(full_move fm, int c) const;
 
     // wrappers for low-level functions
+    std::pair<int, int> get_board_size() const;
     std::pair<int, int> get_present() const;
     std::pair<int, int> apparent_present() const;
+    std::pair<int, int> get_initial_lines_range() const;
     std::pair<int, int> get_lines_range() const;
     std::pair<int, int> get_active_range() const;
     std::pair<int, int> get_timeline_start(int l) const;

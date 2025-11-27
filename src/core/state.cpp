@@ -598,6 +598,12 @@ std::string state::pretty_move(full_move fm, int c) const
     return oss.str();
 }
 
+std::pair<int, int> state::get_board_size() const
+{
+    return m->get_board_size();
+}
+
+
 std::pair<int, int> state::get_present() const
 {
     return std::make_pair(present, player);
@@ -606,6 +612,11 @@ std::pair<int, int> state::get_present() const
 std::pair<int, int> state::apparent_present() const
 {
     return m->get_present();
+}
+
+std::pair<int, int> state::get_initial_lines_range() const
+{
+    return m->get_initial_lines_range();
 }
 
 std::pair<int, int> state::get_lines_range() const
