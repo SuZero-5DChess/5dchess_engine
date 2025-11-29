@@ -6,13 +6,8 @@
 // for debug
 #include <cassert>
 #include <iostream>
-#define DEBUGMSG
+//#define DEBUGMSG
 #include "debug.h"
-
-//generator<moveseq> search_legal_action(state s)
-//{
-//    
-//}
 
 std::shared_ptr<board> extract_board(const semimove& loc)
 {
@@ -92,21 +87,19 @@ std::tuple<std::vector<vec4>, int> get_move_path(const state &s, full_move fm, i
     }
 }
 
-// test if king/royal queen with color c is under attack
-bool has_physical_check(const board &b, bool c, vec4 p = {0,0,0,0})
+// test if a royal piece with color c is under attack
+bool has_physical_check(const board &b, bool c)
 {
     bitboard_t friendly =  c ? b.black() : b.white();
     for(int pos : marked_pos(b.royal() & friendly))
     {
         if([[maybe_unused]] auto x = b.is_under_attack(pos, c))
         {
-            dprint("physical check", full_move(vec4(marked_pos(x)[0],p.tl()),vec4(pos, p.tl())));
-//            dprint(b.to_string());
+            dprint("physical check", full_move(vec4(marked_pos(x)[0],vec4(0,0,0,0)),vec4(pos, vec4(0,0,0,0))));
             return true;
         }
     }
-    dprint("no check for", c, "in");
-    dprint(b.to_string());
+    dprint("no check for", c?"black":"white", "in", "\n"+b.to_string());
     return false;
 }
 
@@ -116,13 +109,12 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
     std::map<int, int> line_to_axis; // map from timeline index to axis index
     std::vector<std::vector<semimove>> axis_coords; // axis_coords[i] is the set of all moves on i-th playable board
     HC universe;
-    int sign = signum(s.new_line()); // sign for the new lines
     int new_axis, dimension;
     std::vector<std::set<int>> nonbranching_axes, branching_axes;
     auto [mandatory_timelines, optional_timelines, unplayable_timelines] = s.get_timeline_status();
     auto playable_timelines = concat_vectors(mandatory_timelines, optional_timelines);
     assert(!s.can_submit());
-    auto [present_t, present_c] = s.get_present();
+    auto [present_t, player] = s.get_present();
     
     // generate all moves, then split them into cases
     // for departing moves, we merge the moves that depart from the same coordinate
@@ -130,6 +122,10 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
     std::map<int, std::vector<vec4>> departs_from;
     // to track the corresponding departing moves for each arriving move
     std::map<vec4, int> jump_indices;
+    
+    //TODO: support promotion to other pieces
+    static const piece_t promote_to = QUEEN_W;
+    const auto &[size_x, size_y] = s.get_board_size();
     
     for(vec4 from : s.gen_movable_pieces())
     {
@@ -142,8 +138,8 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
                 if(!has_depart)
                 {
                     departs_from[from.l()].push_back(m.from);
+                    has_depart = true;
                 }
-                has_depart = true;
                 arrives_to[to.l()].push_back(m);
             }
             else
@@ -164,31 +160,58 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
         for(full_move m : stays_on[l])
         {
             vec4 p = m.from, q = m.to;
-            std::shared_ptr<board> b0_ptr = s.get_board(p.l(), p.t(), present_c);
-            piece_t pic = b0_ptr->get_piece(p.xy());
-            std::shared_ptr<board> b_ptr = b0_ptr
-                ->replace_piece(p.xy(), NO_PIECE)
-                ->replace_piece(q.xy(), pic);
+            vec4 d = q - p;
+            const std::shared_ptr<board>& b_ptr = s.get_board(p.l(), p.t(), player);
+            std::shared_ptr<board> newboard = nullptr;
+            bitboard_t z = pmask(p.xy());
+            // en passant
+            if((b_ptr->lpawn()&z) && d.x()!=0 && b_ptr->get_piece(q.xy()) == NO_PIECE)
+            {
+                dprint(" ... en passant");
+                newboard = b_ptr->replace_piece(ppos(q.x(),p.y()), NO_PIECE)
+                                ->move_piece(p.xy(), q.xy());
+            }
+            // promotion
+            else if((b_ptr->lpawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
+            {
+                dprint(" ... promotion");
+                piece_t promoted = player ? to_black(promote_to) : promote_to;
+                newboard = b_ptr->replace_piece(p.xy(), NO_PIECE)
+                                ->replace_piece(q.xy(), promoted);
+            }
+            // castling
+            else if((b_ptr->king()&z) && abs(d.x()) > 1)
+            {
+                dprint(" ... castling");
+                int rook_x1 = d.x() < 0 ? 0 : (size_x - 1); //rook's original x coordinate
+                int rook_x2 = q.x() + (d.x() < 0 ? 1 : -1); //rook's new x coordinate
+                newboard = b_ptr->move_piece(ppos(rook_x1, p.y()), ppos(rook_x2,q.y()))
+                                ->move_piece(p.xy(), q.xy());
+            }
+            // normal move
+            else
+            {
+                dprint(" ... normal move/capture");
+                newboard = b_ptr->move_piece(p.xy(), q.xy());
+            }
             // filter physical checks in the very begining
             dprint(locs.size(), "physical", m);
-            bool flag = has_physical_check(*b_ptr, present_c, p);
+            bool flag = has_physical_check(*newboard, player);
             if(!flag)
             {
-                dprint(b_ptr->to_string());
-                locs.push_back(physical_move{m, b_ptr});
+                locs.push_back(physical_move{m, newboard});
             }
         }
         for(vec4 p : departs_from[l])
         {
             assert(!jump_indices.contains(p));
             // store the departing board after move is made
-            std::shared_ptr<board> b_ptr = s.get_board(p.l(), p.t(), present_c)
+            std::shared_ptr<board> b_ptr = s.get_board(p.l(), p.t(), player)
                 ->replace_piece(p.xy(), NO_PIECE);
             dprint(locs.size(), "depart", p);
-            bool flag = has_physical_check(*b_ptr, present_c, p);
+            bool flag = has_physical_check(*b_ptr, player);
             if(!flag)
             {
-                dprint(b_ptr->to_string());
                 jump_indices[p] = static_cast<int>(locs.size());
                 locs.push_back(departing_move{p, b_ptr});
             }
@@ -197,23 +220,37 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
         {
             // only store (possible) non-branching jump arrives
             auto [last_t, last_c] = s.get_timeline_end(m.to.l());
-            if(m.to.t() == last_t && present_c == last_c)
+            if(m.to.t() == last_t && player == last_c)
             {
                 assert(m.from.tl()!=m.to.tl());
                 // store the arriving board after move is made
-                piece_t pic = s.get_piece(m.from, present_c);
-                std::shared_ptr<board> b_ptr = s.get_board(m.to.l(), m.to.t(), present_c)
-                ->replace_piece(m.to.xy(), pic);
+                vec4 p = m.from, q = m.to;
+                bitboard_t z = pmask(p.xy());
+                piece_t pic = s.get_piece(m.from, player);
+                const std::shared_ptr<board>& b_ptr = s.get_board(p.l(), p.t(), player);
+                const std::shared_ptr<board>& c_ptr = s.get_board(q.l(), q.t(), player);
+                std::shared_ptr<board> newboard = nullptr;
+                
+                // promotion (only brawns can do)
+                if ((b_ptr->lrawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
+                {
+                    dprint(" ... nonbranching brawn promotion");
+                    piece_t promoted = player ? to_black(promote_to) : promote_to;
+                    newboard = c_ptr->replace_piece(q.xy(), promoted);
+                }
+                // normal non_branching move
+                else
+                {
+                    dprint(" ... nonbranching jump");
+                    newboard = c_ptr->replace_piece(q.xy(), pic);
+                }
+                
                 dprint(locs.size(), "arrive", m);
-                //adprint("Was:", pic, "\n", s.get_board(m.to.l(), m.to.t(), present_c)->to_string());
-                //adprint("After applying:", m, "\n", b_ptr->to_string());
                 // use a temporary idx of -1, will be filled later
-                bool flag = has_physical_check(*b_ptr, present_c);
-                //adprint("Has physical check for",present_c,":",flag);
+                bool flag = has_physical_check(*newboard, player);
                 if(!flag)
                 {
-                    dprint(b_ptr->to_string());
-                    locs.push_back(arriving_move{m, b_ptr, -1});
+                    locs.push_back(arriving_move{m, newboard, -1});
                 }
             }
         }
@@ -224,13 +261,10 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
         axis_coords.push_back(std::move(locs));
     }
     
-    
     new_axis = static_cast<int>(axis_coords.size());
 
     // build branching axes
     int max_branch = 0;
-    std::vector<semimove> locs = {null_move{vec4(0,0,present_t,0)}};
-    // original is `Pass undefined`
     for(const auto& [l, froms] : departs_from)
     {
         // determine the number of branching axes
@@ -240,30 +274,49 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
         }
     }
     // collect all branching moves
+    // the T index for this null_move is needed in find_checks()
+    std::vector<semimove> locs = {null_move{vec4(0,0,present_t,s.new_line())}};
     for(const auto &[l, arrives] : arrives_to)
     {
         for(full_move m : arrives)
         {
-            dprint(m);
-            piece_t pic = s.get_piece(m.from, present_c);
-            std::shared_ptr<board> b_ptr = s.get_board(m.to.l(), m.to.t(), present_c)
-            ->replace_piece(m.to.xy(), pic);
+            vec4 p = m.from, q = m.to;
+            bitboard_t z = pmask(p.xy());
+            piece_t pic = s.get_piece(m.from, player);
+            const std::shared_ptr<board>& b_ptr = s.get_board(p.l(), p.t(), player);
+            const std::shared_ptr<board>& c_ptr = s.get_board(q.l(), q.t(), player);
+            std::shared_ptr<board> newboard = nullptr;
+            
+            // promotion (only brawns can do)
+            if ((b_ptr->lrawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
+            {
+                dprint(" ... nonbranching brawn promotion");
+                piece_t promoted = player ? to_black(promote_to) : promote_to;
+                newboard = c_ptr->replace_piece(q.xy(), promoted);
+            }
+            // normal non_branching move
+            else
+            {
+                dprint(" ... nonbranching jump");
+                newboard = c_ptr->replace_piece(q.xy(), pic);
+            }
+            
             if(jump_indices.contains(m.from))
             {
                 /* only add this arriving move when the corresponding departing move
                  is legal (Otherwise, it shouldn't have been registered in jump_map) */
-                bool flag = has_physical_check(*b_ptr, present_c);
                 dprint(locs.size(), "branching:", m);
+                bool flag = has_physical_check(*newboard, player);
                 if(!flag)
                 {
-                    dprint(b_ptr->to_string());
-                    locs.push_back(arriving_move{m, b_ptr, jump_indices[m.from]});
+                    locs.push_back(arriving_move{m, newboard, jump_indices[m.from]});
                 }
             }
         }
     }
     // replicate this axis max_branch times
     const int new_l = s.new_line();
+    const int sign = signum(s.new_line()); // sign for the new lines
     for(int i = 0; i < max_branch; i++)
     {
         assert(!line_to_axis.contains(new_l+sign*i));
@@ -306,16 +359,22 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
                     dprint("ghost arrive at axis:", n, ";no:", i,";move pruned:", p->m);
                     auto flag = universe.axes[n].erase(i);
                     assert(flag);
-                    //axis_coords[n].erase(axis_coords[n].begin() + i);
                 }
             }
         }
     }
     
-    HC_info info(s, line_to_axis, axis_coords, universe, sign, new_axis, dimension, mandatory_timelines);
+#ifdef DEBUGMSG
+    for(const auto [k, v]: line_to_axis)
+    {
+        dprint("line", k, "=>", "axis", v);
+    }
+#endif
+    
+    HC_info info(s, line_to_axis, axis_coords, universe, new_axis, dimension, mandatory_timelines);
+    
     
     // split the search space by number of branches
-    // TODO: move this part into search() 
     HC hc_n_lines = universe;
     std::set<int> singleton = {0}, non_null;
     if(new_axis < dimension)
@@ -340,7 +399,7 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
 
 std::optional<point> HC_info::take_point(HC &hc) const
 {
-    dprint("take_point()", hc.to_string());
+    dprint("take_point()");
     graph g(dimension);
     std::vector<int> must_include;
     // store a pair of departing/arriving move for each edge
@@ -369,15 +428,13 @@ std::optional<point> HC_info::take_point(HC &hc) const
                     if(it == hc.axes[from_axis].end())
                     {
                         ghost_arrive_indices.insert(i);
-                        dprint("ghost arriving move",n,i, "(source", from_axis, loc.idx,")\n");//,show_semimove(loc));
+                        dprint("ghost arriving move",n,i, "(source", from_axis, loc.idx,")");//,show_semimove(loc));
                         return;
                     }
                     if(!edge_refs.contains(std::make_pair(from_axis, n)))
                     {
                         dprint("new edge", from_axis, n, show_semimove(loc));
                         g.add_edge(from_axis, n);
-//                        std::cout << loc.m << "\n";
-//                        std::cout << g.to_string();
                         assert(from_axis!=n);
                         edge_refs[std::make_pair(from_axis, n)] = loc.idx;
                         edge_refs[std::make_pair(n, from_axis)] = i;
@@ -397,6 +454,11 @@ std::optional<point> HC_info::take_point(HC &hc) const
         for(int i : ghost_arrive_indices)
         {
             hc.axes[n].erase(i);
+        }
+        if(hc.axes[n].empty())
+        {
+            // search space is empty after prune; abort
+            return std::nullopt;
         }
         if(!has_nonjump)
         {
@@ -424,11 +486,13 @@ std::optional<point> HC_info::take_point(HC &hc) const
 #endif
         dprint("final result:", range_to_string(result));
         assert(hc.contains(result));
+#ifdef DEBUGMSG
         for(int n = 0; n < result.size(); n++)
         {
             int i = result[n];
             dprint("n=",n,",i=",i,",loc=",show_semimove(axis_coords[n][i]));
         }
+#endif
         return std::optional<point>(result);
     }
     else
@@ -458,11 +522,7 @@ std::optional<slice> HC_info::jump_order_consistent(const point &p, const HC& hc
     remember t, l are stored as the higher part of a vec4
      */
     std::map<vec4, int> jump_map;
-    
-//    if(p == std::vector<int>{12,7,11,3})
-//    {
-//        std::cout << "ksdnfknk" << std::endl;
-//    }
+    auto [t, c] = s.get_present();
     
     for(int n = new_axis; n < dimension; n++)
     {
@@ -471,7 +531,8 @@ std::optional<slice> HC_info::jump_order_consistent(const point &p, const HC& hc
         const semimove& loc = axis_coords[n][in];
         if(std::holds_alternative<null_move>(loc))
         {
-            continue;
+            break;
+            // assumed: search space is always separated by number of branches
         }
         assert(std::holds_alternative<arriving_move>(loc));
         const arriving_move arr = std::get<arriving_move>(loc);
@@ -484,7 +545,8 @@ std::optional<slice> HC_info::jump_order_consistent(const point &p, const HC& hc
             const int m = line_to_axis.at(to.l());
             const int im = p[m];
             const semimove& loc2 = axis_coords[m][im];
-            if(std::holds_alternative<null_move>(loc2))
+            if(std::holds_alternative<null_move>(loc2)
+               && s.get_timeline_end(to.l()) == std::make_pair(to.l(), c))
             {
                 null_move nm = std::get<null_move>(loc2);
                 if(nm.tl == to.tl())
@@ -516,7 +578,6 @@ std::optional<slice> HC_info::jump_order_consistent(const point &p, const HC& hc
                 }
             }
         }
-        //dprint(from.tl());
         /* case two: there is a branching move (l,t) -> (l',t')
          but the source (l,t) is already registered in jump_map, i.e.
          there was a jump (l0,t0) -> (l,t) ~> (new_l0,t)
@@ -572,10 +633,6 @@ std::optional<slice> HC_info::jump_order_consistent(const point &p, const HC& hc
 std::optional<slice> HC_info::test_present(const point &p, const HC& hc) const
 {
     dprint("test_present()");
-    if(p == std::vector<int>{4, 0, 6, 0})
-    {
-        std::cout << "kashliwhod\n";
-    }
     const auto old_tc = s.get_present();
     const auto [old_present, c] = old_tc;
     // record the lines range and active range of current state
@@ -587,8 +644,10 @@ std::optional<slice> HC_info::test_present(const point &p, const HC& hc) const
     int mint = old_present; // mint is the new present
     std::optional<std::pair<int,int>> pass_coord = std::nullopt; // record the axis of the problematic pass
     std::optional<int> reactivate_move_axis = std::nullopt;
-    for(int n = 0; n < new_axis; n++)
+    for(int l : mandatory_lines)
     {
+        assert(line_to_axis.contains(l));
+        int n = line_to_axis.at(l);
         if(std::holds_alternative<null_move>(axis_coords[n][p[n]]))
         {
             // if there is a pass in playable line, then it could be problematic
@@ -603,8 +662,7 @@ std::optional<slice> HC_info::test_present(const point &p, const HC& hc) const
         semimove loc = axis_coords[n][i];
         if(std::holds_alternative<null_move>(loc))
         {
-            //break;
-            continue; // null_move's don't change present
+            break;
         }
         // update lines range and active range
         std::optional<int> reactivated = std::nullopt;
@@ -741,24 +799,18 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
     for(full_move mv : mvs)
     {
 #ifdef DEBUGMSG
-        mvsstr += s.pretty_move(mv) + " ";
+        // !!do use flag SHOW_MATE (or expect explosion)!!
+        mvsstr += s.pretty_move<state::SHOW_NOTHING>(mv) + " ";
 #endif
         bool flag = newstate.apply_move(mv);
         assert(flag && "failed to apply move here");
     }
     bool flag = newstate.submit();
-    //auto [new_present, new_color] = newstate.get_present();
-    dprint(newstate.to_string());
     assert(flag && "failed to submit here");
-    dprint("after applying moves:", mvsstr, newstate.to_string());
+    //dprint("after applying moves:", mvsstr, newstate.to_string());
+    dprint("applied moves:", mvsstr);
     dprint("c=", c);
     auto gen = newstate.find_checks(!c);
-//    if(p == std::vector<int>{12, 7, 1, 13})
-//    {
-//        //std::cout << newstate.to_string();
-//        for(auto m : newstate.find_checks(!c))
-//            std::cout << m << std::endl;
-//    }
     if(auto maybe_check = gen.first())
     {
         // there is a check
@@ -767,8 +819,11 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
         dprint("found check: ", check);
         assert(check.from.tl() != check.to.tl() && "physical checks should have already removed");
         auto [path, sliding_type] = get_move_path(newstate, check, !c);
-        //        std::cout << std::endl;
-        //        dprint(s.get_board(check.from.l(), check.from.t(), !c));
+        auto is_next = c ? [](int t1, int t2){
+            return t1 + 1 == t2;
+        }:[](int t1, int t2){
+            return t1 == t2;
+        };
         /* on axis for check.from.l():
          ban all moves that allows the same piece hostile piece remain in that position
          */
@@ -780,12 +835,12 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
             for(int i : hc.axes[n1])
             {
                 semimove loc = axis_coords[n1][i];
-                if(std::holds_alternative<null_move>(loc))
+                /* if there isn't a new board on the same place, it won't create the same check*/
+                if(std::holds_alternative<null_move>(loc) || !is_next(extract_tl(loc).first,check.from.t()))
                 {
                     continue;
                 }
                 std::shared_ptr<board> newboard = extract_board(loc);
-                dprint(n1, i, sliding_type, show_semimove(loc));
                 if(sliding_type)
                 {
                     bitboard_t bb = c ? newboard->white() : newboard->black();
@@ -808,6 +863,7 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
                     }
                     if(pmask(check.from.xy()) & bb)
                     {
+                        dprint(n1, i, sliding_type, show_semimove(loc));
                         dprint("axis", n1, "not taking (sliding)", i);
                         not_taking.insert(i);
                     }
@@ -815,6 +871,7 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
                 else if(newboard->get_piece(check.from.xy()) == newstate.get_piece(check.from, !c))
                 {
                     // non sliding pieces remains in same position
+                    dprint(n1, i, sliding_type, show_semimove(loc));
                     dprint("axis", n1, "not taking (untouched)", i);
                     not_taking.insert(i);
                 }
@@ -832,14 +889,16 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
             int n2 = line_to_axis.at(l2);
             // next line rely on the default value of null_move
             auto [t2, _]  = extract_tl(axis_coords[n2][p[n2]]);
-            if(next_tc(t2, c) == std::make_pair(check.to.t(), !c))
+            assert(is_next(t2, check.to.t()) == (next_tc(t2, c) == std::make_pair(check.to.t(), !c)));
+            if(is_next(t2, check.to.t()))
             {
                 std::set<int> expose_royal;
                 for(int i : hc.axes[n2])
                 {
                     semimove loc = axis_coords[n2][i];
                     std::shared_ptr<board> newboard;
-                    if(std::holds_alternative<null_move>(loc))
+                    /* if there isn't a new board on the same place, do nothing*/
+                    if(std::holds_alternative<null_move>(loc) || extract_tl(loc).first!=t2)
                     {
                         continue;
                     }
@@ -848,9 +907,11 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
                         newboard = extract_board(loc);
                     }
                     //dprint(n2, i, show_semimove(loc));
-                    bool is_royal = pmask(check.to.xy()) & newboard->royal();
+                    bitboard_t friendly = c ? newboard->black() : newboard->white();
+                    bool is_royal = pmask(check.to.xy()) & newboard->royal() & friendly;
                     if(is_royal)
                     {
+                        dprint(show_semimove(loc));
                         dprint("axis", n2, "expose royal", i);
                         expose_royal.insert(i);
                     }
@@ -858,7 +919,6 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
                 problem.fixed_axes.insert({n2, expose_royal});
             }
         }
-//        dprint(n1, range_to_string(not_taking), n2, range_to_string(expose_royal));
         /* on axes for checking path crossings:
          if passing board is prone to change, then ban all moves, except for
          those (physical or arriving) brings a non-royal piece blocking the
@@ -869,36 +929,73 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
             if(line_to_axis.contains(crossed.l()))
             {
                 int n = line_to_axis.at(crossed.l());
+                /* skip the loop if this axis doesn't make a difference*/
                 auto [tc, _]  = extract_tl(axis_coords[n][p[n]]);
-                if(next_tc(tc, c) == std::make_pair(crossed.t(), !c))
+                if(is_next(tc, crossed.t()))
                 {
                     bitboard_t z = pmask(crossed.xy());
                     std::set<int> not_blocking;
                     for(int i : hc.axes[n])
                     {
                         semimove loc = axis_coords[n][i];
-                        if(std::holds_alternative<physical_move>(loc))
+                        /* if there isn't a board, then nothing pass through it*/
+                        if(std::holds_alternative<null_move>(loc) || extract_tl(loc).first!=tc)
                         {
-                            if(std::get<physical_move>(loc).m.to == crossed)
+                            continue;
+                        }
+                        std::shared_ptr<board> newboard = extract_board(loc);
+                        /* if the very place is empty, then it is clearly not blocking*/
+                        if(!(z & newboard->occupied()))
+                        {
+                            dprint(n, i, sliding_type, show_semimove(loc));
+                            dprint("axis", n, "not blocking (empty)", i);
+                            not_blocking.insert(i);
+                            continue;
+                        }
+                        /* on the crossed point, if a hostile piece with the same sliding type
+                         of the attacking piece is placed here, it doesn't completely resolve the check
+                         */
+                        if(sliding_type)
+                        {
+                            bitboard_t bb = c ? newboard->white() : newboard->black();
+                            switch(sliding_type)
                             {
-                                bool is_royal = z & std::get<physical_move>(loc).b->royal();
-                                if(!is_royal)
-                                    continue;
+                                case 1:
+                                    bb &= newboard->lrook();
+                                    break;
+                                case 2:
+                                    bb &= newboard->lbishop();
+                                    break;
+                                case 3:
+                                    bb &= newboard->lunicorn();
+                                    break;
+                                case 4:
+                                    bb &= newboard->ldragon();
+                                    break;
+                                default:
+                                    assert(false && "wrong sliding type infered");
+                            }
+                            if(z & bb)
+                            {
+                                dprint(n, i, sliding_type, show_semimove(loc));
+                                dprint("axis", n, "not blocking (sliding)", i);
+                                not_blocking.insert(i);
+                                continue;
                             }
                         }
-                        else if (std::holds_alternative<arriving_move>(loc))
+                        /* on the crossed point, if a friendly royal piece is there
+                         it is still checking despite the path is technically blocked
+                         */
+                        bitboard_t friendly = c ? newboard->black() : newboard->white();
+                        bool is_royal = pmask(check.to.xy()) & newboard->royal() & friendly;
+                        if(z & is_royal)
                         {
-                            if(std::get<arriving_move>(loc).m.to == crossed)
-                            {
-                                bool is_royal = z & std::get<arriving_move>(loc).b->royal();
-                                if(!is_royal)
-                                    continue;
-                            }
+                            dprint(n, i, sliding_type, show_semimove(loc));
+                            dprint("axis", n, "not blocking (expose royal)", i);
+                            not_blocking.insert(i);
+                            continue;
                         }
-                        dprint("axis", n, "not blocking", i);
-                        not_blocking.insert(i);
                     }
-                    dprint(problem.to_string());
                     problem.fixed_axes[n] = not_blocking;
                 }
             }
@@ -915,30 +1012,6 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
 moveseq HC_info::to_action(const point &p) const
 {
     std::vector<full_move> mvs;
-//    std::vector<int> lines;
-//    lines.reserve(line_to_axis.size());
-//
-//    for (auto &[k, _] : line_to_axis)
-//        lines.push_back(k);
-//
-//    if (s.get_present().second)
-//        std::reverse(lines.begin(), lines.end());
-//    for(int i = 0; i < p.size(); i++)
-//    {
-//        semimove loc = axis_coords[i][p[i]];
-//        if(std::holds_alternative<physical_move>(loc))
-//        {
-//            mvs.push_back(std::get<physical_move>(loc).m);
-//        }
-//        else if(std::holds_alternative<arriving_move>(loc))
-//        {
-//            mvs.push_back(std::get<arriving_move>(loc).m);
-//        }
-//    }
-//    std::sort(mvs.begin(), mvs.end(), [sign=sign](full_move a, full_move b){
-//        return sign*a.to.l() < sign*b.to.l();
-//    });
-    
     for(const auto [l,i] : line_to_axis)
     {
         semimove loc = axis_coords[i][p[i]];
@@ -966,33 +1039,33 @@ moveseq HC_info::to_action(const point &p) const
 
 generator<moveseq> HC_info::search(search_space ss) const
 {
-    adprint("begining search: ", ss.to_string());
+    dprint("begining search: ", ss.to_string());
     while(!ss.hcs.empty())
     {
         HC hc = ss.hcs.back();
-        adprint("searching ", hc.to_string());
+        dprint("searching ", hc.to_string());
         ss.hcs.pop_back();
         auto pt_opt = take_point(hc);
         if(pt_opt)
         {
             point pt = pt_opt.value();
-            print_range("got point: ", pt);
+            dprint("got point: ", range_to_string(pt));
             auto problem = find_problem(pt, hc);
             if(problem)
             {
-                adprint("found problem:", problem.value().to_string());
+                dprint("found problem:", problem.value().to_string());
                 // remove the problematic slice from hc, and add the remaining to ss
                 search_space new_ss = hc.remove_slice(problem.value());
                 // make sure when a leave is removed, so is the corresponding arrive
-                adprint("removed problem, continue search:", new_ss.to_string());
+                dprint("removed problem, continue search:", new_ss.to_string());
                 ss.concat(std::move(new_ss));
             }
             else
             {
-                adprint("point is okay, removing it from this hc");
+                dprint("point is okay, removing it from this hc");
                 co_yield to_action(pt);
                 search_space new_ss = hc.remove_point(pt);
-                adprint("removed point, continue search:", new_ss.to_string());
+                dprint("removed point, continue search:", new_ss.to_string());
                 ss.concat(std::move(new_ss));
             }
         }
@@ -1006,46 +1079,47 @@ generator<moveseq> HC_info::search(search_space ss) const
     co_return;
 }
 
-std::vector<moveseq> HC_info::search1(search_space ss) const
-{
-    std::vector<moveseq> result;
-    adprint("begining search: ", ss.to_string());
-    while(!ss.hcs.empty())
-    {
-        HC hc = ss.hcs.back();
-        adprint("searching ", hc.to_string());
-        ss.hcs.pop_back();
-        auto pt_opt = take_point(hc);
-        if(pt_opt)
-        {
-            point pt = pt_opt.value();
-            print_range("got point: ", pt);
-            auto problem = find_problem(pt, hc);
-            if(problem)
-            {
-                adprint("found problem:", problem.value().to_string());
-                // remove the problematic slice from hc, and add the remaining to ss
-                search_space new_ss = hc.remove_slice(problem.value());
-                // make sure when a leave is removed, so is the corresponding arrive
-                adprint("removed problem, continue search:", new_ss.to_string());
-                ss.concat(std::move(new_ss));
-            }
-            else
-            {
-                adprint("point is okay, removing it from this hc");
-                result.push_back(to_action(pt));
-                search_space new_ss = hc.remove_point(pt);
-                adprint("removed point, continue search:", new_ss.to_string());
-                ss.concat(std::move(new_ss));
-            }
-        }
-        else
-        {
-            dprint("didn't secure any point in the first hypercuboid;");
-            dprint("continue searching the remaining part");
-        }
-    }
-    dprint("search space is empty; finish.");
-    return result;
-}
+// /* for debugging only (this version is more friendly with stacktracing) */
+//std::vector<moveseq> HC_info::search1(search_space ss) const
+//{
+//    std::vector<moveseq> result;
+//    adprint("begining search: ", ss.to_string());
+//    while(!ss.hcs.empty())
+//    {
+//        HC hc = ss.hcs.back();
+//        adprint("searching ", hc.to_string());
+//        ss.hcs.pop_back();
+//        auto pt_opt = take_point(hc);
+//        if(pt_opt)
+//        {
+//            point pt = pt_opt.value();
+//            print_range("got point: ", pt);
+//            auto problem = find_problem(pt, hc);
+//            if(problem)
+//            {
+//                adprint("found problem:", problem.value().to_string());
+//                // remove the problematic slice from hc, and add the remaining to ss
+//                search_space new_ss = hc.remove_slice(problem.value());
+//                // make sure when a leave is removed, so is the corresponding arrive
+//                adprint("removed problem, continue search:", new_ss.to_string());
+//                ss.concat(std::move(new_ss));
+//            }
+//            else
+//            {
+//                adprint("point is okay, removing it from this hc");
+//                result.push_back(to_action(pt));
+//                search_space new_ss = hc.remove_point(pt);
+//                adprint("removed point, continue search:", new_ss.to_string());
+//                ss.concat(std::move(new_ss));
+//            }
+//        }
+//        else
+//        {
+//            dprint("didn't secure any point in the first hypercuboid;");
+//            dprint("continue searching the remaining part");
+//        }
+//    }
+//    dprint("search space is empty; finish.");
+//    return result;
+//}
 

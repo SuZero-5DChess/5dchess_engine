@@ -58,6 +58,7 @@ struct null_move
 //AxisLoc
 using semimove = std::variant<physical_move, arriving_move, departing_move, null_move>;
 
+[[maybe_unused]]
 static std::string show_semimove(semimove loc)
 {
     std::ostringstream oss;
@@ -88,15 +89,17 @@ class HC_info
     const std::map<int, int> line_to_axis; // map from timeline index to axis index
     const std::vector<std::vector<semimove>> axis_coords; // axis_coords[i] is the set of all moves on i-th playable board
     const HC universe;
-    const int sign; // sign for the new lines
     const int new_axis, dimension; // axes 0, 1, ..., new_axis-1 are playable lines
     // whereas new_axis, new_axis+1, ..., dimension-1 are the possible branching lines
-    // identity: num_axes = universe.axes.size() = axis_coords.size()
+    // identity: dimension = universe.axes.size() = axis_coords.size()
     const std::vector<int> mandatory_lines;
     
+    /*
+     take_point(): takes a point in hc while making sure arrives matches departures
+     if it finds an arrive with its departure no longer in hc, then this arrives get
+     deleted immediately (that's why parameter hc is a non-const reference)
+     */
     std::optional<point> take_point(HC& hc) const;
-    // find_problem functions essentially just find the problem of p
-    // but it also try to remove more points in the sub-hypercuboid that contains p
     std::optional<slice> find_problem(const point& p, const HC& hc) const;
     std::optional<slice> jump_order_consistent(const point& p, const HC& hc) const;
     std::optional<slice> test_present(const point& p, const HC& hc) const;
@@ -104,13 +107,14 @@ class HC_info
     moveseq to_action(const point& p) const;
     
     //private aggregate constructor
-    HC_info(state s, std::map<int, int> lm, std::vector<std::vector<semimove>> crds, HC uni, int sg, int ax, int dim, const std::vector<int> pl)
-        : s(std::move(s)), line_to_axis(std::move(lm)), axis_coords(std::move(crds)), universe(std::move(uni)), sign(sg), new_axis(ax), dimension(dim), mandatory_lines(pl) {}
+    HC_info(state s, std::map<int, int> lm, std::vector<std::vector<semimove>> crds, HC uni, int ax, int dim, const std::vector<int> pl)
+        : s(std::move(s)), line_to_axis(std::move(lm)), axis_coords(std::move(crds)), universe(std::move(uni)), new_axis(ax), dimension(dim), mandatory_lines(pl) {}
 
 public:
     static std::tuple<HC_info, search_space> build_HC(const state& s);
     generator<moveseq> search(search_space ss) const;
-    std::vector<moveseq> search1(search_space ss) const;
+    // /* uncomment when debugging */
+    //std::vector<moveseq> search1(search_space ss) const;
 };
 
 #endif /* HYPERCUBOID_H */

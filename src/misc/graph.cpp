@@ -2,11 +2,13 @@
 #include <queue>
 #include <sstream>
 #include <algorithm>
+#include <cassert>
 
 #include <iostream>
 
 void graph::add_edge(int u, int v)
 {
+    assert(u!=v && "loops are not allowed");
     adj[u][v] = true;
     adj[v][u] = true;
 }

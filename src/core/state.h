@@ -91,10 +91,22 @@ public:
     std::vector<vec4> gen_movable_pieces() const;
     std::vector<vec4> get_movable_pieces(std::vector<int> lines) const;
     
-    template<bool RELATIVE=false>
-    std::string pretty_move(full_move fm) const;
-    template<bool RELATIVE=false>
-    std::string pretty_move(full_move fm, int c) const;
+    /*
+    pretty_move<FLAGS>(fm, c):
+    Return a pretty string representation of the move `fm` from the perspective of player with color `c`.
+    (This is the inverse of parse_move())
+    FLAGS is a bitmask that controls what information to show.
+    */
+    constexpr static uint16_t SHOW_NOTHING = 0;
+    constexpr static uint16_t SHOW_RELATIVE = 1 << 0;
+    constexpr static uint16_t SHOW_PAWN = 1 << 1;
+    constexpr static uint16_t SHOW_CAPTURE = 1 << 2;
+    constexpr static uint16_t SHOW_PROMOTION = 1 << 3;
+    constexpr static uint16_t SHOW_MATE = 1 << 4;
+    constexpr static uint16_t SHOW_LCOMMENT = 1 << 5;
+    constexpr static uint16_t SHOW_ALL = SHOW_RELATIVE | SHOW_PAWN | SHOW_CAPTURE | SHOW_PROMOTION | SHOW_MATE | SHOW_LCOMMENT;
+    template<uint16_t FLAGS=SHOW_CAPTURE | SHOW_PROMOTION>
+    std::string pretty_move(full_move fm, piece_t promote_to=QUEEN_W) const;
 
     // wrappers for low-level functions
     std::pair<int, int> get_board_size() const;
@@ -122,6 +134,6 @@ public:
     parse_pgn_res parse_move(const std::string &move) const;
 };
 
-//std::ostream& operator<<(std::ostream& os, const match_status_t& status);
+#include "state.inl"
 
 #endif //STATE_H

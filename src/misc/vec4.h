@@ -14,7 +14,7 @@
 #include <sstream>
 #include <iomanip>
 
-static_assert(-(1) == ~0, "Two's complement required");
+static_assert(-(1) == ~0, "two's complement required");
 
 typedef std::uint32_t vec4_t;
 constexpr vec4_t L_BITS = 8, T_BITS = 8, Y_BITS = 8, X_BITS = 8;

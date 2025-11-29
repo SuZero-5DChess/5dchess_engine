@@ -10,7 +10,8 @@
 #include <exception>
 
 // for debugging exceptions in coroutine
-
+#include <iostream>
+#include <sstream>
 // Detect C++23 <stacktrace>
 #if __has_include(<stacktrace>) && defined(__cpp_lib_stacktrace) && __cpp_lib_stacktrace >= 202011
     #include <stacktrace>

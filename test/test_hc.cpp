@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <regex>
+#include <chrono>
 
 #include "hypercuboid.h"
 #include "pgnparser.h"
@@ -61,6 +62,7 @@ std::string pgn4 = R"(
 10.(-1T6)Qf3f7 (0T6)Qf3f7 / (0T6)Bf8>(-1T6)f7
 )";
 std::string pgn5 = R"(
+{NP}{8 options}
 [Board "Standard"]
 [Mode "5D"]
 
@@ -107,20 +109,31 @@ std::string pgn5 = R"(
 41. (-4T33)Rb3g3 / (3T33)Kh8 (0T33)Kh8 (-1T33)Kh8 (-4T33)Kh8
 42. (3T34)Rf2h2 (0T34)Rf1h1 (-1T34)Rf1h1 (-4T34)Rf2h2
 )";
+std::string pgn6=R"(
+[Mode "5D"]
+[Board "Standard"]
 
-int main()
+1. (0T1)Nc3 / (0T1)a6
+2. (0T2)Rb1 / (0T2)a5
+3. (0T3)Rb1>>(0T2)b1~ / (1T2)a5 (0T3)Nb8>>(0T2)b6~
+{4. (0T4)Nc3>>(0T2)d3~ (1T3)Ra1>>(0T3)a1}
+)";
+
+void search_all(std::string pgn)
 {
-    pgnparser_ast::game g = *pgnparser(pgn1).parse_game();
+    pgnparser_ast::game g = *pgnparser(pgn).parse_game();
     state s(g);
     std::cout << s.to_string() << std::endl;
     std::cout << "starting_test:\n";
     auto [w, ss] = HC_info::build_HC(s);
     std::vector<moveseq> legal_moves;
 //    auto it = ss.hcs.end();
-//    it--;
-//    std::cout << (*it).to_string();
-//
-//    search_space ss1 {{*it}};
+//    it--; it--;
+//    HC hc = *it;
+//    hc.axes[1] = {0};
+//    std::cout << hc.to_string();
+//    search_space ss1 {{hc}};
+
     for(auto x : w.search(ss))
     {
         if(x.size() == 0)
@@ -137,7 +150,6 @@ int main()
             }
         }
         std::cout << "\n";
-        //break;
         std::cout << "\n----------------------------\n\n";
     }
     std::cout << "\n----------------------------\n\n";
@@ -146,9 +158,32 @@ int main()
     {
         for(full_move m : x)
         {
-            std::cout << s.pretty_move(m) << " ";
+            std::cout << s.pretty_move<>(m) << " ";
         }
         std::cout << "\n";
     }
+}
+
+void count(std::string pgn)
+{
+    pgnparser_ast::game g = *pgnparser(pgn).parse_game();
+    state s(g);
+    auto [w, ss] = HC_info::build_HC(s);
+    std::vector<moveseq> legal_moves;
+    for(auto x : w.search(ss))
+    {
+        legal_moves.push_back(x);
+    }
+    std::cout << "Summary: totally " << legal_moves.size() << " options\n";
+}
+
+
+int main()
+{
+    auto start = std::chrono::high_resolution_clock::now();
+    count(pgn6);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration<double, std::milli>(end - start).count();
+    std::cout << "took " << duration << " ms\n";
     return 0;
 }

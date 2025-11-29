@@ -50,8 +50,8 @@ void test_match()
 
 int main(int argc, const char * argv[])
 {
-    //test_match();
-    auto obj = pgnparser("(-1T5)f6>>(0T5)f6").parse_superphysical_move();
-    std::cout << obj << "\n";
+    test_match();
+//    auto obj = pgnparser("(-1T5)f6>>(0T5)f6").parse_superphysical_move();
+//    std::cout << obj << "\n";
     return 0;
 }

@@ -124,7 +124,16 @@ np = """
 41. (-4T33)Rb3g3 / (3T33)Kh8 (0T33)Kh8 (-1T33)Kh8 (-4T33)Kh8
 42. (3T34)Rf2h2 (0T34)Rf1h1 (-1T34)Rf1h1 (-4T34)Rf2h2
 """
-g = engine.game(np)
+another = """
+[Mode "5D"]
+[Board "Standard"]
+
+1. (0T1)Nc3 / (0T1)a6
+2. (0T2)Rb1 / (0T2)a5
+3. (0T3)Rb1>>(0T2)b1~ / (1T2)a5 (0T3)Nb8>>(0T2)b6~
+{4. (0T4)Nc3>>(0T2)d3~ (1T3)Ra1>>(0T3)a1}
+"""
+g = engine.game(another)
 game_data = {}
 
 

@@ -8,7 +8,7 @@ Example:
     #define DEBUGMSG
     #include "debug.h"
 */
-namespace dprint_detail {
+namespace detail {
 template <typename T>
 void debug_print_impl(T t)
 {
@@ -28,12 +28,13 @@ void debug_print(Args... args)
     std::cerr << "[DEBUG] ";
     debug_print_impl(args...);
 }
-} // namespace
+} /* namespace */
 
-#define adprint(...) (dprint_detail::debug_print(__VA_ARGS__))
+/* always debug-print */
+#define adprint(...) (detail::debug_print(__VA_ARGS__))
 
 #ifdef DEBUGMSG
-#define dprint(...) (dprint_detail::debug_print(__VA_ARGS__))
+#define dprint(...) (detail::debug_print(__VA_ARGS__))
 #else
 #define dprint(...)
 #endif

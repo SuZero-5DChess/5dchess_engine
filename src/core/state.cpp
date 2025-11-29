@@ -275,6 +275,10 @@ bool state::apply_move(full_move fm, piece_t promote_to)
         }
     }
     
+    /* WARNING: similiar logic used in hypercuboid.cpp for applying semimoves
+     If some move logic needs to be changed here, make sure also perform change
+     in HC_info::build_HC()
+     */
     // physical move, no time travel
     if(d.l() == 0 && d.t() == 0)
     {
@@ -318,23 +322,53 @@ bool state::apply_move(full_move fm, piece_t promote_to)
     // non-branching superphysical move
     else if (std::make_pair(q.t(), player) == m->get_timeline_end(q.l()))
     {
-        dprint(" ... nonbranching move");
         const std::shared_ptr<board>& b_ptr = m->get_board(p.l(), p.t(), player);
         const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
         m->append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
+        
+        bitboard_t z = pmask(p.xy());
+        const auto &[size_x, size_y] = m->get_board_size();
         const std::shared_ptr<board>& c_ptr = m->get_board(q.l(), q.t(), player);
-        m->append_board(q.l(), c_ptr->replace_piece(q.xy(), pic));
+        
+        // promotion (only brawns can do)
+        if ((b_ptr->lrawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
+        {
+            dprint(" ... nonbranching brawn promotion");
+            piece_t promoted = player ? to_black(promote_to) : promote_to;
+            m->append_board(q.l(), c_ptr->replace_piece(q.xy(), promoted));
+        }
+        // normal non_branching move
+        else
+        {
+            dprint(" ... nonbranching jump");
+            m->append_board(q.l(), c_ptr->replace_piece(q.xy(), pic));
+        }
     }
     //branching move
     else
     {
-        dprint(" ... branching move");
         const std::shared_ptr<board>& b_ptr = m->get_board(p.l(), p.t(), player);
         const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
         m->append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
         const std::shared_ptr<board>& x_ptr = m->get_board(q.l(), q.t(), player);
         auto [t, c] = next_tc(q.t(), player);
-        m->insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), pic));
+        
+        bitboard_t z = pmask(p.xy());
+        const auto &[size_x, size_y] = m->get_board_size();
+        
+        // promotion (only brawns can do)
+        if ((b_ptr->lrawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
+        {
+            dprint(" ... branching brawn promotion");
+            piece_t promoted = player ? to_black(promote_to) : promote_to;
+            m->insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), promoted));
+        }
+        // normal non_branching move
+        else
+        {
+            dprint(" ... branching jump");
+            m->insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), pic));
+        }
         auto [new_present, _] = m->get_present();
         if(new_present < present)
         {
@@ -534,70 +568,6 @@ std::vector<vec4> state::gen_movable_pieces_impl(std::vector<int> lines) const
     return result;
 }
 
-template<bool RELATIVE>
-std::string state::pretty_move(full_move fm) const
-{
-    return pretty_move(fm, player);
-}
-
-template<bool RELATIVE>
-std::string state::pretty_move(full_move fm, int c) const
-{
-    std::ostringstream oss;
-    vec4 p = fm.from, q = fm.to;
-    oss << m->pretty_lt(p.tl());
-    oss << to_white(piece_name(get_piece(p, c)));
-    oss << static_cast<char>(p.x() + 'a') << static_cast<char>(p.y() + '1');
-    if(p.tl() != q.tl())
-    {
-//        std::cout << "p=" << p << "\t q=" << q << "\t";        // superphysical move
-        if(std::pair{q.t(), player} < get_timeline_end(q.l()))
-        {
-            oss << ">>";
-        }
-        else
-        {
-            oss << ">";
-        }
-        if(get_piece(q, c) != NO_PIECE)
-        {
-            oss << "x";
-        }
-        if constexpr(RELATIVE)
-        {
-            vec4 d = q - p;
-            auto show_diff = [&oss](int w){
-                if(w>0)
-                    oss << "+" << w;
-                else if(w<0)
-                    oss << "-" << (-w);
-                else
-                    oss << "=";
-            };
-            oss << "$(L";
-            show_diff(d.x());
-            oss << "T";
-            show_diff(d.y());
-            oss << ")";
-        }
-        else
-        {
-            oss << m->pretty_lt(q.tl());
-        }
-    }
-    else
-    {
-        //physical move
-        if(get_piece(q, c) != NO_PIECE)
-        {
-            oss << "x";
-        }
-    }
-    oss << static_cast<char>(q.x() + 'a') << static_cast<char>(q.y() + '1');
-    //TODO: promotion
-    return oss.str();
-}
-
 std::pair<int, int> state::get_board_size() const
 {
     return m->get_board_size();
@@ -678,6 +648,7 @@ state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
     std::optional<full_move> fm;
     std::optional<piece_t> promotion;
     dprint("parse_move(",move,")");
+    constexpr static uint16_t FLAGS = SHOW_PAWN | SHOW_CAPTURE | SHOW_PROMOTION;
     if(std::holds_alternative<pgnparser_ast::physical_move>(move.data))
     {
         auto mv = std::get<pgnparser_ast::physical_move>(move.data);
@@ -692,7 +663,7 @@ state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
                 full_move fm(p,q);
                 dprint("matching", fm);
                 // test if this physical move matches any of them
-                std::string full_notation = pretty_move(fm, player);
+                std::string full_notation = pretty_move<FLAGS>(fm);
                 auto full = pgnparser(full_notation).parse_physical_move();
                 assert(full.has_value());
                 bool match = pgnparser::match_physical_move(mv, *full);
@@ -742,7 +713,7 @@ state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
                     full_move fm(p,q);
                     dprint("matching", fm);
                     // test if this physical move matches any of them
-                    std::string full_notation = pretty_move(fm, player);
+                    std::string full_notation = pretty_move<FLAGS>(fm);
                     auto full = pgnparser(full_notation).parse_superphysical_move();
                     assert(full.has_value());
                     bool match = pgnparser::match_superphysical_move(spm, *full);
@@ -795,8 +766,3 @@ template generator<full_move> state::find_checks_impl<false>(std::vector<int>) c
 template generator<full_move> state::find_checks_impl<true>(std::vector<int>) const;
 template std::vector<vec4> state::gen_movable_pieces_impl<false>(std::vector<int>) const;
 template std::vector<vec4> state::gen_movable_pieces_impl<true>(std::vector<int>) const;
-
-template std::string state::pretty_move<false>(full_move) const;
-template std::string state::pretty_move<true>(full_move) const;
-template std::string state::pretty_move<false>(full_move, int) const;
-template std::string state::pretty_move<true>(full_move, int) const;

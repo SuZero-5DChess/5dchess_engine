@@ -3,6 +3,8 @@
 
 #include "multiverse_base.h"
 
+static_assert(-(1) == ~0, "two's complement required");
+
 class multiverse_odd : public multiverse
 {
     std::pair<int,int> calculate_active_range() const override;
