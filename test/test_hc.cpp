@@ -43,8 +43,8 @@ std::string pgn3 = R"(
 5. (-1T3)Kxb1 / (-1T3)K>>(0T2)c3
 6. (-2T3)R>>(-1T3)b1 / (2T3)B>x(1T3)b3 (-2T3)d1
 7. (-1T4)Kb1>>x(-1T3)b1 / (3T3)d1
-8. (3T4)Nxd1 (1T4)N>(2T4)d2 (-2T4)Nxd1 /
-   (3T4)Rc1 (1T4)K>x(2T4)d2 (-1T4)Rc2 (-2T4)Kc3d3
+{8. (3T4)Nxd1 (1T4)N>(2T4)d2 (-2T4)Nxd1 /
+   (3T4)Rc1 (1T4)K>x(2T4)d2 (-1T4)Rc2 (-2T4)Kc3d3}
 )";
 std::string pgn4 = R"(
 {exiledKings}
@@ -119,6 +119,34 @@ std::string pgn6=R"(
 {4. (0T4)Nc3>>(0T2)d3~ (1T3)Ra1>>(0T3)a1}
 )";
 
+template<bool C>
+generator<moveseq> naive_search_impl(state s, moveseq mvs, int k, bool b)
+{
+    if(s.can_submit() && !s.find_checks(!C).first().has_value())
+        co_yield mvs;
+    for(vec4 p : s.gen_movable_pieces())
+    {
+        for(vec4 q : s.gen_piece_move(p))
+        {
+            bool branching = std::make_pair(q.t(),C)<s.get_timeline_end(q.l());
+            if(!branching && (b || (C?q.l()>k:q.l()<k)))
+                continue;
+            state t = *s.can_apply(full_move(p, q));
+            moveseq mmvs = mvs;
+            mmvs.push_back(full_move(p, q));
+            for(moveseq nmvs : naive_search_impl<C>(t, mmvs, branching ? k : q.l(), branching))
+                co_yield nmvs;
+        }
+    }
+}
+
+generator<moveseq> naive_search(state s)
+{
+    const auto [t,c] = s.get_present();
+    const auto [lmin, lmax] = s.get_lines_range();
+    return c ? naive_search_impl<true>(s, {}, lmax+1, false) : naive_search_impl<false>(s, {}, lmin-1, false);
+}
+
 void search_all(std::string pgn)
 {
     pgnparser_ast::game g = *pgnparser(pgn).parse_game();
@@ -177,11 +205,70 @@ void count(std::string pgn)
     std::cout << "Summary: totally " << legal_moves.size() << " options\n";
 }
 
+void count_naive(std::string pgn)
+{
+    pgnparser_ast::game g = *pgnparser(pgn).parse_game();
+    state s(g);
+    std::vector<moveseq> legal_moves;
+    for(auto x : naive_search(s))
+    {
+        for(full_move m : x)
+        {
+            std::cout << s.pretty_move<state::SHOW_NOTHING>(m) << " ";
+        }
+        std::cout << "\n";
+        legal_moves.push_back(x);
+    }
+    std::cout << "Summary: totally " << legal_moves.size() << " options\n";
+}
 
-int main()
+void diff(std::string pgn)
+{
+    pgnparser_ast::game g = *pgnparser(pgn).parse_game();
+    const state s(g);
+    std::set<moveseq> legal_moves_hc, legal_moves_naive;
+    auto [w, ss] = HC_info::build_HC(s);
+    for(auto x : w.search(ss))
+    {
+        legal_moves_hc.insert(x);
+    }
+    for(auto x : naive_search(s))
+    {
+        legal_moves_naive.insert(x);
+    }
+//    std::vector<int> intersect;
+//    std::set_intersection(legal_moves_hc.begin(), legal_moves_hc.end(), legal_moves_naive.begin(), legal_moves_naive.end(), std::back_inserter(intersect));
+    std::set<moveseq> only1 = set_minus(legal_moves_hc, legal_moves_naive);
+    std::set<moveseq> only2 = set_minus(legal_moves_naive, legal_moves_hc);
+    std::cout << "hc count: " << legal_moves_hc.size() << "\n";
+    std::cout << "naive count: " << legal_moves_naive.size() << "\n";
+    std::cout << "\n----------------------------\n\n";
+    std::cout << "only in hc (" << only1.size() << " items):\n";
+    for(moveseq x:only1)
+    {
+        for(full_move m : x)
+        {
+            std::cout << s.pretty_move<state::SHOW_NOTHING>(m) << " ";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n----------------------------\n\n";
+    std::cout << "only in naive (" << only2.size() << " items):\n";
+    for(moveseq x:only2)
+    {
+        for(full_move m : x)
+        {
+            std::cout << s.pretty_move<state::SHOW_NOTHING>(m) << " ";
+        }
+        std::cout << "\n";
+    }
+}
+
+int main(int argc, const char *argv[])
 {
     auto start = std::chrono::high_resolution_clock::now();
-    count(pgn6);
+    diff(pgn3);
+    //count(pgn3);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double, std::milli>(end - start).count();
     std::cout << "took " << duration << " ms\n";

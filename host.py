@@ -31,10 +31,11 @@ very_small_open = """
 [Mode "5D"]
 [nbrk/3p*/P*3/KRBN:0:1:w]
 1. Rb4 / Rxb4
-2. N>>d3 / (L1)Bc3+
-3. Nxc3
+2. N>>d3 {/ (L1)Bc3+
+3. Nxc3}
 """
 ctp1 = """
+{ctp1}{checkmate}
 [Size "4x4"]
 [Board "Custom"]
 [Mode "5D"]
@@ -46,8 +47,8 @@ ctp1 = """
 5. (-1T3)Kxb1 / (-1T3)K>>(0T2)c3
 6. (-2T3)R>>(-1T3)b1 / (2T3)B>x(1T3)b3 (-2T3)d1
 7. (-1T4)Kb1>>x(-1T3)b1 / (3T3)d1
-8. (3T4)Nxd1 (1T4)N>(2T4)d2 (-2T4)Nxd1 /
-   (3T4)Rc1 (1T4)K>x(2T4)d2 (-1T4)Rc2 (-2T4)Kc3d3
+{8. (3T4)Nxd1 (1T4)N>(2T4)d2 (-2T4)Nxd1 /
+   (3T4)Rc1 (1T4)K>x(2T4)d2 (-1T4)Rc2 (-2T4)Kc3d3}
 """
 exiled_kings = """
 [Mode "5D"]
@@ -133,7 +134,7 @@ another = """
 3. (0T3)Rb1>>(0T2)b1~ / (1T2)a5 (0T3)Nb8>>(0T2)b6~
 {4. (0T4)Nc3>>(0T2)d3~ (1T3)Ra1>>(0T3)a1}
 """
-g = engine.game(another)
+g = engine.game(ctp1)
 game_data = {}
 
 
