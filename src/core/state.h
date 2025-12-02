@@ -67,6 +67,11 @@ public:
     bool apply_move(full_move fm, piece_t promote_to = QUEEN_W);
     template<bool UNSAFE = false>
     bool submit();
+    
+    /*
+     phantom: state used for deciding whether the current is a checkmate or stalemate
+     */
+    state phantom() const;
 
     /*
      new_line(): return the index of a new line to be created by this->player.
@@ -90,6 +95,7 @@ public:
     
     std::vector<vec4> gen_movable_pieces() const;
     std::vector<vec4> get_movable_pieces(std::vector<int> lines) const;
+    
     
     /*
     pretty_move<FLAGS>(fm, c):

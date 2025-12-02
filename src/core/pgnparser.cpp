@@ -810,16 +810,16 @@ std::optional<game> pgnparser::parse_game()
     {
         const std::string s(buffer.comment);
         const int len = static_cast<int>(s.size());
-        bool saw_colon = false;
+        bool saw_quote = false;
         for(auto c:s)
         {
-            if(c==':')
+            if(c=='"')
             {
-                saw_colon = true;
+                saw_quote = true;
                 break;
             }
         }
-        if(saw_colon)
+        if(!saw_quote)
         {
             // parse as <board-fen>
             int now = 0, prev;

@@ -52,11 +52,12 @@ state::state(const pgnparser_ast::game &g)
     {
         std::string board_str = it->second;
         // none of the default variants should be named as "Custom[...]"
-        const static std::map<std::string, std::tuple<bool, board_t>> default_variants = {
+        const static std::map<std::string, std::tuple<bool, int, int, board_t>> default_variants = {
             {
                 "Standard",
                 {
                     false, // Odd timelines
+                    8,8,
                     {
                         std::make_tuple("r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*", pgnparser_ast::NIL, 0, 1, false)
                     }
@@ -66,9 +67,20 @@ state::state(const pgnparser_ast::game &g)
                 "Standard - Turn Zero",
                 {
                     false, // Odd timelines
+                    8,8,
                     {
                         std::make_tuple("r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*", pgnparser_ast::NIL, 0, 0, true),
                         std::make_tuple("r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*", pgnparser_ast::NIL, 0, 1, false),
+                    }
+                }
+            },
+            {
+                "Very Small - Open",
+                {
+                    false, // Odd timelines
+                    4,4,
+                    {
+                        std::make_tuple("nbrk/3p*/P*3/KRBN", pgnparser_ast::NIL, 0, 1, false),
                     }
                 }
             },
@@ -92,7 +104,7 @@ state::state(const pgnparser_ast::game &g)
             // if g.board is not empty, any description in "Board" header is ignored
             try {
                 bool even;
-                std::tie(even, boards) = default_variants.at(board_str);
+                std::tie(even, size_x, size_y, boards) = default_variants.at(board_str);
                 is_even_timelines = even;
             } catch (const std::out_of_range&) {
                 throw std::runtime_error("state(): Unknown variant: " + board_str);
@@ -395,6 +407,21 @@ bool state::submit()
     return true;
 }
 
+state state::phantom() const
+{
+    const auto [l_min, l_max] = get_lines_range();
+    state s = *this;
+    for(int l = l_min; l <= l_max; l++)
+    {
+        auto [t,c] = get_timeline_end(l);
+        if(c == player)
+        {
+            s.m->append_board(l, m->get_board(l, t, c));
+        }
+    }
+    return s;
+}
+
 //
 //void state::set_promotion_piece(piece_t pt)
 //{
@@ -467,7 +494,6 @@ generator<full_move> state::find_checks(bool c) const
             lines.push_back(i);
         }
     }
-    // find checks on the opponents timelines
     if (c)
     {
         return find_checks_impl<true>(lines);

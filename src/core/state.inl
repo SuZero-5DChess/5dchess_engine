@@ -62,9 +62,12 @@ std::string state::pretty_move(full_move fm, piece_t pt) const
     else
     {
         //physical move
-        if(get_piece(q, player) != NO_PIECE)
+        if constexpr(FLAGS & SHOW_CAPTURE)
         {
-            oss << "x";
+            if(get_piece(q, player) != NO_PIECE)
+            {
+                oss << "x";
+            }
         }
     }
     oss << static_cast<char>(q.x() + 'a') << static_cast<char>(q.y() + '1');

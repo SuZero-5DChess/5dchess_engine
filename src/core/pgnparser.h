@@ -10,6 +10,12 @@
 
 #include "ast.h"
 
+class parse_error : public std::runtime_error {
+public:
+    explicit parse_error(const std::string& message)
+        : std::runtime_error(message) {}
+};
+
 class pgnparser
 {
 private:
@@ -25,11 +31,6 @@ private:
         std::string_view comment;
     } buffer;
 public:
-    class parse_error : public std::runtime_error {
-    public:
-        explicit parse_error(const std::string& message)
-            : std::runtime_error(message) {}
-    };
     
     pgnparser(std::string msg, bool check_turn_number=true, pgnparser_ast::turn_t start_turn=std::make_pair(1,false));
     void next_token();

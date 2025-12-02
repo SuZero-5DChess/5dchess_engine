@@ -20,9 +20,14 @@ The storage of a game state is based on [bitboards](https://www.chessprogramming
 
 Currently, the engine implements move generation and check detection using coroutine-based generators. Thus it won't work on compilers pre-C++20.
 
-There is a checkmate detection program using method from [here](https://github.com/penteract/cwmtt), but it still needs extensive testing.
+There are two checkmate detection program: 
+1. hc, using method from [here](https://github.com/penteract/cwmtt), adapted to c++ with improvements.
+2. naive, plain DFS searching pruning states with checks/moves not in order.
+
+From my testing, hc has a better worse case performance than naive.
 
 ### Usage (MacOS, etc.)
+
 
 ```sh
 mkdir build
@@ -46,7 +51,7 @@ cmake --build .
 
 The last step is same as above.
 
-### Debugging
+### Debugging/Command Line Interface
 It is possible to run the c++ part of the code without interacting with python or web interface at all. It also makes sense to use a modern programming IDE:
 ```sh
 mkdir build_xcode
@@ -66,6 +71,15 @@ To enable optimizations, configure the build using:
 cmake .. -DCMAKE_BUILD_TYPE=Release -DTEST=on
 ```
 
+The command line tool will be built as `build/cli`. To use it, type `cli <option>`, press enter, and then input the game in 5dpgn (press control+D to complete). Current features of the command line tool including:
+-  `print`: print the final state of the game
+-  `count [fast|naive] [<max>]`: display number of avialible moves capped by <max>
+-  `all [fast|naive] [<max>]`: display all legal moves capped by `<max>`
+-  `checkmate [fast|naive]`: determine whether the final state is checkmate/stalemate
+-  `diff`: compare the output of two algorithms
+
+
+
 ### Documentation
 
 For more detail, please read [this page](docs/index.md).
@@ -77,9 +91,9 @@ For more detail, please read [this page](docs/index.md).
 - &#9745; support even timeline game
 - &#9745; 5dpgn reader for simplified moves
 - &#9745; ~~method~~ function to get check path
-- &#9744; test hypercuboid algorithm
+- &#9745; test hypercuboid algorithm
 - &#9745; promotion
-- &#9744; integrate the function of reading simplified: implement an additional `parse_game` function for parser class
+- &#9745; integrate the function of reading simplified: implement an additional `parse_game` function for parser class
 - &#9744; refactor the `action` class as a sequence of moves sorted by the line of the destination board
-- &#9744; refactor the `game` class and correspondin python interface
+- &#9744; refactor the `game` class and correspondig python interface
 - &#9744; document for notation of 5dLAN and simplified 5dpgn

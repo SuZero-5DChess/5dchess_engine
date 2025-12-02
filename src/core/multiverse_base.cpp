@@ -937,7 +937,7 @@ movegen_t multiverse::gen_moves_impl(vec4 p) const
                     if(inbound(r,C))
                     {
                         std::shared_ptr<board> b1_ptr = get_board(r.l(), r.t(), C);
-                        bitboard_t bc = z & ~b_ptr->occupied();
+                        bitboard_t bc = z & ~b1_ptr->occupied();
                         if(bc)
                         {
                             //result[r.tl()] |= bc;
@@ -1009,7 +1009,7 @@ movegen_t multiverse::gen_moves_impl(vec4 p) const
                     if(inbound(r,C))
                     {
                         std::shared_ptr<board> b1_ptr = get_board(r.l(), r.t(), C);
-                        bitboard_t bc = z & ~b_ptr->occupied();
+                        bitboard_t bc = z & ~b1_ptr->occupied();
                         if(bc)
                         {
                             co_yield std::make_pair(r.tl(), bc);

@@ -290,14 +290,14 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
             // promotion (only brawns can do)
             if ((b_ptr->lrawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
             {
-                dprint(" ... nonbranching brawn promotion");
+                dprint(" ... branching brawn promotion");
                 piece_t promoted = player ? to_black(promote_to) : promote_to;
                 newboard = c_ptr->replace_piece(q.xy(), promoted);
             }
             // normal non_branching move
             else
             {
-                dprint(" ... nonbranching jump");
+                dprint(" ... branching jump");
                 newboard = c_ptr->replace_piece(q.xy(), pic);
             }
             
@@ -546,36 +546,32 @@ std::optional<slice> HC_info::jump_order_consistent(const point &p, const HC& hc
             const int im = p[m];
             const semimove& loc2 = axis_coords[m][im];
             if(std::holds_alternative<null_move>(loc2)
-               && s.get_timeline_end(to.l()) == std::make_pair(to.l(), c))
+               && s.get_timeline_end(to.l()) == std::make_pair(to.t(), c))
             {
-                null_move nm = std::get<null_move>(loc2);
-                if(nm.tl == to.tl())
+                /* ban these combinations:
+                 -[m,xm] the null_move on (l', t'); with
+                 -[s] any branching move on axis n to (l', t') (which is a null_move)
+                 i.e. all moves >> (l',t') then creates branch new_l
+                 */
+                std::set<int> s;
+                for(int i : hc[n])
                 {
-                    /* ban these combinations:
-                     -[m,xm] the null_move on (l', t'); with
-                     -[s] any branching move on axis n to (l', t') (which is a null_move)
-                     i.e. all moves >> (l',t') then creates branch new_l
-                     */
-                    std::set<int> s;
-                    for(int i : hc[n])
+                    const semimove& loc3 = axis_coords[n][i];
+                    if(std::holds_alternative<arriving_move>(loc3))
                     {
-                        const semimove& loc3 = axis_coords[n][i];
-                        if(std::holds_alternative<arriving_move>(loc3))
+                        vec4 to3 = std::get<arriving_move>(loc3).m.to;
+                        if(to3.tl() == to.tl())
                         {
-                            vec4 to3 = std::get<arriving_move>(loc3).m.to;
-                            if(to3.tl() == to.tl())
-                            {
-                                s.insert(i);
-                            }
+                            s.insert(i);
                         }
                     }
-                    std::map<int, std::set<int>> fixed_axes {{n, s}, {m, {im}}};
-                    slice problem(fixed_axes);
-                    dprint("case one; point:", range_to_string(p));
-                    dprint("problem", problem.to_string());
-                    assert(problem.contains(p));
-                    return problem;
                 }
+                std::map<int, std::set<int>> fixed_axes {{n, s}, {m, {im}}};
+                slice problem(fixed_axes);
+                dprint("case one; point:", range_to_string(p));
+                dprint("problem", problem.to_string());
+                assert(problem.contains(p));
+                return problem;
             }
         }
         /* case two: there is a branching move (l,t) -> (l',t')
@@ -638,7 +634,9 @@ std::optional<slice> HC_info::test_present(const point &p, const HC& hc) const
     // record the lines range and active range of current state
     // these values will get updated as we simulate the process of finding new present
     const auto [l0_min, l0_max] = s.get_initial_lines_range();
-    auto [l_min, l_max] = s.get_lines_range();
+    const auto [l_min, l_max] = s.get_lines_range();
+    // the following non-const value will be changed and maintained during the loop
+    auto [l1_min, l1_max] = s.get_lines_range();
     auto [active_min, active_max] = s.get_active_range();
     // step one: find the new present
     int mint = old_present; // mint is the new present
@@ -669,21 +667,21 @@ std::optional<slice> HC_info::test_present(const point &p, const HC& hc) const
         int l_new;
         if(c == false)
         {
-            l_max++;
-            l_new = l_max;
+            l1_max++;
+            l_new = l1_max;
         }
         else
         {
-            l_min--;
-            l_new = l_min;
+            l1_min--;
+            l_new = l1_min;
         }
-        int whites_lines = l_max - l0_max;
-        int blacks_lines = l0_min - l_min;
+        int whites_lines = l1_max - l0_max;
+        int blacks_lines = l0_min - l1_min;
         if(l_new > l0_max && whites_lines <= blacks_lines + 1 && l_new > active_max)
         {
             dprint("+");
             active_max++;
-            if(l_min < active_min) // check reactivate
+            if(l1_min < active_min) // check reactivate
             {
                 active_min--;
                 reactivated = active_min;
@@ -693,7 +691,7 @@ std::optional<slice> HC_info::test_present(const point &p, const HC& hc) const
         {
             dprint("-");
             active_min--;
-            if(l_max > active_max)
+            if(l1_max > active_max)
             {
                 active_max++;
                 reactivated = active_max;
@@ -884,13 +882,19 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
          Otherwise, don't alter that axis futher.
          */
         int l2 = check.to.l();
+//        if(p == std::vector<int>{2, 12, 8, 9, 0, 22, 0, 0, 0, 0})
+//        {
+//            std::cout << "ach!\n";
+//        }
         if(line_to_axis.contains(l2))
         {
             int n2 = line_to_axis.at(l2);
-            // next line rely on the default value of null_move
-            auto [t2, _]  = extract_tl(axis_coords[n2][p[n2]]);
-            assert(is_next(t2, check.to.t()) == (next_tc(t2, c) == std::make_pair(check.to.t(), !c)));
-            if(is_next(t2, check.to.t()))
+            semimove loc0 = axis_coords[n2][p[n2]];
+            if(std::holds_alternative<null_move>(loc0) || !is_next(extract_tl(loc0).first, check.to.t()))
+            {
+                // pass to ban everything
+            }
+            else
             {
                 std::set<int> expose_royal;
                 for(int i : hc.axes[n2])
@@ -898,7 +902,7 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
                     semimove loc = axis_coords[n2][i];
                     std::shared_ptr<board> newboard;
                     /* if there isn't a new board on the same place, do nothing*/
-                    if(std::holds_alternative<null_move>(loc) || extract_tl(loc).first!=t2)
+                    if(std::holds_alternative<null_move>(loc) || !is_next(extract_tl(loc).first, check.to.t()))
                     {
                         continue;
                     }
@@ -906,7 +910,6 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
                     {
                         newboard = extract_board(loc);
                     }
-                    //dprint(n2, i, show_semimove(loc));
                     bitboard_t friendly = c ? newboard->black() : newboard->white();
                     bool is_royal = pmask(check.to.xy()) & newboard->royal() & friendly;
                     if(is_royal)
@@ -926,12 +929,16 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
          */
         for(vec4 crossed : path)
         {
+//            dprint("should cross", crossed.l());
             if(line_to_axis.contains(crossed.l()))
             {
                 int n = line_to_axis.at(crossed.l());
-                /* skip the loop if this axis doesn't make a difference*/
-                auto [tc, _]  = extract_tl(axis_coords[n][p[n]]);
-                if(is_next(tc, crossed.t()))
+                semimove loc0 = axis_coords[n][p[n]];
+                if(std::holds_alternative<null_move>(loc0) || !is_next(extract_tl(loc0).first, crossed.t()))
+                {
+                    // pass to ban everything
+                }
+                else
                 {
                     bitboard_t z = pmask(crossed.xy());
                     std::set<int> not_blocking;
@@ -939,7 +946,7 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
                     {
                         semimove loc = axis_coords[n][i];
                         /* if there isn't a board, then nothing pass through it*/
-                        if(std::holds_alternative<null_move>(loc) || extract_tl(loc).first!=tc)
+                        if(std::holds_alternative<null_move>(loc) || !is_next(extract_tl(loc).first, crossed.t()))
                         {
                             continue;
                         }

@@ -54,6 +54,15 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
         add_executable(test_exec "test.cpp")
         target_link_libraries(test_exec PRIVATE 5dchess_engine_core)
         add_subdirectory(test)  # Add test directory
+
+        add_executable(cli "cli.cpp")
+        target_link_libraries(cli PRIVATE 5dchess_engine_core)
+        add_custom_command(TARGET cli POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_SOURCE_DIR}/test/pgn
+                $<TARGET_FILE_DIR:cli>/pgn
+        )
+
     else()
         message(STATUS ">>> Building python library...")
         # Add pybind11 for Python bindings
