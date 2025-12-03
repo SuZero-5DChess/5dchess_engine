@@ -15,7 +15,6 @@ If interaction with the [graphics interface](https://github.com/SuZero-5DChess/5
 
 This program supports reading arbitary 5d chess variant specified by 5dfen. For moves, it supports long algebraic notation (which looks like `(0T13)b6b5` for physical moves and `(-1T19)e8(0T18)f8` for superphysical moves) or simplified 5dpgn notation specified in [docs/pgn-bnf.txt](docs/pgn-bnf.txt).
 
-
 The storage of a game state is based on [bitboards](https://www.chessprogramming.org/Bitboards). As a result, all boards are hard-coded to be no larger than `8x8`.
 
 Currently, the engine implements move generation and check detection using coroutine-based generators. Thus it won't work on compilers pre-C++20.
@@ -24,7 +23,9 @@ There are two checkmate detection program:
 1. hc, using method from [here](https://github.com/penteract/cwmtt), adapted to c++ with improvements.
 2. naive, plain DFS searching pruning states with checks/moves not in order.
 
-From my testing, hc has a better worse case performance than naive.
+From my testing, hc has a better worse case performance than naive, especially when the search space is large while available actions are sparse, e.g. when the situation is almost checkmate. However, naive usually perform better when options are abundant.
+
+This program supports tree shaped traversal.
 
 ### Usage (MacOS, etc.)
 
@@ -94,6 +95,6 @@ For more detail, please read [this page](docs/index.md).
 - &#9745; test hypercuboid algorithm
 - &#9745; promotion
 - &#9745; integrate the function of reading simplified: implement an additional `parse_game` function for parser class
-- &#9744; refactor the `action` class as a sequence of moves sorted by the line of the destination board
-- &#9744; refactor the `game` class and correspondig python interface
+- &#9745; refactor the `action` class as a sequence of moves sorted by the line of the destination board
+- &#9745; refactor the `game` class and correspondig python interface
 - &#9744; document for notation of 5dLAN and simplified 5dpgn

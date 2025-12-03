@@ -210,8 +210,7 @@ state::state(const pgnparser_ast::game &g)
             bool flag = submit();
             if(!flag)
             {
-                std::ostringstream oss;
-                oss << "[WARNING]state(): Cannot submit after parsing these moves: " << act;
+                std::cerr << "[WARNING]state(): Cannot submit after parsing these moves: " << act;
             }
         }
         gt = last_gt;
@@ -253,6 +252,25 @@ std::optional<state> state::can_apply(full_move fm, piece_t promote_to) const
     {
         return std::nullopt;
     }
+}
+
+std::optional<state> state::can_apply(const action &act) const
+{
+    state new_state = *this;
+    for(const auto& em : act.get_moves())
+    {
+        bool flag = new_state.apply_move<false>(em.fm, em.promote_to);
+        if(!flag)
+        {
+            return std::nullopt;
+        }
+    }
+    bool flag = new_state.submit<false>();
+    if(!flag)
+    {
+        return std::nullopt;
+    }
+    return std::optional<state>(new_state);
 }
 
 template<bool UNSAFE>

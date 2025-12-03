@@ -747,7 +747,7 @@ std::optional<slice> HC_info::test_present(const point &p, const HC& hc) const
         int whites_lines = l_max - l0_max;
         int blacks_lines = l0_min - l_min;
         int timeline_advantage = c ? (whites_lines - blacks_lines) : (blacks_lines - whites_lines);
-        for(int n = new_axis; n <= timeline_advantage+new_axis; n++)
+        for(int n = new_axis; n < dimension && n <= timeline_advantage+new_axis; n++)
         {
             if(reactivate_move_axis == std::make_optional<int>(n))
             {

@@ -9,217 +9,10 @@
 
 
 std::string t0_fen = ""
-"[Size 8x8]"
+"[Size \"8x8\"]"
 "[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:0:b]\n"
 "[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:1:w]\n";
 
-
-std::vector<move5d> pgn_to_moves_(const std::string& input)
-{
-    std::string output;
-    
-    // Regex to match slashes ("/") and move numbers (e.g., "1.", "2.")
-    std::regex pattern(R"((\d+\.)|(/))");
-    const static std::regex comment_pattern(R"(\{.*?\})");
-    
-    // Create a stringstream from the input string
-    std::string clean_input = std::regex_replace(input, comment_pattern, "");
-    std::istringstream stream(clean_input);
-    std::string line;
-
-    while (std::getline(stream, line)) {
-        // Replace matches with "submit"
-        line = std::regex_replace(line, pattern, " submit ");
-        output += line + "\n"; // Append to output with newline preserved
-    }
-
-    // Split the result by whitespace into a vector of moves
-    std::vector<move5d> result;
-    std::istringstream result_stream(output);
-    std::string word;
-    //remove the first "submit"
-    result_stream >> word;
-    
-    multiverse_odd m0(t0_fen);
-    state s(m0);
-    try {
-        while (result_stream >> word)
-        {
-            if(word.compare("submit") != 0)
-            {
-                auto [m, pt, candidates] = s.parse_move(word);
-                if(!m.has_value())
-                {
-                    std::cout << "pgn: " << word << " is ";
-                    if(candidates.size() > 0)
-                    {
-                        std::cout << "ambiguious, possible candidates are:\n";
-                        for(full_move fm : candidates)
-                        {
-                            std::cout << "  " << s.pretty_move(fm) << "\n";
-                        }
-                    }
-                    else
-                    {
-                        std::cout << "invalid, no matches found.\n";
-                    }
-                    throw 0;
-                }
-                result.push_back(move5d(*m));
-                bool flag = s.apply_move(*m);
-                if(!flag)
-                {
-                    throw 1;
-                }
-            }
-            else
-            {
-                result.push_back(move5d::submit());
-                bool flag = s.submit();
-                if(!flag)
-                {
-                    throw 2;
-                }
-            }
-        }
-    }
-    catch(int err)
-    {
-        std::cout << "pgn_to_moves_:Error " << err << " from\n";
-        std::cout << input;
-        std::cout << "Cannot parse w.r.t. the current state:\n";
-        std::cout << s.to_string() << std::endl;
-        exit(1);
-    }
-    return result;
-}
-
-void test1()
-{
-    game g(t0_fen);
-//     move5d mv("(0T1)Ng1f3");
-//     std :: cout << st.m.get_present() << endl;
-//     st.apply_move(mv);
-//     std :: cout << st.m.get_present() << endl;
-//     std :: cout << st.m.to_string() << endl;
-    
-//     cout << mv << endl;
-//
-//     std::visit(overloads{
-//         [](std::monostate){},
-//         [&](std::tuple<vec4, vec4> data)
-//         {
-//             auto [p, d] = data;
-//             vector<vec4> deltas = m.gen_piece_move(p, st.player);
-//             print_range("deltas:", deltas);
-//             SHOW(p)
-//             SHOW(-vec4(5,2,1,0))
-//             SHOW(-p)
-//             SHOW(d)
-//         }
-//     }, mv.data);
-//
-    std::vector<move5d> mvs = {
-        move5d("(0T1)e2e3"),
-        move5d::submit(),
-        move5d("(0T1)g8f6"),
-        move5d::submit(),
-        move5d("(0T2)f1c4"),
-        move5d::submit(),
-        move5d("(0T2)g7g5"),
-        move5d::submit(),
-        move5d("(0T3)g1h3"),
-        move5d::submit(),
-        move5d("(0T3)g5g4"),
-        move5d::submit(),
-        move5d("(0T4)e1g1"),
-        move5d::submit(),
-    };
-    
-    for(move5d mv : mvs)
-    {
-        std::cout << "Applying move: " << mv;
-        bool flag = g.apply_move(mv);
-        if(!flag)
-        {
-            std::cout << " ... failure\n";
-            break;
-        }
-        std::cout << " ... success\n";
-    }
-//
-//     g.undo();
-//     g.undo();
-//     g.undo();
-//     g.redo();
-//     std::cout << g.apply_move(move5d("(0T2)Rh8g8")) << endl;
-    std::cout << g.get_current_state().to_string();
-    std::cout << "test1 finished" << std::endl;
-}
-
-
-multiverse_odd m0(t0_fen);
-
-template<bool DETECT_CHECKS>
-void run_game(std::vector<move5d> mvs)
-{
-    state s(m0);
-    
-//    std::cerr << "Running new game ..." << std::endl;
-    
-    for(move5d mv : mvs)
-    {
-        bool flag;
-//        std::cerr << "apply " << mv << std::endl;
-        if(std::holds_alternative<std::monostate>(mv.data))
-        {
-            flag = s.submit();
-        }
-        else if(std::holds_alternative<full_move>(mv.data))
-        {
-            auto fm = std::get<full_move>(mv.data);
-            flag = s.apply_move(fm);
-        }
-        else
-        {
-            throw std::runtime_error("Unknown move5d variant.\n");
-        }
-        if(!flag)
-        {
-            std::cerr << "In run_game:\n";
-            std::cerr << "current boards:\n";
-            std::cerr << s.to_string() << std::endl;
-            std::cerr << "failed to apply: " << mv << "\n";
-            std::visit(overloads {
-                [&](std::monostate){},
-                [&](full_move data)
-                {
-                    vec4 p = data.from;
-                    std::cerr << "The allowed moves are: ";
-                    for(vec4 d : s.gen_piece_move(p))
-                    {
-                        std::cerr << move5d::move(p, d) << " ";
-                    }
-                    std::cerr << std::endl;
-                }
-            }, mv.data);
-            exit(-1);
-        }
-        if constexpr(DETECT_CHECKS)
-        {
-            auto [t,c] = s.get_present();
-            if(s.find_checks(!c).first())
-            {
-                std::cerr << "In run_game:\n";
-                std::cerr << "current boards:\n";
-                std::cerr << s.to_string() << std::endl;
-                std::cerr << "This move" << mv << "is illeagal because hostile is checking.\n";
-            }
-        }
-    }
-//    
-//    std::cerr << "all moves are legal" << std::endl;
-}
 
 int main()
 {
@@ -599,21 +392,22 @@ int main()
 42. (3T34)Rf2h2 (0T34)Rf1h1 (-1T34)Rf1h1 (-4T34)Rf2h2
 )", 
     };
-    std::vector<std::vector<move5d>> mvss;
+//    std::vector<game> games;
+//    for(auto mvs : pgns)
+//    {
+//        std::string pgn = t0_fen + mvs;
+//        games.push_back(game::from_pgn(pgn));
+//    }
     int count = 0;
-    int n = 200;
-    for(auto pgn : pgns)
-    {
-        auto mvs = pgn_to_moves_(pgn);
-        mvss.push_back(mvs);
-        count += mvs.size();
-    }
+    int n = 10;
     auto start = std::chrono::high_resolution_clock::now();
     for(int i = 0; i < n; i++)
     {
-        for(auto mvs : mvss)
+        for(auto mvs : pgns)
         {
-            run_game<false>(mvs);
+            std::string pgn = t0_fen + mvs;
+            game g = game::from_pgn(pgn);
+            //std::cout << g.get_current_state().apparent_present() << "\n";
         }
     }
     auto end = std::chrono::high_resolution_clock::now();

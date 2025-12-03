@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 #include <map>
+#include "vec4.h"
 
 namespace pgnparser_ast {
 typedef enum {
@@ -66,8 +67,8 @@ struct superphysical_move {
    friend std::ostream& operator<<(std::ostream& os, const superphysical_move& sm);
 };
 struct move {
-   std::variant<physical_move, superphysical_move> data;
-   friend std::ostream& operator<<(std::ostream& os, const move& mv);
+    std::variant<physical_move, superphysical_move> data;
+    friend std::ostream& operator<<(std::ostream& os, const move& mv);
 };
 struct actions {
     std::vector<move> moves;

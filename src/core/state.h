@@ -8,7 +8,7 @@
 #include <tuple>
 #include <iostream>
 #include "multiverse.h"
-#include "actions.h"
+#include "action.h"
 #include "generator.h"
 #include "ast.h"
 
@@ -57,6 +57,7 @@ public:
      Note that this function is different from `apply_move` in that it does not change the current state as a side effect.
     */
     std::optional<state> can_apply(full_move fm, piece_t promote_to = QUEEN_W) const;
+    std::optional<state> can_apply(const action &act) const;
     std::optional<state> can_submit() const;
     
     /*
@@ -113,6 +114,8 @@ public:
     constexpr static uint16_t SHOW_ALL = SHOW_RELATIVE | SHOW_PAWN | SHOW_CAPTURE | SHOW_PROMOTION | SHOW_MATE | SHOW_LCOMMENT;
     template<uint16_t FLAGS=SHOW_CAPTURE | SHOW_PROMOTION>
     std::string pretty_move(full_move fm, piece_t promote_to=QUEEN_W) const;
+    template<uint16_t FLAGS=SHOW_CAPTURE | SHOW_PROMOTION>
+    std::string pretty_action(action act) const;
 
     // wrappers for low-level functions
     std::pair<int, int> get_board_size() const;

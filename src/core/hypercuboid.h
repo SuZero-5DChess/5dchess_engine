@@ -19,7 +19,6 @@
 #include "generator.h"
 
 
-using moveseq = std::vector<full_move>;
 //generator<moveseq> search_legal_action(state s);
 
 /*

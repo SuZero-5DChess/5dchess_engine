@@ -112,18 +112,28 @@ PYBIND11_MODULE(engine, m) {
         .def("to_string", &vec4::to_string)
         // Bind the stream operator for string representation
         .def("__repr__", [](const vec4 &v) { return v.to_string(); });
-    py::class_<move5d>(m, "move5d")
-        .def(py::init<std::string>())
-        .def_static("submit", &move5d::submit)
-        .def_static("move", &move5d::move)
-        .def("nonempty", &move5d::nonempty)
-        .def("__lt__", &move5d::operator<)
-        .def("__eq__", &move5d::operator==)
-        .def("__repr__", [](const move5d& fm) {
-            std::ostringstream os;
-            os << fm;
-            return os.str();
-        });
+    py::class_<ext_move>(m, "ext_move")
+        .def(py::init<vec4, vec4, piece_t>(),
+             py::arg("from"),
+             py::arg("to"),
+             py::arg("promote_to") = QUEEN_W)
+        .def("get_from", &ext_move::get_from)
+        .def("get_to", &ext_move::get_to)
+        .def("get_promote", &ext_move::get_promote)
+        .def("to_string", &ext_move::to_string)
+        .def("__repr__", [](const ext_move &m){
+            return "<ext_move " + m.to_string() + ">";
+        })
+        .def(py::self == py::self);
+    py::class_<action>(m, "action")
+        // No py::init() → Python cannot construct this class
+        .def("get_moves", &action::get_moves)
+        .def(py::self == py::self)
+        // optional: nice repr
+        .def("__repr__", [](const action &a){
+            return "<action with " + std::to_string(a.get_moves().size()) + " moves>";
+        })
+    ;
     /*
     py::class_<state>(m, "state")
         .def_readwrite("m", &state::m)
@@ -131,9 +141,14 @@ PYBIND11_MODULE(engine, m) {
         .def("apply_move", &state::apply_move<false>);
     */
     py::class_<game>(m, "game")
-        .def(py::init<std::string>())
-        .def("get_current_boards", &game::get_current_boards)
+        // metadata
+        .def_readwrite("metadata", &game::metadata)
+        // factory
+        .def_static("from_pgn", &game::from_pgn)
+        // core functions
+        .def("get_current_state", &game::get_current_state)
         .def("get_current_present", &game::get_current_present)
+        .def("get_current_boards", &game::get_current_boards)
         .def("get_current_timeline_status", &game::get_current_timeline_status)
         .def("gen_move_if_playable", &game::gen_move_if_playable)
         .def("get_match_status", &game::get_match_status)
@@ -144,9 +159,21 @@ PYBIND11_MODULE(engine, m) {
         .def("can_submit", &game::can_submit)
         .def("undo", &game::undo)
         .def("redo", &game::redo)
-        .def("apply_move", &game::apply_move, py::return_value_policy::reference)
+        .def("apply_move", &game::apply_move)
+        .def("submit", &game::submit)
         .def("currently_check", &game::currently_check)
         .def("get_current_checks", &game::get_current_checks)
         .def("get_board_size", &game::get_board_size)
-        .def_readwrite("metadata", &game::metadata);  // Expose metadata map
+        .def("suggest_action", &game::suggest_action)
+        .def("get_comments", &game::get_comments)
+        .def("has_parent", &game::has_parent)
+        .def("visit_parent", &game::visit_parent)
+        .def("get_child_moves", &game::get_child_moves)
+        // Python version of visit_child without newstate argument
+        .def("visit_child",
+             [](game &g, const action &a) {
+                 return g.visit_child(a); 
+             },
+             py::arg("action")
+        );
 }

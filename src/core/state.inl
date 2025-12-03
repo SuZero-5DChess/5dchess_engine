@@ -80,3 +80,20 @@ std::string state::pretty_move(full_move fm, piece_t pt) const
     }
     return oss.str();
 }
+
+template<uint16_t FLAGS>
+std::string state::pretty_action(action act) const
+{
+    state s = *this;
+    std::string ans = "";
+    for(auto [m, pt] : act.get_moves())
+    {
+        ans += s.pretty_move<state::SHOW_CAPTURE>(m) + " ";
+        s.apply_move(m, pt);
+    }
+    if(!ans.empty())
+    {
+        ans.pop_back();
+    }
+    return ans;
+}
