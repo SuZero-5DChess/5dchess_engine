@@ -11,7 +11,7 @@ const std::set<int> &HC::operator[](size_t i) const
 bool HC::contains(point loc) const
 {
     assert(loc.size() == axes.size());
-    for(int i = 0; i < axes.size(); i++)
+    for(int i = 0; i < static_cast<int>(axes.size()); i++)
     {
         if(!axes[i].contains(loc[i]))
             return false;

@@ -48,7 +48,7 @@ void test_match()
 
 
 
-int main(int argc, const char * argv[])
+int main()
 {
     test_match();
 //    auto obj = pgnparser("(-1T5)f6>>(0T5)f6").parse_superphysical_move();
