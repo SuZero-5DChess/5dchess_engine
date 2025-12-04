@@ -757,8 +757,9 @@ std::optional<gametree> pgnparser::parse_gametree()
 {
     PARSE_START;
     dprint("parse_gametree()");
+    gametree gt;
     std::optional<actions> act_buffer;
-    std::vector<std::pair<actions,gametree>> variations;
+    std::vector<std::pair<actions,std::unique_ptr<gametree>>> &variations = gt.variations;
     std::optional<gametree> gt_buffer;
     turn_t branch_start_turn = buffer.turn;
     while (buffer.token == LEFT_PAREN)
@@ -773,7 +774,7 @@ std::optional<gametree> pgnparser::parse_gametree()
         else if(buffer.token != RIGHT_PAREN)
             throw parse_error("parse_gametree(): Expect ')':" + PARSED_MSG);
         else
-            variations.push_back({*act_buffer, *gt_buffer});
+            variations.push_back({*act_buffer, std::make_unique<gametree>(std::move(*gt_buffer))});
         buffer.turn = branch_start_turn; //last branch is over, reset turn number
         dprint("turn reset to:", buffer.turn.first, buffer.turn.second?"b":"w");
         next_token();
@@ -785,9 +786,9 @@ std::optional<gametree> pgnparser::parse_gametree()
         gt_buffer = parse_gametree();
         if(!gt_buffer)
             throw parse_error("parse_gametree(): !!This should not happen!! Invalid game tree continuation: " + PARSED_MSG);
-        variations.push_back({*act_buffer, *gt_buffer});
+        variations.push_back(std::make_pair(*act_buffer, std::make_unique<gametree>(std::move(*gt_buffer))));
     }
-    return gametree{variations};
+    return gt;
 }
 
 /*
@@ -917,7 +918,7 @@ std::optional<game> pgnparser::parse_game()
     parse_comments();
     auto gt_opt = parse_gametree();
     if(!gt_opt) PARSE_FAIL;
-    return game{headers, boards, *gt_opt};
+    return game{headers, boards, std::move(*gt_opt)};
 }
 
 /* ***MATCHER*** */

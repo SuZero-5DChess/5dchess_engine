@@ -111,7 +111,6 @@ public:
     template<bool C> movegen_t gen_superphysical_moves(vec4 p) const;
     template<bool C> movegen_t gen_moves(vec4 p) const;
     generator<vec4> gen_piece_move(vec4 p, int board_color) const;
-    generator<vec4> gen_board_move(vec4 p0, int board_color) const;
     
     // help functions
     bool inbound(vec4 a, int color) const;

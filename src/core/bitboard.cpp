@@ -64,7 +64,7 @@ const std::array<bitboard_t, BOARD_SIZE*BOARD_LENGTH> rook_copy_mask_data = gene
     size_t n = key >> (BOARD_BITS*2);
     bitboard_t a, b, c, d, bb = 0;
     a = b = c = d = pmask(static_cast<int>(pos));
-    for(int i = 0; i < n; i++)
+    for(size_t i = 0; i < n; i++)
     {
         a = shift_north(a);
         b = shift_south(b);
@@ -81,7 +81,7 @@ const std::array<bitboard_t, BOARD_SIZE*BOARD_LENGTH> bishop_copy_mask_data = ge
     size_t n = key >> (BOARD_BITS*2);
     bitboard_t a, b, c, d, bb = 0;
     a = b = c = d = pmask(static_cast<int>(pos));
-    for(int i = 0; i < n; i++)
+    for(size_t i = 0; i < n; i++)
     {
         a = shift_northwest(a);
         b = shift_northeast(b);

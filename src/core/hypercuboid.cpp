@@ -225,25 +225,11 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
                 assert(m.from.tl()!=m.to.tl());
                 // store the arriving board after move is made
                 vec4 p = m.from, q = m.to;
-                bitboard_t z = pmask(p.xy());
-                piece_t pic = s.get_piece(m.from, player);
-                const std::shared_ptr<board>& b_ptr = s.get_board(p.l(), p.t(), player);
+                piece_t pic = s.get_piece(p, player);
                 const std::shared_ptr<board>& c_ptr = s.get_board(q.l(), q.t(), player);
-                std::shared_ptr<board> newboard = nullptr;
                 
-                // promotion (only brawns can do)
-                if ((b_ptr->lrawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
-                {
-                    dprint(" ... nonbranching brawn promotion");
-                    piece_t promoted = player ? to_black(promote_to) : promote_to;
-                    newboard = c_ptr->replace_piece(q.xy(), promoted);
-                }
-                // normal non_branching move
-                else
-                {
-                    dprint(" ... nonbranching jump");
-                    newboard = c_ptr->replace_piece(q.xy(), pic);
-                }
+                dprint(" ... nonbranching jump");
+                std::shared_ptr<board> newboard = c_ptr->replace_piece(q.xy(), pic);
                 
                 dprint(locs.size(), "arrive", m);
                 // use a temporary idx of -1, will be filled later
@@ -281,25 +267,11 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
         for(full_move m : arrives)
         {
             vec4 p = m.from, q = m.to;
-            bitboard_t z = pmask(p.xy());
-            piece_t pic = s.get_piece(m.from, player);
-            const std::shared_ptr<board>& b_ptr = s.get_board(p.l(), p.t(), player);
+            piece_t pic = s.get_piece(p, player);
             const std::shared_ptr<board>& c_ptr = s.get_board(q.l(), q.t(), player);
-            std::shared_ptr<board> newboard = nullptr;
             
-            // promotion (only brawns can do)
-            if ((b_ptr->lrawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
-            {
-                dprint(" ... branching brawn promotion");
-                piece_t promoted = player ? to_black(promote_to) : promote_to;
-                newboard = c_ptr->replace_piece(q.xy(), promoted);
-            }
-            // normal non_branching move
-            else
-            {
-                dprint(" ... branching jump");
-                newboard = c_ptr->replace_piece(q.xy(), pic);
-            }
+            dprint(" ... branching jump");
+            std::shared_ptr<board> newboard = c_ptr->replace_piece(q.xy(), pic);
             
             if(jump_indices.contains(m.from))
             {
@@ -332,7 +304,7 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
         std::set<int> coords;
         // on nth dimension, the hypercube has coordinates 0, 1, ..., m avialible
         // which corresponds to axis_coords[n][0], axis_coords[n][1], ...
-        for(int i = 0; i < axis_coords[n].size(); i++)
+        for(int i = 0; i < static_cast<int>(axis_coords[n].size()); i++)
         {
             coords.insert(coords.end(), i);
         }
@@ -340,9 +312,9 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
     }
     
     // fill the idx of arriving moves
-    for(int n = 0; n < axis_coords.size(); n++)
+    for(int n = 0; n < static_cast<int>(axis_coords.size()); n++)
     {
-        for(int i = 0; i < axis_coords[n].size(); i++)
+        for(int i = 0; i < static_cast<int>(axis_coords[n].size()); i++)
         {
             semimove& loc = axis_coords[n][i];
             if(auto* p = std::get_if<arriving_move>(&loc))
@@ -379,7 +351,7 @@ std::tuple<HC_info, search_space> HC_info::build_HC(const state& s)
     std::set<int> singleton = {0}, non_null;
     if(new_axis < dimension)
     {
-        for(int i = 1; i < axis_coords[new_axis].size(); i++)
+        for(int i = 1; i < static_cast<int>(axis_coords[new_axis].size()); i++)
         {
             non_null.insert(non_null.end(), i);
         }
@@ -415,7 +387,7 @@ std::optional<point> HC_info::take_point(HC &hc) const
         {
             const semimove& loc = axis_coords[n][i];
             std::visit(overloads {
-                [&](const physical_move& loc) {
+                [&](const physical_move&) {
                     if(!has_nonjump)
                     {
                         has_nonjump = true;
@@ -441,8 +413,8 @@ std::optional<point> HC_info::take_point(HC &hc) const
                         assert(loc.idx != -1);
                     }
                 },
-                [](const departing_move& loc) {},
-                [&](const null_move& loc) {
+                [](const departing_move&) {},
+                [&](const null_move&) {
                     if(!has_nonjump)
                     {
                         has_nonjump = true;
@@ -747,7 +719,8 @@ std::optional<slice> HC_info::test_present(const point &p, const HC& hc) const
         int whites_lines = l_max - l0_max;
         int blacks_lines = l0_min - l_min;
         int timeline_advantage = c ? (whites_lines - blacks_lines) : (blacks_lines - whites_lines);
-        for(int n = new_axis; n < dimension && n <= timeline_advantage+new_axis; n++)
+        
+        for(int n = new_axis; n <= std::min(timeline_advantage+new_axis, dimension-1); n++)
         {
             if(reactivate_move_axis == std::make_optional<int>(n))
             {

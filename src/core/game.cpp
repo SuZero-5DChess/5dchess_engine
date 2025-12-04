@@ -85,7 +85,7 @@ game game::from_pgn(std::string input)
             std::unique_ptr<gnode<comments_t>> child_node = gnode<comments_t>::create_child(node, s, act, act_ast.comments);
             gnode<comments_t>* child_node_ptr = node->add_child(std::move(child_node));
             cn = child_node_ptr;
-            dfs(child_node_ptr, child_gt);
+            dfs(child_node_ptr, *child_gt);
         }
     };
     
@@ -158,8 +158,8 @@ bool game::is_playable(vec4 p) const
 {
     auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_current_timeline_status();
     const state& cs = get_current_state();
-    if(std::ranges::contains(mandatory_timelines, p.l())
-    || std::ranges::contains(optional_timelines, p.l()))
+    if (std::find(mandatory_timelines.begin(), mandatory_timelines.end(), p.l()) != mandatory_timelines.end() ||
+        std::find(optional_timelines.begin(), optional_timelines.end(), p.l()) != optional_timelines.end()) 
     {
         auto [t, c] = cs.get_present();
         auto v1 = std::make_pair(p.t(), c);

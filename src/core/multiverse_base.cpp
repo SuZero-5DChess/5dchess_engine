@@ -191,7 +191,7 @@ void multiverse::insert_board_impl(int l, int t, bool c, const std::shared_ptr<b
 
     // if u is too large, resize this->board to accommodate new board
     // and fill any missing row with empty vector
-    if(u >= this->boards.size())
+    if(u >= static_cast<int>(this->boards.size()))
     {
         this->boards.resize(u+1, std::vector<std::shared_ptr<board>>());
         this->timeline_start.resize(u+1, std::numeric_limits<int>::max());
@@ -201,7 +201,7 @@ void multiverse::insert_board_impl(int l, int t, bool c, const std::shared_ptr<b
     l_max = std::max(l_max, l);
     std::vector<std::shared_ptr<board>> &timeline = this->boards[u];
     // do the same for v
-    if(v >= timeline.size())
+    if(v >= static_cast<int>(timeline.size()))
     {
         timeline.resize(v+1, nullptr);
     }
@@ -251,11 +251,11 @@ void multiverse::update_active_range()
 std::vector<std::tuple<int,int,bool,std::string>> multiverse::get_boards() const
 {
     std::vector<std::tuple<int,int,bool,std::string>> result;
-    for(int u = 0; u < this->boards.size(); u++)
+    for(int u = 0; u < static_cast<int>(boards.size()); u++)
     {
         const auto& timeline = this->boards[u];
         int l = u_to_l(u);
-        for(int v = 0; v < timeline.size(); v++)
+        for(int v = 0; v < static_cast<int>(timeline.size()); v++)
         {
             const auto [t, c] = v_to_tc(v);
             if(timeline[v] != nullptr)
@@ -274,11 +274,11 @@ std::string multiverse::to_string() const
     sstm << "Multiverse present: T" << present << (player?'b':'w') << "\n";
     sstm << "lines range:" << get_lines_range() << "\t";
     sstm << "active range:" << get_active_range() << "\n";
-    for(int u = 0; u < this->boards.size(); u++)
+    for(int u = 0; u < static_cast<int>(this->boards.size()); u++)
     {
         const auto& timeline = this->boards[u];
         int l = u_to_l(u);
-        for(int v = 0; v < timeline.size(); v++)
+        for(int v = 0; v < static_cast<int>(timeline.size()); v++)
         {
             const auto [t, c] = v_to_tc(v);
             if(timeline[v] != nullptr)
@@ -486,12 +486,6 @@ generator<vec4> multiverse::gen_piece_move(vec4 p, int board_color) const
 			co_yield q;
         }
     }
-}
-
-generator<vec4> multiverse::gen_board_move(vec4 p0, int board_color) const
-{
-    // TODO
-    return generator<vec4>();
 }
 
 constexpr std::initializer_list<vec4> orthogonal_dtls = {
