@@ -37,9 +37,9 @@ constexpr static int u_to_l(int u)
         return u >> 1;
 }
 
-constexpr static std::tuple<int, int> v_to_tc(int v)
+constexpr static std::pair<int, int> v_to_tc(int v)
 {
-    return std::tuple<int, int>(v >> 1, v & 1);
+    return std::pair<int, int>(v >> 1, v & 1);
 }
 
 multiverse::multiverse(std::vector<std::tuple<int, int, bool, std::string>> bds, int size_x, int size_y, int l0_min, int l0_max)
