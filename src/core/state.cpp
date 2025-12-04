@@ -1,19 +1,229 @@
 #include "state.h"
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include "utils.h"
+#include "pgnparser.h"
 
-state::state(multiverse mtv) : m(mtv), match_status(match_status_t::PLAYING)
+//#define DEBUGMSG
+#include "debug.h"
+
+
+state::state(multiverse &mtv) noexcept : m(mtv.clone())
 {
-    std::tie(present, player) = m.get_present();
+    std::tie(present, player) = m->get_present();
+}
+
+state::state(const pgnparser_ast::game &g)
+{
+    auto &metadata = g.headers;
+    // parse size
+    auto find_or_default = [](const std::map<std::string, std::string>& m, const std::string& key, const std::string& def) -> std::string {
+        auto it = m.find(key);
+        if (it != m.end()) {
+            return it->second;
+        } else {
+            return def;
+        }
+    };
+    std::string size_str = find_or_default(metadata, "size", "8x8");
+    int size_x, size_y;
+    auto pos = size_str.find('x');
+    if (pos == std::string::npos)
+        throw std::runtime_error("state(): Invalid board size format: " + size_str);
+    try {
+        size_x = std::stoi(size_str.substr(0, pos));
+        size_y = std::stoi(size_str.substr(pos + 1));
+        if(size_x <= 0 || size_y <= 0 || size_x > BOARD_LENGTH || size_y > BOARD_LENGTH)
+        {
+            throw std::out_of_range("");
+        }
+    } catch (const std::invalid_argument&) {
+        throw std::runtime_error("state(): Expect number in size value: " + size_str);
+    } catch (const std::out_of_range&) {
+        throw std::runtime_error("state(): Number out of range in size value: " + size_str + " (max board size allowed: " + std::to_string(BOARD_LENGTH) + ")");
+    }
+    // parse board
+    using board_t = std::vector<std::tuple<std::string, pgnparser_ast::token_t, int, int, bool>>;
+    board_t boards = g.boards;
+    std::optional<bool> is_even_timelines;
+    auto it = metadata.find("board");
+    if(it != metadata.end())
+    {
+        std::string board_str = it->second;
+        // none of the default variants should be named as "Custom[...]"
+        const static std::map<std::string, std::tuple<bool, int, int, board_t>> default_variants = {
+            {
+                "Standard",
+                {
+                    false, // Odd timelines
+                    8,8,
+                    {
+                        std::make_tuple("r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*", pgnparser_ast::NIL, 0, 1, false)
+                    }
+                }
+            },
+            {
+                "Standard - Turn Zero",
+                {
+                    false, // Odd timelines
+                    8,8,
+                    {
+                        std::make_tuple("r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*", pgnparser_ast::NIL, 0, 0, true),
+                        std::make_tuple("r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*", pgnparser_ast::NIL, 0, 1, false),
+                    }
+                }
+            },
+            {
+                "Very Small - Open",
+                {
+                    false, // Odd timelines
+                    4,4,
+                    {
+                        std::make_tuple("nbrk/3p*/P*3/KRBN", pgnparser_ast::NIL, 0, 1, false),
+                    }
+                }
+            },
+        };
+        
+        // Custom variant, can specify even/odd timelines here
+        if(board_str == "Custom - Even" || board_str == "Even")
+        {
+            is_even_timelines = true;
+        }
+        else if(board_str == "Custom - Odd" || board_str == "Odd")
+        {
+            is_even_timelines = false;
+        }
+        else if(board_str.starts_with("Custom"))
+        {
+            // do nothing
+        }
+        else if(boards.empty())
+        {
+            // if g.board is not empty, any description in "Board" header is ignored
+            try {
+                bool even;
+                std::tie(even, size_x, size_y, boards) = default_variants.at(board_str);
+                is_even_timelines = even;
+            } catch (const std::out_of_range&) {
+                throw std::runtime_error("state(): Unknown variant: " + board_str);
+            }
+        }
+    }
+    if(boards.empty())
+    {
+        throw std::runtime_error("state(): Variant is unspecific: no Board header or 5DFEN given");
+    }
+    if(!is_even_timelines.has_value())
+    {
+        bool even = false;
+        for(const auto& [fen, sign, l, t, c] : boards)
+        {
+            even |= (sign == pgnparser_ast::POSITIVE && l == 0);
+            even |= (sign == pgnparser_ast::NEGATIVE && l == 0);
+            if(even) break;
+        }
+        is_even_timelines = even;
+    }
+    // construct multiverse
+    std::vector<boards_info_t> boards_info(boards.size());
+    if(*is_even_timelines)
+    {
+        std::transform(boards.begin(), boards.end(), boards_info.begin(), [](const auto& tup) {
+            const auto& [fen, sign, l, t, c] = tup;
+            int signed_l = sign == pgnparser_ast::NEGATIVE ? ~l : l;
+            return std::make_tuple(signed_l, t, c, fen);
+        });
+        m = std::make_unique<multiverse_even>(boards_info, size_x, size_y);
+    }
+    else
+    {
+        std::transform(boards.begin(), boards.end(), boards_info.begin(), [](const auto& tup) {
+            const auto& [fen, sign, l, t, c] = tup;
+            int sgn = sign == pgnparser_ast::NEGATIVE ? -1 : 1;
+            return std::make_tuple(l*sgn, t, c, fen);
+        });
+        m = std::make_unique<multiverse_odd>(boards_info, size_x, size_y);
+    }
+    std::tie(present, player) = m->get_present();
+    // parse moves
+    std::reference_wrapper<const pgnparser_ast::gametree> gt = g.gt;
+    while(!gt.get().variations.empty())
+    {
+        const auto &[act, last_gt] = *(gt.get().variations.end() - 1);
+        //std::cout << act;
+        for(const auto& mv: act.moves)
+        {
+            auto [fm_opt, pt_opt, candidates] = parse_move(mv);
+            if(!fm_opt.has_value())
+            {
+                if(candidates.empty())
+                {
+                    std::ostringstream oss;
+                    dprint(to_string());
+                    oss << "state(): Invalid move: " << mv;
+                    throw std::runtime_error(oss.str());
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    dprint(to_string());
+                    oss << "state(): Ambiguous move: " << mv << "; candidates: ";
+                    oss << range_to_string(candidates, "", "");
+                    throw std::runtime_error(oss.str());
+                }
+            }
+            else
+            {
+                full_move fm = fm_opt.value();
+                bool flag;
+                if(pt_opt.has_value())
+                {
+                    piece_t pt = player ? to_white(*pt_opt) : *pt_opt;
+                    flag = apply_move<false>(fm, pt);
+                }
+                else
+                {
+                    flag = apply_move<false>(fm);
+                }
+                if(!flag)
+                {
+                    std::ostringstream oss;
+                    oss << "state(): Illegal move: " << mv << " (parsed as: " << fm << ")";
+                    throw std::runtime_error(oss.str());
+                }
+            }
+        }
+        if(!last_gt.variations.empty())
+        {
+            bool flag = submit();
+            if(!flag)
+            {
+                std::ostringstream oss;
+                oss << "state(): Cannot submit after parsing these moves: " << act;
+                throw std::runtime_error(oss.str());
+            }
+        }
+        else
+        {
+            bool flag = submit();
+            if(!flag)
+            {
+                std::cerr << "[WARNING]state(): Cannot submit after parsing these moves: " << act;
+            }
+        }
+        gt = last_gt;
+    }
 }
 
 int state::new_line() const
 {
+    auto [l_min, l_max] = m->get_lines_range();
     if(player == 0)
-        return m.l_max + 1;
+        return l_max + 1;
     else
-        return m.l_min - 1;
+        return l_min - 1;
 }
 
 std::optional<state> state::can_submit() const
@@ -30,7 +240,7 @@ std::optional<state> state::can_submit() const
     }
 }
 
-std::optional<state> state::can_apply(full_move fm) const
+std::optional<state> state::can_apply(full_move fm, piece_t promote_to) const
 {
     state new_state = *this;
     bool flag = new_state.apply_move<false>(fm);
@@ -44,29 +254,46 @@ std::optional<state> state::can_apply(full_move fm) const
     }
 }
 
-template<bool UNSAFE>
-bool state::apply_move(full_move fm)
+std::optional<state> state::can_apply(const action &act) const
 {
-    if constexpr (!UNSAFE)
+    state new_state = *this;
+    for(const auto& em : act.get_moves())
     {
-        if(match_status != match_status_t::PLAYING)
+        bool flag = new_state.apply_move<false>(em.fm, em.promote_to);
+        if(!flag)
         {
-            std::cerr << "In apply_move<" << UNSAFE << ">(" << fm << "):\n";
-            std::cerr << "Match has already ended with outcome " << match_status << "\n";
-            throw std::runtime_error("Attempt to move finalized game.\n");
+            return std::nullopt;
         }
     }
+    bool flag = new_state.submit<false>();
+    if(!flag)
+    {
+        return std::nullopt;
+    }
+    return std::optional<state>(new_state);
+}
+
+template<bool UNSAFE>
+bool state::apply_move(full_move fm, piece_t promote_to)
+{
+    dprint("applying move", fm);
     vec4 p = fm.from;
     vec4 q = fm.to;
     vec4 d = q - p;
     if constexpr (!UNSAFE)
     {
-        std::map<vec4, bitboard_t> mvbbs = player ? m.gen_moves<true>(p) : m.gen_moves<false>(p);
-        auto it = mvbbs.find(q.tl());
+        auto te = m->get_timeline_end(p.l());
+        assert(std::make_pair(p.t(), player) == te && "moves must be made on an active board");
+        auto mvs = player ? m->gen_moves<true>(p) : m->gen_moves<false>(p);
+        //auto it = mvbbs.find(q.tl());
+        const auto &res = mvs.find([&q](const auto &pair){
+            const auto &[tl, bb] = pair;
+            return tl == q.tl();
+        });
         // is it a pseudolegal move?
-        if(it != mvbbs.end())
+        if(res)
         {
-            bitboard_t bb = mvbbs[q.tl()];
+            bitboard_t bb = res.value().second;
             if(!(pmask(q.xy()) & bb))
             {
                 return false;
@@ -78,58 +305,101 @@ bool state::apply_move(full_move fm)
         }
     }
     
+    /* WARNING: similiar logic used in hypercuboid.cpp for applying semimoves
+     If some move logic needs to be changed here, make sure also perform change
+     in HC_info::build_HC()
+     */
     // physical move, no time travel
     if(d.l() == 0 && d.t() == 0)
     {
-        const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
-        piece_t pic = b_ptr->get_piece(p.xy());
+        const std::shared_ptr<board>& b_ptr = m->get_board(p.l(), p.t(), player);
+        bitboard_t z = pmask(p.xy());
+        const auto &[size_x, size_y] = m->get_board_size();
         // en passant
-        if(to_white(pic) == PAWN_W && d.x()!=0 && b_ptr->get_piece(q.xy()) == NO_PIECE)
+        if((b_ptr->lpawn()&z) && d.x()!=0 && b_ptr->get_piece(q.xy()) == NO_PIECE)
         {
-            //std::cout << " ... en passant";
-            m.append_board(p.l(),
-                            b_ptr->replace_piece(ppos(q.x(),p.y()), NO_PIECE)
+            dprint(" ... en passant");
+            m->append_board(p.l(), b_ptr
+                            ->replace_piece(ppos(q.x(),p.y()), NO_PIECE)
                             ->move_piece(p.xy(), q.xy()));
         }
-        // TODO: promotion
-        // castling
-        else if(to_white(pic) == KING_W && abs(d.x()) > 1)
+        // promotion
+        else if((b_ptr->lpawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
         {
-            //std::cout << " ... castling";
-            int rook_x1 = d.x() < 0 ? 0 : 7;
-            int rook_x2 = q.x() + (d.x() < 0 ? 1 : -1);
-            m.append_board(p.l(),b_ptr
+            dprint(" ... promotion");
+            piece_t promoted = player ? to_black(promote_to) : promote_to;
+            m->append_board(p.l(), b_ptr
+                            ->replace_piece(p.xy(), NO_PIECE)
+                            ->replace_piece(q.xy(), promoted));
+        }
+        // castling
+        else if((b_ptr->king()&z) && abs(d.x()) > 1)
+        {
+            dprint(" ... castling");
+            int rook_x1 = d.x() < 0 ? 0 : (size_x - 1); //rook's original x coordinate
+            int rook_x2 = q.x() + (d.x() < 0 ? 1 : -1); //rook's new x coordinate
+            m->append_board(p.l(),b_ptr
                             ->move_piece(ppos(rook_x1, p.y()), ppos(rook_x2,q.y()))
                             ->move_piece(p.xy(), q.xy()));
         }
         // normal move
         else
         {
-            //std::cout << " ... normal move/capture";
-            m.append_board(p.l(), b_ptr->move_piece(p.xy(), q.xy()));
+            dprint(" ... normal move/capture");
+            m->append_board(p.l(), b_ptr->move_piece(p.xy(), q.xy()));
         }
     }
     // non-branching superphysical move
-    else if(multiverse::tc_to_v(q.t(), player) == m.timeline_end[multiverse::l_to_u(q.l())])
+    else if (std::make_pair(q.t(), player) == m->get_timeline_end(q.l()))
     {
-        //std::cout << " ... nonbranching move";
-        const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
+        const std::shared_ptr<board>& b_ptr = m->get_board(p.l(), p.t(), player);
         const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
-        m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
-        const std::shared_ptr<board>& c_ptr = m.get_board(q.l(), q.t(), player);
-        m.append_board(q.l(), c_ptr->replace_piece(q.xy(), pic));
+        m->append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
+        
+        bitboard_t z = pmask(p.xy());
+        const auto &[size_x, size_y] = m->get_board_size();
+        const std::shared_ptr<board>& c_ptr = m->get_board(q.l(), q.t(), player);
+        
+        // promotion (only brawns can do)
+        if ((b_ptr->lrawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
+        {
+            dprint(" ... nonbranching brawn promotion");
+            piece_t promoted = player ? to_black(promote_to) : promote_to;
+            m->append_board(q.l(), c_ptr->replace_piece(q.xy(), promoted));
+        }
+        // normal non_branching move
+        else
+        {
+            dprint(" ... nonbranching jump");
+            m->append_board(q.l(), c_ptr->replace_piece(q.xy(), pic));
+        }
     }
     //branching move
     else
     {
-        //std::cout << " ... branching move";
-        const std::shared_ptr<board>& b_ptr = m.get_board(p.l(), p.t(), player);
+        const std::shared_ptr<board>& b_ptr = m->get_board(p.l(), p.t(), player);
         const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
-        m.append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
-        const std::shared_ptr<board>& x_ptr = m.get_board(q.l(), q.t(), player);
-        auto [t, c] = multiverse::v_to_tc(multiverse::tc_to_v(q.t(), player)+1);
-        m.insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), pic));
-        auto [new_present, _] = m.get_present();
+        m->append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
+        const std::shared_ptr<board>& x_ptr = m->get_board(q.l(), q.t(), player);
+        auto [t, c] = next_tc(q.t(), player);
+        
+        bitboard_t z = pmask(p.xy());
+        const auto &[size_x, size_y] = m->get_board_size();
+        
+        // promotion (only brawns can do)
+        if ((b_ptr->lrawn()&z) && (q.y() == 0 || q.y() == size_y - 1))
+        {
+            dprint(" ... branching brawn promotion");
+            piece_t promoted = player ? to_black(promote_to) : promote_to;
+            m->insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), promoted));
+        }
+        // normal non_branching move
+        else
+        {
+            dprint(" ... branching jump");
+            m->insert_board(new_line(), t, c, x_ptr->replace_piece(q.xy(), pic));
+        }
+        auto [new_present, _] = m->get_present();
         if(new_present < present)
         {
             // if a historical board is activated by this travel, go back
@@ -142,7 +412,7 @@ bool state::apply_move(full_move fm)
 template <bool UNSAFE>
 bool state::submit()
 {
-    auto [present_t, present_c] = m.get_present();
+    auto [present_t, present_c] = m->get_present();
     if constexpr (!UNSAFE)
     {
         if(player == present_c)
@@ -155,6 +425,31 @@ bool state::submit()
     return true;
 }
 
+state state::phantom() const
+{
+    const auto [l_min, l_max] = get_lines_range();
+    state s = *this;
+    for(int l = l_min; l <= l_max; l++)
+    {
+        auto [t,c] = get_timeline_end(l);
+        if(c == player)
+        {
+            s.m->append_board(l, m->get_board(l, t, c));
+        }
+    }
+    return s;
+}
+
+//
+//void state::set_promotion_piece(piece_t pt)
+//{
+//    dprint("setting promotion piece to:", pt);
+//    assert(to_white(pt) == pt && pt != KING_W && pt != ROYAL_QUEEN_W);
+//    promote_to = pt;
+//}
+
+
+
 std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_timeline_status() const
 {
     return get_timeline_status(present, player);
@@ -162,20 +457,21 @@ std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_time
 
 std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_timeline_status(int present_t, int present_c) const
 {
+    auto [l_min, l_max] = m->get_lines_range();
+    auto [active_min, active_max] = m->get_active_range();
+    auto present_v = std::make_pair(present_t, present_c);
     std::vector<int> mandatory_timelines, optional_timelines, unplayable_timelines;
-    int present_v = multiverse::tc_to_v(present_t, present_c);
-    for(int l = m.l_min; l <= m.l_max; l++)
+    for(int l = l_min; l <= l_max; l++)
     {
-        int v = m.timeline_end[multiverse::l_to_u(l)];
-        if (std::max(m.l_min, -m.number_activated()) <= l
-            && std::min(m.l_max, m.number_activated()) >= l
-            && v == present_v)
+        auto v = m->get_timeline_end(l);
+        //int v = m->timeline_end[multiverse::l_to_u(l)];
+        if (active_min <= l && active_max >= l && v == present_v)
         {
             mandatory_timelines.push_back(l);
         }
         else
         {
-            auto [t, c] = multiverse::v_to_tc(v);
+            auto [t, c] = v;
             if(present_c==c)
             {
                 optional_timelines.push_back(l);
@@ -201,161 +497,52 @@ std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_time
  **
  */
 
-bool state::find_check() const
+generator<full_move> state::find_checks(bool c) const
 {
-    std::list<int> lines;
-    int next_v = multiverse::tc_to_v(present, player) + 1;
-    for(int l = m.l_min; l <= m.l_max; l++)
+    // cannot use get_timeline_status() directly because it only works for current player
+    auto [l_min, l_max] = m->get_lines_range();
+    auto [active_min, active_max] = m->get_active_range();
+    std::vector<int> lines;
+    auto [p_min, p_max] = c ? std::make_pair(active_min, l_max) : std::make_pair(l_min, active_max);
+    for(int i = p_min; i <= p_max; i++)
     {
-        int v = m.timeline_end[multiverse::l_to_u(l)];
-        if (std::max(m.l_min, -m.number_activated()) <= l
-            && std::min(m.l_max, m.number_activated()) >= l
-            && v == next_v)
+        auto [t, col] = m->get_timeline_end(i);
+        if(col == c)
         {
-            //if this board is on a mandatory line, then it is more likely to create a check
-            lines.push_front(l);
-        }
-        else
-        {
-            auto [t, c] = multiverse::v_to_tc(v);
-            if(player!=c)
-            {
-                //if this board is on an optional line, it is still possible to create a check
-                lines.push_back(l);
-            }
+            lines.push_back(i);
         }
     }
-    // find checks on the opponents timelines
-	if (player == 0)
-	{
-		return find_check_impl<true>(lines);
-	}
-	else
-	{
-		return find_check_impl<false>(lines);
-	}
-}
-
-template<bool C>
-bool state::find_check_impl(const std::list<int>& lines) const
-{
-    std::set<vec4> checking;
-//    std::cerr << "\nIn find_check_impl<" << C << ">(";
-//    for(int l : lines)
-//    {
-//        std::cerr << l << ",";
-//    }
-//    std::cerr << "\b)\n";
-    for (int l : lines)
+    if (c)
     {
-        // take the active board
-        int v = m.timeline_end[multiverse::l_to_u(l)];
-        auto [t, c] = multiverse::v_to_tc(v);
-//        std::cerr << c << " " << C << "\n";
-//        assert(c == C);
-        std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
-        bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->wall();
-        // find checks for the physical moves
-        for (int pos : marked_pos(b_ptr->hostile<C>()& b_ptr->royal()))
-        {
-            if (b_ptr->is_under_attack(pos, !C))
-            {
-				//std::cerr << "The royal piece is under attack on " << vec4(pos, vec4(0, 0, t, l)) << std::endl;
-                return true;
-            }
-        }
-		// find checks for the superphysical moves
-        // for each friendly piece on this board
-        for (int src_pos : marked_pos(b_pieces))
-        {
-            vec4 p = vec4(src_pos, vec4(0,0,t,l));
-            // generate the aviliable superphysical moves
-            std::map<vec4, bitboard_t> moves = m.gen_superphysical_moves<C>(p);
-//            std::cerr << "The allowed moves are: ";
-//            for(vec4 d : m.gen_piece_move(p, C))
-//            {
-//                std::cerr << move5d::move(p, d) << " ";
-//            }
-//            std::cerr << std::endl;
-            // for each destination board and bit location
-//            std::cerr << "for piece " << m.get_piece(p, C) << " on " << p << ":\n";
-            for (const auto& [q0, bb] : moves)
-            {
-//                std::cerr << "q0 = " << q0 << std::endl;
-                std::shared_ptr<board> b1_ptr = m.get_board(q0.l(), q0.t(), C);
-                if (bb)
-                {
-                    // if the destination square is royal, this is a check
-                    if (bb & b1_ptr->royal())
-                    {
-						//std::cerr << "Found a check on " << q0 << std::endl;
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    return false;
-}
-
-
-std::vector<full_move> state::find_all_checks() const
-{
-    std::list<int> lines;
-    int next_v = multiverse::tc_to_v(present, player) + 1;
-    for(int l = m.l_min; l <= m.l_max; l++)
-    {
-        int v = m.timeline_end[multiverse::l_to_u(l)];
-        if (std::max(m.l_min, -m.number_activated()) <= l
-            && std::min(m.l_max, m.number_activated()) >= l
-            && v == next_v)
-        {
-            //if this board is on a mandatory line, then it is more likely to create a check
-            lines.push_front(l);
-        }
-        else
-        {
-            auto [t, c] = multiverse::v_to_tc(v);
-            if(player!=c)
-            {
-                //if this board is on an optional line, it is still possible to create a check
-                lines.push_back(l);
-            }
-        }
-    }
-    // find checks on the opponents timelines
-    if (player == 0)
-    {
-        return find_all_checks_impl<true>(lines);
+        return find_checks_impl<true>(lines);
     }
     else
     {
-        return find_all_checks_impl<false>(lines);
+        return find_checks_impl<false>(lines);
     }
 }
 
 template<bool C>
-std::vector<full_move> state::find_all_checks_impl(const std::list<int>& lines) const
+generator<full_move> state::find_checks_impl(std::vector<int> lines) const
 {
-    std::vector<full_move> checking;
+//    print_range(__PRETTY_FUNCTION__, lines);
     for (int l : lines)
     {
         // take the active board
-        int v = m.timeline_end[multiverse::l_to_u(l)];
-        auto [t, c] = multiverse::v_to_tc(v);
-//        assert(c == C);
-        std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
+        auto [t, c] = m->get_timeline_end(l);
+        assert(c == C);
+        std::shared_ptr<board> b_ptr = m->get_board(l, t, C);
         bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->wall();
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {
             vec4 p = vec4(src_pos, vec4(0,0,t,l));
             // generate the aviliable moves
-            std::map<vec4, bitboard_t> moves = m.gen_moves<C>(p);
+            auto moves = m->gen_moves<C>(p);
             // for each destination board and bit location
             for (const auto& [q0, bb] : moves)
             {
-                std::shared_ptr<board> b1_ptr = m.get_board(q0.l(), q0.t(), C);
+                std::shared_ptr<board> b1_ptr = m->get_board(q0.l(), q0.t(), C);
                 if (bb)
                 {
                     // if the destination square is royal, this is a check
@@ -365,21 +552,26 @@ std::vector<full_move> state::find_all_checks_impl(const std::list<int>& lines) 
                         for(int dst_pos : marked_pos(c_pieces))
                         {
                             vec4 q = vec4(dst_pos, q0);
-                            checking.push_back({p, q});
+                            dprint("found check", full_move(p,q), "source:", p);
+                            co_yield full_move(p, q);
                         }
                     }
                 }
             }
         }
     }
-    return checking;
 }
 
 
-std::map<vec4, bitboard_t> state::gen_movable_pieces() const
+std::vector<vec4> state::gen_movable_pieces() const
 {
     auto [mandatory_timelines, optional_timelines, unplayable_timelines] = get_timeline_status(present, player);
     auto lines = concat_vectors(mandatory_timelines, optional_timelines);
+    return get_movable_pieces(lines);
+}
+
+std::vector<vec4> state::get_movable_pieces(std::vector<int> lines) const
+{
     if (player == 0)
     {
         return gen_movable_pieces_impl<false>(lines);
@@ -391,78 +583,230 @@ std::map<vec4, bitboard_t> state::gen_movable_pieces() const
 }
 
 template <bool C>
-std::map<vec4, bitboard_t> state::gen_movable_pieces_impl(const std::vector<int> &lines) const
+std::vector<vec4> state::gen_movable_pieces_impl(std::vector<int> lines) const
 {
-    std::map<vec4, bitboard_t> movable;
+    dprint("gen_movable_pieces_impl()");
+    std::vector<vec4> result;
     for (int l : lines)
     {
         // take the active board
-        int v = m.timeline_end[multiverse::l_to_u(l)];
-        auto [t, c] = multiverse::v_to_tc(v);
+        auto [t, c] = get_timeline_end(l);
         const vec4 p0 = vec4(0,0,t,l);
 //        assert(c == C);
-        std::shared_ptr<board> b_ptr = m.get_board(l, t, C);
+        std::shared_ptr<board> b_ptr = m->get_board(l, t, C);
         bitboard_t b_pieces = b_ptr->friendly<C>() & ~b_ptr->wall();
         // for each friendly piece on this board
         for (int src_pos : marked_pos(b_pieces))
         {
             vec4 p = vec4(src_pos, p0);
             // generate the aviliable moves
-            std::map<vec4, bitboard_t> moves = m.gen_moves<C>(p);
+            auto moves = m->gen_moves<C>(p);
             // for each destination board and bit location
-            bool still = true;
-            for (const auto& [q0, bb] : moves)
+            if(auto info = moves.first())
             {
-                if (bb)
+                result.push_back(p);
+            }
+        }
+    }
+    dprint(range_to_string(result));
+    return result;
+}
+
+std::pair<int, int> state::get_board_size() const
+{
+    return m->get_board_size();
+}
+
+
+std::pair<int, int> state::get_present() const
+{
+    return std::make_pair(present, player);
+}
+
+std::pair<int, int> state::apparent_present() const
+{
+    return m->get_present();
+}
+
+std::pair<int, int> state::get_initial_lines_range() const
+{
+    return m->get_initial_lines_range();
+}
+
+std::pair<int, int> state::get_lines_range() const
+{
+    return m->get_lines_range();
+}
+
+std::pair<int, int> state::get_active_range() const
+{
+    return m->get_active_range();
+}
+
+std::pair<int, int> state::get_timeline_start(int l) const
+{
+    return m->get_timeline_start(l);
+}
+
+std::pair<int, int> state::get_timeline_end(int l) const
+{
+    return m->get_timeline_end(l);
+}
+
+piece_t state::get_piece(vec4 p, int color) const
+{
+    return m->get_piece(p, color);
+}
+
+std::shared_ptr<board> state::get_board(int l, int t, int c) const
+{
+    return m->get_board(l, t, c);
+}
+
+std::vector<std::tuple<int, int, bool, std::string>> state::get_boards() const
+{
+    return m->get_boards();
+}
+
+generator<vec4> state::gen_piece_move(vec4 p) const
+{
+    return m->gen_piece_move(p, player);
+}
+
+generator<vec4> state::gen_piece_move(vec4 p, int c) const
+{
+    return m->gen_piece_move(p, c);
+}
+
+std::string state::to_string() const
+{
+    std::ostringstream ss;
+    ss << "State(present=" << present << ", player=" << player << "):\n";
+    return ss.str() + m->to_string();
+}
+
+state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
+{
+    std::vector<full_move> matched;
+    std::vector<full_move> pawn_move_matched;
+    std::optional<full_move> fm;
+    std::optional<piece_t> promotion;
+    dprint("parse_move(",move,")");
+    constexpr static uint16_t FLAGS = SHOW_PAWN | SHOW_CAPTURE | SHOW_PROMOTION;
+    if(std::holds_alternative<pgnparser_ast::physical_move>(move.data))
+    {
+        auto mv = std::get<pgnparser_ast::physical_move>(move.data);
+        // for all physical moves avilable in current state
+        for(vec4 p : gen_movable_pieces())
+        {
+            char piece = to_white(piece_name(get_piece(p, player)));
+            bitboard_t bb = player ? m->gen_physical_moves<true>(p) : m->gen_physical_moves<false>(p);
+            for(int pos : marked_pos(bb))
+            {
+                vec4 q(pos, p.tl());
+                full_move fm(p,q);
+                dprint("matching", fm);
+                // test if this physical move matches any of them
+                std::string full_notation = pretty_move<FLAGS>(fm);
+                auto full = pgnparser(full_notation).parse_physical_move();
+                assert(full.has_value());
+                bool match = pgnparser::match_physical_move(mv, *full);
+                if(match)
                 {
-                    still = false;
-                    break;
+                    dprint("matched");
+                    matched.push_back(fm);
+                    if(piece == PAWN_W)
+                    {
+                        pawn_move_matched.push_back(fm);
+                    }
                 }
             }
-            if(still)
+        }
+        if(matched.size()==1)
+        {
+            // if there is exactly one match, we are good
+            fm = matched[0];
+        }
+        else if(pawn_move_matched.size() == 1)
+        {
+            /* if there are more than one match, test if it this can be
+             parsed as the unique pawn move
+             */
+            fm = pawn_move_matched[0];
+        }
+        if(fm.has_value())
+        {
+            promotion = mv.promote_to.transform([](char pt){
+                return static_cast<piece_t>(pt);
+            });
+        }
+    }
+    else if(std::holds_alternative<pgnparser_ast::superphysical_move>(move.data))
+    {
+        // do the same for superphysical moves
+        auto spm = std::get<pgnparser_ast::superphysical_move>(move.data);
+        for(vec4 p : gen_movable_pieces())
+        {
+            char piece = to_white(piece_name(get_piece(p, player)));
+            auto gen = player ? m->gen_superphysical_moves<true>(p) : m->gen_superphysical_moves<false>(p);
+            for(const auto& [p0, bb] : gen)
             {
-                // if this is a still pos, remove it mask
-                b_pieces &= ~pmask(src_pos);
+                for(int pos : marked_pos(bb))
+                {
+                    vec4 q(pos, p0);
+                    full_move fm(p,q);
+                    dprint("matching", fm);
+                    // test if this physical move matches any of them
+                    std::string full_notation = pretty_move<FLAGS>(fm);
+                    auto full = pgnparser(full_notation).parse_superphysical_move();
+                    assert(full.has_value());
+                    bool match = pgnparser::match_superphysical_move(spm, *full);
+                    if(match)
+                    {
+                        dprint("matched");
+                        matched.push_back(fm);
+                        if(piece == PAWN_W)
+                        {
+                            pawn_move_matched.push_back(fm);
+                        }
+                    }
+                }
             }
         }
-        if(b_pieces)
+        if(matched.size()==1)
         {
-            movable[p0] = b_pieces;
+            fm = matched[0];
+        }
+        else if(pawn_move_matched.size() == 1)
+        {
+            fm = pawn_move_matched[0];
+        }
+        if(fm.has_value())
+        {
+            promotion = spm.promote_to.transform([](char pt){
+                return static_cast<piece_t>(pt);
+            });
         }
     }
-    return movable;
+    return std::make_tuple(fm, promotion, matched);
 }
 
-std::ostream& operator<<(std::ostream& os, const match_status_t& status)
+state::parse_pgn_res state::parse_move(const std::string &move) const
 {
-    switch (status)
+    auto parsed_move = pgnparser(move).parse_move();
+    if(!parsed_move.has_value())
     {
-        case match_status_t::PLAYING:
-            os << "PLAYING";
-            break;
-        case match_status_t::WHITE_WINS:
-            os << "WHITE_WINS";
-            break;
-        case match_status_t::BLACK_WINS:
-            os << "BLACK_WINS";
-            break;
-        case match_status_t::STALEMATE:
-            os << "STALEMATE";
-            break;
+        return std::make_tuple(std::nullopt, std::nullopt, std::vector<full_move>{});
     }
-    return os;
+    return parse_move(*parsed_move);
 }
 
-template bool state::apply_move<false>(full_move);
-template bool state::apply_move<true>(full_move);
+template bool state::apply_move<false>(full_move, piece_t);
+template bool state::apply_move<true>(full_move, piece_t);
 template bool state::submit<false>();
 template bool state::submit<true>();
 
-template bool state::find_check_impl<false>(const std::list<int>&) const;
-template bool state::find_check_impl<true>(const std::list<int>&) const;
-
-template std::map<vec4, bitboard_t> state::gen_movable_pieces_impl<false>(const std::vector<int>&) const;
-template std::map<vec4, bitboard_t> state::gen_movable_pieces_impl<true>(const std::vector<int>&) const;
-
-template std::vector<full_move> state::find_all_checks_impl<false>(const std::list<int>&) const;
-template std::vector<full_move> state::find_all_checks_impl<true>(const std::list<int>&) const;
+template generator<full_move> state::find_checks_impl<false>(std::vector<int>) const;
+template generator<full_move> state::find_checks_impl<true>(std::vector<int>) const;
+template std::vector<vec4> state::gen_movable_pieces_impl<false>(std::vector<int>) const;
+template std::vector<vec4> state::gen_movable_pieces_impl<true>(std::vector<int>) const;

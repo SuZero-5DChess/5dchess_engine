@@ -83,7 +83,7 @@ piece_t board::get_piece(int pos) const
         else if(z & princess())
             piece = PRINCESS_B;
         else
-            throw std::runtime_error("get_piece: unknown piece\n");
+            throw std::runtime_error("board::get_piece: unknown piece\n");
     }
     else
     {
@@ -159,7 +159,9 @@ void board::set_piece(int pos, piece_t p)
                 bbs[board::LPAWN] |= z;
                 break;
             default:
-                std::cerr << "bb_full_collection initializer:" << p << "not implemented" << std::endl;
+                std::ostringstream oss;
+                oss << "board::set_piece:" << p << "not implemented" << std::endl;
+                throw std::runtime_error(oss.str());
                 break;
         }
     }

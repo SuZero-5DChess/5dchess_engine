@@ -1,0 +1,36 @@
+<game> ::= {<space-comment>* <header>}* {<space-comment>* <board-fen>}* <space-comment>* <game-tree>
+<header> ::= '[' <header-key> <whitespace>+ '"' <header-value> '"]'
+<header-key> ::= 'Size' | 'Promotion' | 'Date' | 'Round' | 'White' | 'Black' | 'Result' | any sequence of words not containing whitespace or '"'
+<header-value> ::= any sequence of words not containing '"'
+<board-fen> ::= '[' <fen-string> ':' <line> ':' <time> ':' {'w' | 'b'} ']'
+<fen-string> ::= any sequence of words not containing ':' or ']' ;to be parsed separately
+
+ <game-tree> ::= {'(' <space-comment>* <actions> <space-comment>* <game-tree>')' <space-comment>*}* [<actions> <space-comment>* <game-tree> <space-comment>*]
+
+<actions> ::= <turn-serial> <space-comment>* <move> {<space-comment>+ <move>}* <space-comment>*
+<turn-serial> ::= <number> ['w' | 'b'] '.' |  '/'
+<space-comment> ::= <whitespace> | <comment>
+<comment> ::= '{' <comment-text> '}' <whitespace>*
+<comment-text> ::= any sequence of words not containing '{' or '}'
+
+<move> ::= <physical-move> | <superphysical-move>
+<physical-move> ::= [<absolute-board>] ([<piece-name>] [<file>] [<rank>] ['x'] <file> <rank> ['=' <promote-to>] | 'O-O' | 'O-O-O') [<check-symbol>] [<evaluation-symbol>]
+<superphysical-move> ::= [<absolute-board>] [<piece-name>] [<file>] [<rank>] (<jump-indicator> ['x'] | [<jump-indicator>] ['x'] <to-board>) <file> <rank> ['=' <promote-to>] [<check-symbol>] [<present-moved-symbol>] [<evaluation-symbol>] <timeline-comment>*
+<to-board> ::= <absote-board> | <relative-board>
+<absolute-board> ::= '(' (['L'] <line> | [['L'] <line>] 'T' <time>) ')'
+<relative-board> ::= '$(' (['L'] <difference> | [['L'] <difference>] 'T' <difference>) ')'
+<piece-name> ::= 'P' | 'W' | 'K' | 'C' | 'Q' | 'Y' | 'S' | 'N' | 'R' | 'B' | 'U' | 'D'
+<promote-to> ::= 'Q' ;change this if promotion to other pieces is allowed
+<jump-indicator> ::= '>' | '>>'
+<difference> ::= '=' | '+' <positive-number> | '-' <positive-number>
+<file> ::= 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h'
+<rank> ::= '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8'
+<check-symbol> ::= '+' | '#' | '*'
+<evaluation-symbol> ::= '!!' | '!' | '??' | '?' | '!? ' | '?!'
+<present-moved-symbol> ::= '~'
+<timeline-comment> ::= <whitespace> '(' {'>L' <line> | '~T' <time>} ')'
+<line> ::= ['+' | '-'] <natural-number>
+<time> ::= <natural-number>
+<natural-number> ::= '0' | <positive-number>
+<positive-number> ::= '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | ...
+<whitespace> ::= {' ' | '\t' | '\n' | '\r'}+

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Line Comparator</title>
+<style>
+    body { font-family: sans-serif; margin: 20px; }
+    textarea {
+        width: 100%;
+        height: 300px;
+        font-family: monospace;
+        font-size: 14px;
+    }
+    .col { width: 50%; padding: 10px; }
+    .row { display: flex; gap: 10px; }
+    .output {
+        white-space: pre;
+        border: 1px solid #ccc;
+        padding: 5px;
+        margin-top: 5px;
+        font-family: monospace;
+        font-size: 14px;
+    }
+    .count {
+        font-size: 13px;
+        color: #444;
+        margin-bottom: 5px;
+    }
+    #controlPanel {
+        margin: 20px;
+        text-align: left;
+    }
+</style>
+</head>
+<body>
+
+<h2>Compare Lines (order-insensitive)</h2>
+
+<!-- INPUT AREA -->
+<div class="row">
+    <div class="col">
+        <h3>First Input</h3>
+        <div id="count1" class="count">0 lines</div>
+        <textarea id="input1" oninput="updateCounts()"></textarea>
+    </div>
+
+    <div class="col">
+        <h3>Second Input</h3>
+        <div id="count2" class="count">0 lines</div>
+        <textarea id="input2" oninput="updateCounts()"></textarea>
+    </div>
+</div>
+
+<!-- BUTTONS + COMMON COUNT (in the middle) -->
+<div id="controlPanel">
+    <button onclick="compareLines()">Compare</button>
+    <button onclick="compareByWord()">Compare by word</button>
+    <span id="commonCount">Common lines: 0</span>
+</div>
+
+<!-- OUTPUT AREA -->
+<div class="row">
+    <div class="col">
+        <h4>Only in first: <span id="countOnly1">0</span> items</h4>
+        <div id="out1" class="output"></div>
+    </div>
+
+    <div class="col">
+        <h4>Only in second: <span id="countOnly2">0</span> items</h4>
+        <div id="out2" class="output"></div>
+    </div>
+</div>
+
+<script>
+function countLines(txt) {
+    if (!txt) return 0;
+    return txt.split(/\r?\n/).length;
+}
+
+function updateCounts() {
+    const t1 = document.getElementById('input1').value;
+    const t2 = document.getElementById('input2').value;
+
+    document.getElementById('count1').textContent = countLines(t1) + " lines";
+    document.getElementById('count2').textContent = countLines(t2) + " lines";
+}
+
+// NORMAL LINE COMPARISON
+function compareLines() {
+    const input1 = document.getElementById('input1').value;
+    const input2 = document.getElementById('input2').value;
+
+    const set1 = new Set(input1.split(/\r?\n/).map(l => l.trimEnd()).filter(l => l !== ""));
+    const set2 = new Set(input2.split(/\r?\n/).map(l => l.trimEnd()).filter(l => l !== ""));
+
+    const only1 = [...set1].filter(x => !set2.has(x)).sort();
+    const only2 = [...set2].filter(x => !set1.has(x)).sort();
+    const common = [...set1].filter(x => set2.has(x)).length;
+
+    document.getElementById("countOnly1").textContent = only1.length;
+    document.getElementById("countOnly2").textContent = only2.length;
+    document.getElementById("commonCount").textContent = "Common lines: " + common;
+
+    document.getElementById("out1").textContent = only1.join("\n");
+    document.getElementById("out2").textContent = only2.join("\n");
+
+    updateCounts();
+}
+
+// WORD-NORMALIZED COMPARISON
+function normalizeByWords(line) {
+    if (!line.trim()) return "";
+    const words = line.trim().split(/\s+/).sort();
+    return words.join(" ");
+}
+
+function compareByWord() {
+    const input1 = document.getElementById('input1').value;
+    const input2 = document.getElementById('input2').value;
+
+    const norm1 = input1.split(/\r?\n/)
+        .map(l => normalizeByWords(l.trimEnd()))
+        .filter(x => x !== "");
+    const norm2 = input2.split(/\r?\n/)
+        .map(l => normalizeByWords(l.trimEnd()))
+        .filter(x => x !== "");
+
+    const set1 = new Set(norm1);
+    const set2 = new Set(norm2);
+
+    const only1 = [...set1].filter(x => !set2.has(x)).sort();
+    const only2 = [...set2].filter(x => !set1.has(x)).sort();
+    const common = [...set1].filter(x => set2.has(x)).length;
+
+    document.getElementById("countOnly1").textContent = only1.length;
+    document.getElementById("countOnly2").textContent = only2.length;
+    document.getElementById("commonCount").textContent = "Common (by word): " + common;
+
+    document.getElementById("out1").textContent = only1.join("\n");
+    document.getElementById("out2").textContent = only2.join("\n");
+
+    updateCounts();
+}
+</script>
+
+</body>
+</html>

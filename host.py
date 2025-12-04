@@ -25,15 +25,10 @@ tminf_fen = """
 [Size "8x8"]
 [Board "custom"]
 """ + '\n'.join([f'[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:{i}:b][r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:{i+1}:w]' for i in range(0, 41)])
-very_small_open = """
-[Size "4x4"]
-[Board "custom"]
-[Mode "5D"]
-[nbrk/3p*/P*3/KRBN:0:1:w]
-"""
-g = engine.game(t0_fen)
-game_data = {}
 
+g = engine.game.from_pgn(t0_fen)
+game_data = {}
+next_options = False
 
 @app.route('/')
 def index():
@@ -60,8 +55,10 @@ def handle_click(data):
     present_t, present_c = g.get_current_present()
     print(pos, qs, pos in qs)
     if pos in qs:
-        fm = engine.move5d.move(p0, pos)
+        fm = engine.ext_move(p0, pos)
+        print("applying", fm)
         flag = g.apply_move(fm)
+        print("finished", flag)
         hl = []
         if flag:
             if g.currently_check():
@@ -114,6 +111,20 @@ def handle_click(data):
     qs = []
     display()
 
+@socketio.on('request_prev')
+def handle_prev():
+    print('load previous move')
+    g.visit_parent()
+    display()
+
+@socketio.on('request_next')
+def handle_next(data):
+    print('load next move')
+    global next_options
+    print(next_options)
+    g.visit_child(next_options[data])
+    display()
+
 @socketio.on('request_undo')
 def handle_undo():
     print('attempting undo', end='')
@@ -131,9 +142,27 @@ def handle_redo():
 @socketio.on('request_submit')
 def handle_submit():
     print('received submition request', end='')
-    flag = g.apply_move(engine.move5d.submit())
+    flag = g.submit()
     print(' ---', 'success' if flag else 'failed')
     display()
+
+@socketio.on('request_hint')
+def suggest_action():
+    print('received hint request', end='')
+    flag = g.suggest_action()
+    print(' ---', 'success' if flag else 'failed')
+    display()
+
+@socketio.on('request_load')
+def suggest_action(data):
+    print('received load:')
+    print(data)
+    global g
+    try:
+        g = engine.game.from_pgn(data)
+        display()
+    except RuntimeError as e:
+        emit('response_load', str(e))
 
 def convert_boards_data(boards):
     def convert_board(board):
@@ -147,17 +176,25 @@ def display(hl=[]):
     critical = g.get_movable_pieces()
     cc = [{'x':q.x(), 'y':q.y(), 't':q.t(), 'l':q.l(), 'c':present_c} for q in critical]
     match_status = g.get_match_status()
-    text = f"""
-<p>{'white' if present_c == 0 else 'black'}'s move</p>
-<p>{str(match_status)}</p>
-"""[1:-1]
-    is_game_over = match_status != engine.match_status_t.PLAYING
-    emit('response_text', text)
+    comments = g.get_comments()
+    if comments:
+        emit('response_text', comments[-1])
+    else:
+        emit('response_text', "no comments")
     size_x, size_y = g.get_board_size()
+    children = list(enumerate(g.get_child_moves()))
+    global next_options
+    select_values = {str(n):s for (n,(_,s)) in children}
+    next_options = {str(n):a for (n,(a,_)) in children}
     new_data = {
+
         'submit-button': 'enabled' if g.can_submit() else 'disabled',
+        'prev-button': 'enabled' if g.has_parent() else 'disabled',
+        'next-button': 'enabled' if select_values else 'disabled',
         'undo-button': 'enabled' if g.can_undo() else 'disabled',
         'redo-button': 'enabled' if g.can_redo() else 'disabled',
+        'hint-button': 'enabled',
+        'next-options': select_values,
         'metadata': {
             "mode" : "odd"
         },
@@ -168,7 +205,7 @@ def display(hl=[]):
         'present': {
             't': present_t,
             'c': present_c,
-            'color': 'rgba(219,172,52,0.4)' if not is_game_over else 'rgba(128,128,128,0.4)'
+            'color': 'rgba(219,172,52,0.4)'# if not is_game_over else 'rgba(128,128,128,0.4)'
         },
         'focus': [
             {

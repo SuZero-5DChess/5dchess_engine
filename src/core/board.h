@@ -65,6 +65,7 @@ public:
     constexpr bitboard_t queen() const { return bbs[LROOK] & bbs[LDRAGON] & ~bbs[ROYAL]; }
     
     // indirect getter functions
+    constexpr bitboard_t sliding() const { return bbs[LROOK] | bbs[LBISHOP] | bbs[LUNICORN] | bbs[LDRAGON]; }
     constexpr bitboard_t occupied() const { return bbs[WHITE] | bbs[BLACK]; }
     
     template<bool C>

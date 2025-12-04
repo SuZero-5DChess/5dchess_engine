@@ -9,18 +9,28 @@
 #include <map>
 #include <set>
 #include "state.h"
+#include "gametree.h"
 
 class game
 {
+    using comments_t = std::vector<std::string>;
+    std::unique_ptr<gnode<comments_t>> gametree;
+    gnode<comments_t> *current_node;
     std::vector<state> cached_states;
     std::vector<state>::iterator now;
+    std::vector<ext_move> cached_moves;
+    std::vector<ext_move>::iterator now_moves;
+    
+    game(std::unique_ptr<gnode<comments_t>> gt);
+    void fresh();
 public:
     std::map<std::string, std::string> metadata;
     
-    game(std::string str);
+    static game from_pgn(std::string str);
+    
     state get_current_state() const;
     std::tuple<int,int> get_current_present() const;
-    std::vector<std::tuple<int,int,int,std::string>> get_current_boards() const;
+    std::vector<std::tuple<int,int,bool,std::string>> get_current_boards() const;
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_current_timeline_status() const;
     std::vector<vec4> gen_move_if_playable(vec4 p);
     
@@ -31,14 +41,27 @@ public:
     bool can_undo() const;
     bool can_redo() const;
     bool can_submit() const;
-    void undo();
-    void redo();
-    bool apply_move(move5d fm);
-    //bool apply_indicator_move(move5d fm);
+    bool undo();
+    bool redo();
+    bool apply_move(ext_move m);
+    bool submit();
     bool currently_check() const;
     std::vector<std::pair<vec4,vec4>> get_current_checks() const;
-    
     std::tuple<int, int> get_board_size() const;
+    
+    bool suggest_action();
+
+    comments_t get_comments() const;
+    //TODO: implement comment editing functions
+    bool has_parent() const;
+    void visit_parent();
+    std::vector<std::tuple<action, std::string>> get_child_moves() const;
+    /*
+    visit_child:
+    visit a child node (will create one if that child doesn't exist)
+    returns true if the child exists; false if a new child is created
+    */
+    bool visit_child(action act, comments_t comments = {}, std::optional<state> newstate = std::nullopt);
 };
 
 

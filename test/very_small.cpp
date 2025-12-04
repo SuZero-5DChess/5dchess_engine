@@ -1,26 +1,29 @@
 #include "game.h"
 #include <tuple>
+#include <ranges>
 
-std::string very_small_open = R"(
+std::string very_small_open =
+R"(
 [Size "4x4"]
 [Board "custom"]
 [Mode "5D"]
 [nbrk/3p*/P*3/KRBN:0:1:w]
-
-1. (0T1)Bc1b2 /
 )";
-
 int main()
 {
-    game g(very_small_open);
-    std::cout << g.get_current_state().m.to_string();
-    std::cout << std::get<3>(g.get_current_state().m.get_boards()[0]) << "\n";
+    game g = game::from_pgn(very_small_open);
+    std::cout << g.get_current_state().to_string();
+    ext_move m(vec4(0,1,1,0), vec4(0,2,1,0));
+    g.apply_move(m);
     
-    vec4 p(3,2,1,0);
-    std::cout << g.get_current_state().m.get_piece(p, 1) << "\n";
-    for(auto mv : g.get_current_state().m.gen_piece_move(p, 1))
+    g.suggest_action();
+    g.suggest_action();
+    bool flag = g.suggest_action();
+    std::cout << flag << "\n";
+    for(auto & [act, txt] : g.get_child_moves())
     {
-        std::cout << mv << "\n";
+        std::cout << txt << "\n";
+        std::cout << g.get_current_state().pretty_action(act) << "\n";
     }
     return 0;
 }

@@ -9,176 +9,10 @@
 
 
 std::string t0_fen = ""
-"[Size 8x8]"
+"[Size \"8x8\"]"
 "[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:0:b]\n"
 "[r*nbqk*bnr*/p*p*p*p*p*p*p*p*/8/8/8/8/P*P*P*P*P*P*P*P*/R*NBQK*BNR*:0:1:w]\n";
 
-
-std::vector<move5d> pgn_to_moves_(const std::string& input)
-{
-    std::string output;
-    
-    // Regex to match slashes ("/") and move numbers (e.g., "1.", "2.")
-    std::regex pattern(R"((\d+\.)|(/))");
-    const static std::regex comment_pattern(R"(\{.*?\})");
-    
-    // Create a stringstream from the input string
-    std::string clean_input = std::regex_replace(input, comment_pattern, "");
-    std::istringstream stream(clean_input);
-    std::string line;
-
-    while (std::getline(stream, line)) {
-        // Replace matches with "submit"
-        line = std::regex_replace(line, pattern, " submit ");
-        output += line + "\n"; // Append to output with newline preserved
-    }
-
-    // Split the result by whitespace into a vector of moves
-    std::vector<move5d> result;
-    std::istringstream result_stream(output);
-    std::string word;
-    //remove the first "submit"
-    result_stream >> word;
-    while (result_stream >> word)
-    {
-        if(word.compare("submit") != 0)
-        {
-            result.push_back(move5d(word));
-        }
-        else
-        {
-            result.push_back(move5d::submit());
-        }
-    }
-    return result;
-}
-
-void test1()
-{
-    game g(t0_fen);
-//     move5d mv("(0T1)Ng1f3");
-//     std :: cout << st.m.get_present() << endl;
-//     st.apply_move(mv);
-//     std :: cout << st.m.get_present() << endl;
-//     std :: cout << st.m.to_string() << endl;
-    
-//     cout << mv << endl;
-//
-//     std::visit(overloads{
-//         [](std::monostate){},
-//         [&](std::tuple<vec4, vec4> data)
-//         {
-//             auto [p, d] = data;
-//             vector<vec4> deltas = m.gen_piece_move(p, st.player);
-//             print_range("deltas:", deltas);
-//             SHOW(p)
-//             SHOW(-vec4(5,2,1,0))
-//             SHOW(-p)
-//             SHOW(d)
-//         }
-//     }, mv.data);
-//
-    std::vector<move5d> mvs = {
-        move5d("(0T1)e2e3"),
-        move5d::submit(),
-        move5d("(0T1)g8f6"),
-        move5d::submit(),
-        move5d("(0T2)f1c4"),
-        move5d::submit(),
-        move5d("(0T2)g7g5"),
-        move5d::submit(),
-        move5d("(0T3)g1h3"),
-        move5d::submit(),
-        move5d("(0T3)g5g4"),
-        move5d::submit(),
-        move5d("(0T4)e1g1"),
-        move5d::submit(),
-    };
-    
-    for(move5d mv : mvs)
-    {
-        std::cout << "Applying move: " << mv;
-        bool flag = g.apply_move(mv);
-        if(!flag)
-        {
-            std::cout << " ... failure\n";
-            break;
-        }
-        std::cout << " ... success\n";
-    }
-//
-//     g.undo();
-//     g.undo();
-//     g.undo();
-//     g.redo();
-//     std::cout << g.apply_move(move5d("(0T2)Rh8g8")) << endl;
-    std::cout << g.get_current_state().m.to_string();
-    std::cout << "test1 finished" << std::endl;
-}
-
-
-multiverse m0(t0_fen);
-
-template<bool DETECT_CHECKS>
-void run_game(std::vector<move5d> mvs)
-{
-    state s(m0);
-    
-//    std::cerr << "Running new game ..." << std::endl;
-    
-    for(move5d mv : mvs)
-    {
-        bool flag;
-//        std::cerr << "apply " << mv << std::endl;
-        if(std::holds_alternative<std::monostate>(mv.data))
-        {
-            flag = s.submit();
-        }
-        else if(std::holds_alternative<full_move>(mv.data))
-        {
-            auto fm = std::get<full_move>(mv.data);
-            flag = s.apply_move(fm);
-        }
-        else
-        {
-            throw std::runtime_error("Unknown move5d variant.\n");
-        }
-        if(!flag)
-        {
-            std::cerr << "In run_game:\n";
-            std::cerr << "current boards:\n";
-            std::cerr << s.m.to_string() << std::endl;
-            std::cerr << "failed to apply: " << mv << "\n";
-            std::visit(overloads {
-                [&](std::monostate){},
-                [&](full_move data)
-                {
-                    vec4 p = data.from;
-                    std::cerr << "The allowed moves are: ";
-                    for(vec4 d : s.m.gen_piece_move(p, s.player))
-                    {
-                        std::cerr << move5d::move(p, d) << " ";
-                    }
-                    std::cerr << std::endl;
-                }
-            }, mv.data);
-            exit(-1);
-        }
-        if constexpr(DETECT_CHECKS)
-        {
-            bool checking = s.find_check();
-            if(checking)
-            {
-                std::cerr << "In run_game:\n";
-                std::cerr << "current boards:\n";
-                std::cerr << s.m.to_string() << std::endl;
-                std::cerr << "This move" << mv << "is illeagal because hostile is checking.\n";
-            }
-        }
-    }
-//    
-//    std::cerr << "all moves are legal" << std::endl;
-}
 
 int main()
 {
@@ -394,23 +228,186 @@ int main()
 20.{1:16}(0T20)Re1e3 / {15:47}(0T20)Rd2d1 
 21.{1:17}(0T21)Kc1>>(0T20)b1 / {15:47}(1T20)Nb4d3 
 22.{1:04}(1T21)Kc1>>(0T20)b1 / {15:43}(1T21)Nd3b2 (0T21)Rd1e1 
-)"
+)", R"(
+1.e3/Nf6
+2.b4/e6
+3.Qf3/Bxb4
+4.Qg3/Bf8
+5.Nf3/d5
+6.Nc3/c6
+7.a4/Na6
+8.Bxa6/bxa6
+9.Ba3/g6
+10.Bxf8/Rxf8
+11.Qg5/Qe7
+12.Nd1/a5
+13.Nd4/Ba6
+14.Qe5/Rc8
+15.Rb1/Nd7
+16.Qg3/Qc5
+17.c3/Nf6
+18.Qf3/Ne4
+19.Qg4/Qd6
+20.Rb2/Nc5
+21.Rb6/Nd3
+22.Ke2/Ne5
+23.Rxa6/Nxg4
+24.Nxe6/Qxe6
+25.Rxc6/Rxc6
+26.Nb2/(0T26)Ng4>>(0T25)e4
+27.(0T27)Nb2>>(0T25)c2/(1T25)Qxe3
+)", R"(
+1.Nf3/Nf6
+2.d4/d5
+3.c3/c6
+4.Bf4/Bf5
+5.e3/e6
+6.Bd3/Bxd3
+7.Qxd3/Bd6
+8.Bxd6/Qxd6
+9.Nbd2/Nbd7
+10.a4/a6
+11.Ra3/c5
+12.dxc5/Nxc5
+13.Qd4/Rd8
+14.a5/Rd7
+15.Nb3/Nfe4
+16.Nxc5/Nxc5
+17.b4/Ne4
+18.Qa7/Rd8
+19.Qxb7/Kg8
+20.Ne5/Qxe5
+21.(0T21)Qb7>>(0T18)e7/(1T18)Kxe7
+22.(1T19)Qxg7/(0T21)Qe5>>x(0T18)h2
+23.(-1T19)Qb8/(-1T19)Ke8(0T18)f8
+24.(-2T19)Qb8
+)", R"(
+1.Nf3/Nf6
+2.b3/d5
+3.Bb2/Bg4
+4.e3/Nbd7
+5.Nc3/e6
+6.Bd3/Nc5
+7.Qe2/c6
+8.Qf1/Nce4
+9.h3/Bh5
+10.Bxe4/Nxe4
+11.Nxe4/dxe4
+12.Nd4/Qa5
+13.Bc3/Qc7
+14.Qc4/Qd7
+15.g4/Bg6
+16.Nf5/b5
+17.Qxe4/Qd5
+18.Qxd5/cxd5
+19.Rg1/Rc8
+20.Nxg7/Bxg7
+21.(0T21)Bc3>>x(0T18)c6/(1T18)Kd8
+22.(1T19)Ba5/(1T19)Kd8>>(0T19)d8
+23.(-1T20)Ba5 (1T20)Qxd5
+)",R"(
+1.e3/Nf6
+2.Nf3/d5
+3.c4/c6
+4.cxd5/Qxd5
+5.Nc3/Qh5
+6.Qb3/e6
+7.Nb5/Na6
+8.Nbd4/Nc5
+9.Qc4/Bd7
+10.Bd3/Nxd3
+11.Qxd3/Be7
+12.b3/a6
+13.Bb2/c5
+14.Ne2/Bb5
+15.Qc2/Qg6
+16.Qxg6/hxg6
+17.Ng3/Rd8
+18.a4/Bc6
+19.Rd1/Bd5
+20.Kg1/Bxb3
+21.Rde1/Bxa4
+22.e4/Bc6
+23.Be5/Bd6
+24.d4/Ng4
+25.Bxg7/Rg8
+26.e5/Rxg7
+27.exd6/Rxd6
+28.dxc5/Rd3
+29.h3/Bxf3
+30.gxf3/Nf6
+31.Re3/Rxe3
+32.fxe3/Nd5
+33.e4/Ne3
+34.Rc1/N>>xg3
+35.(0T35)Rc1>>(0T26)c1/(1T26)Rxg7
+36.(1T27)dxc5/(1T27)Bc7
+37.(1T28)h3/(1T28)Nf6
+38.(1T29)Red1/(1T29)Nxe4
+39.(1T30)Nxe4/(1T30)Bxe4
+40.(1T31)Rxd8/(1T31)Bxd8
+41.(1T32)Rce1
+)",R"(
+1. h4 / h5
+2. Rh3 / Rh6
+3. Ra3 / Rg6
+4. Rxa7 / Rxg2
+5. Rxb7 / Rxg1
+6. Rxb8 / Rg2
+7. Rxc8 / Rxf2
+8. Bg2 / Rxg2
+9. Rxc7 / Rxe2
+10. Kf1 / Rxd2
+11. Rxd7 / Qc7
+12. Rxc7 / Rxd1
+13. Kg2 / Rxc1
+14. Rxe7 / Kd8
+15. Rxf7 / Rxb1
+16. Rxf8 / Kc7
+17. Rxg8 / Rxb2
+18. Rxg7 / Kd6
+19. Rh7 / Rbxa2
+20. Rxh5 / Rxc2
+21. Kh1 / Rc4
+22. Kg1 / Rxh4
+23. (0T23)Kg1>>(0T22)g1 / (0T23)Ke6 (1T22)Rxh4
+24. (1T23)Khg2 / (1T23)Rh3
+25. (0T24)Rg5 (1T24)Rg5 / (0T24)Kf6 (1T24)Rh3>>(0T24)h3
+26. (0T25)Rgg1 (1T25)Rg3 (-1T25)Rgg1 / (-1T25)Kd5 (0T25)Rh5 (1T25)Ke5
+27. (-1T26)Rg1>>(-1T25)g1 / (2T25)Kf6
+28. (0T26)Rge1 (2T26)R5g2 (1T26)Rga3 / (-1T26)Rh5 (2T26)Rhh8 (1T26)Kf6 (0T26)Kg7
+29. (2T27)Rga2 (1T27)K1h1 (-1T27)Ra2 (0T27)Reb1 / (-1T27)Rh5>>(-1T25)h5
+30. (-1T28)Ra1 (-2T26)Ra2 / (-1T28)Rc3 (-2T26)Kd5
+31. (-1T29)Rh1 (-2T27)Rag2 / (-1T29)Rc3>>(-1T25)c3 (0T27)Rhh8
+32. (-3T26)Raf1 / (-3T26)Kd5 (2T27)Ke5 (1T27)Kg7
+33. (-3T27)Rf5 / (-3T27)Kc4 (-2T27)Kc4
+34. (2T28)Rg1>(0T28)g1 (1T28)Rc3 (-2T28)Rg2>>(0T28)g2 (-3T28)Rgg5 / (0T28)Kh7 (3T28)Kh7 (2T28)R3h7 (1T28)Kh8 (-2T28)Rha5 (-3T28)Kb3
+35. (1T29)Kh1>(2T29)g1 (-3T29)Rg3 (3T29)Rf2 (0T29)Rb2 (-2T29)Rg2 / (3T29)Kg7 (-2T29)Re4 (-3T29)Ka3 (1T29)Rb8 (0T29)Rhb8 (2T29)Rhb8
+36. (-3T30)Rf5>(-1T30)f5 (-2T30)Rg1 (3T30)Ra5 (1T30)Rc3g3 (2T30)Ra2c2 (0T30)Rf2 /   (3T30)Rh8b8 (2T30)Ke5e6 (1T30)Rb8a8 (0T30)Rb8c8 (-1T30)Kd5e6 (-2T30)Re4e5 (-3T30)Ka3b2
+37. (3T31)Ra5e5 (2T31)Rc2c3 (1T31)Rg3f3 (0T31)Rg1f1 (-1T31)Rf5a5 (-2T31)Rg1g2 (-3T31)Rg3g4 / (3T31)Ra8a1 (2T31)Rh7a7 (1T31)Ra8b8 (0T31)Kh7g8 (-1T31)Ke6f7 (-2T31)Ra5a1 (-3T31)Rh4h8
+38. (3T32)Re5e3 (2T32)Ra1a2 (1T32)Kg2f2 (0T32)Ra1e1 (-1T32)Rh1f1 (-2T32)Rg2g1 (-3T32)Rg4g1 / (3T32)Ra1>>(3T30)a1 (2T32)Rb8c8 (1T32)Rb8a8 (0T32)Rc8c3 (-1T32)Kf7g8 (-2T32)Rh3h8 (-3T32)Rh3h7
+39. (3T33)Rb1g1 (2T33)Ra2a6 (1T33)Rf3h3 (0T33)Rf2g2 (-1T33)Ra5g5 (-2T33)Rg1g4 (-3T33)Rg1g2 (-4T31)Ra5e5 / (2T33)Ke5 (1T33)Kg8  (-2T33)Kc3 (-3T33)Ka1 (-4T31)Rh8b8
+40.  (2T34)Ra6h6 (1T34)Rh3h1   (-2T34)Rg4h4 (-3T34)Rg2h2 (-4T32)Rb1b3 / (2T34)Ra8b8 (1T34)Ra8b8 (-2T34)Ra8b8 (-3T34)Ra8b8 (-4T32)Kg7g8
+41. (-4T33)Rb3g3 / (3T33)Kh8 (0T33)Kh8 (-1T33)Kh8 (-4T33)Kh8
+42. (3T34)Rf2h2 (0T34)Rf1h1 (-1T34)Rf1h1 (-4T34)Rf2h2
+)", 
     };
-    std::vector<std::vector<move5d>> mvss;
+//    std::vector<game> games;
+//    for(auto mvs : pgns)
+//    {
+//        std::string pgn = t0_fen + mvs;
+//        games.push_back(game::from_pgn(pgn));
+//    }
     int count = 0;
-    int n = 200;
-    for(auto pgn : pgns)
-    {
-        auto mvs = pgn_to_moves_(pgn);
-        mvss.push_back(mvs);
-        count += mvs.size();
-    }
+    int n = 10;
     auto start = std::chrono::high_resolution_clock::now();
     for(int i = 0; i < n; i++)
     {
-        for(auto mvs : mvss)
+        for(auto mvs : pgns)
         {
-            run_game<false>(mvs);
+            std::string pgn = t0_fen + mvs;
+            game g = game::from_pgn(pgn);
+            //std::cout << g.get_current_state().apparent_present() << "\n";
         }
     }
     auto end = std::chrono::high_resolution_clock::now();

@@ -4,6 +4,11 @@
 #include <vector>
 #include <tuple>
 #include <iostream>
+#include <sstream>
+#include <set>
+#include <algorithm>
+#include <iterator>
+#include <optional>
 
 /*
 The append/concatenate functions.
@@ -60,12 +65,34 @@ std::ostream& operator<<(std::ostream& os, const std::pair<A,B> x)
 /*
 The list printer function. (For debugging.)
 */
-void print_range(auto const rem, auto const& range)
+void print_range(auto const rem, auto range)
 {
-    std::cout << rem;
+    std::cout << rem << "{";
+    bool first = true;
     for(auto const& elem : range)
-        std::cout << elem << ' ';
-    std::cout << '\n';
+    {
+        if(!first)
+            std::cout << ", ";
+        first = false;
+        std::cout << elem;
+    }
+    std::cout << "}\n";
+}
+
+std::string range_to_string(const auto range, std::string prefix = "{", std::string suffix = "}", std::string separator = ", ")
+{
+    std::ostringstream oss;
+    oss << prefix;
+    bool first = true;
+    for(auto const& elem : range)
+    {
+        if(!first)
+            oss << separator;
+        first = false;
+        oss << elem;
+    }
+    oss << suffix;
+    return oss.str();
 }
 
 #define SHOW(s) std::cout << #s << ": " << (s) << std::endl;
@@ -89,6 +116,55 @@ constexpr auto generate_array(std::index_sequence<N...>, F f)
 -> std::array<decltype(f(std::declval<size_t>())), sizeof...(N)>
 {
     return {f(N)...};
+}
+
+/*
+ set minus function
+ */
+
+template <typename T>
+std::set<T> set_minus(const std::set<T>& a, const std::set<T>& b)
+{
+    std::set<T> result;
+    std::set_difference(a.begin(), a.end(), b.begin(), b.end(),
+                        std::inserter(result, result.begin()));
+    return result;
+}
+
+/*
+ signum function (which STL doesn't provide)
+ */
+
+template <typename T>
+constexpr int signum(T x) requires std::unsigned_integral<T> {
+    return T(0) < x;
+}
+
+template <typename T>
+constexpr int signum(T x) requires std::signed_integral<T> {
+    return (T(0) < x) - (x < T(0));
+}
+
+template <typename T>
+constexpr int signum(T x) requires std::floating_point<T> {
+    return (T(0) < x) - (x < T(0));
+}
+
+/*
+ The optional print function
+ */
+template<typename T>
+std::ostream &operator<<(std::ostream& os, std::optional<T> opt)
+{
+    if(opt.has_value())
+    {
+        os << "opt-value:" << *opt;
+    }
+    else
+    {
+        os << "nullopt";
+    }
+    return os;
 }
 
 #endif // UTILS_H

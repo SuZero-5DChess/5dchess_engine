@@ -14,6 +14,8 @@
 #include <sstream>
 #include <iomanip>
 
+static_assert(-(1) == ~0, "two's complement required");
+
 typedef std::uint32_t vec4_t;
 constexpr vec4_t L_BITS = 8, T_BITS = 8, Y_BITS = 8, X_BITS = 8;
 
@@ -92,6 +94,10 @@ public:
     constexpr auto operator <=>(const vec4& other) const
     {
         return value <=> other.value;
+    }
+    constexpr int dot(vec4 other) const
+    {
+        return x()*other.x() + y()*other.y() + t()*other.t() + l()*other.l();
     }
     friend std::ostream& operator<<(std::ostream& os, const vec4& v)
     {
