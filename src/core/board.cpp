@@ -244,7 +244,7 @@ array_board::array_board(std::string fen, const int x_size, const int y_size)
     piece.fill(WALL_PIECE);
     char c;
     int x = 0, y = y_size - 1;
-    for(int i = 0; i < fen.length(); i++)
+    for(size_t i = 0; i < fen.length(); i++)
     {
         c = fen[i];
         if(i+1 < fen.length() && fen[i+1] == '*')

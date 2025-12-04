@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # compiler-specific options for magic.cpp
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-Wall -pedantic)
+    add_compile_options(-Wall -pedantic -Wextra -Wpedantic)
     add_compile_options(-fconstexpr-steps=100000000)
 elseif(MSVC)
     add_compile_options(/W4 /permissive-)

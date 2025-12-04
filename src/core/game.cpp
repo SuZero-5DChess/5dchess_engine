@@ -85,7 +85,7 @@ game game::from_pgn(std::string input)
             std::unique_ptr<gnode<comments_t>> child_node = gnode<comments_t>::create_child(node, s, act, act_ast.comments);
             gnode<comments_t>* child_node_ptr = node->add_child(std::move(child_node));
             cn = child_node_ptr;
-            dfs(child_node_ptr, child_gt);
+            dfs(child_node_ptr, *child_gt);
         }
     };
     

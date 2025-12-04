@@ -76,7 +76,7 @@ struct actions {
     friend std::ostream& operator<<(std::ostream& os, const actions& ac);
 };
 struct gametree {
-    std::vector<std::pair<actions, gametree>> variations;
+    std::vector<std::pair<actions, std::unique_ptr<gametree>>> variations;
     friend std::ostream& operator<<(std::ostream& os, const gametree& gt);
 };
 struct game {
