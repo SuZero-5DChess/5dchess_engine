@@ -120,7 +120,7 @@ multiverse::multiverse(const std::string &input, int size_x, int size_y, int l0_
     }
 }
 
-std::tuple<int,int> multiverse::get_present() const
+std::pair<int,int> multiverse::get_present() const
 {
     int present_v = std::numeric_limits<int>::max();
     for(int l = active_min; l <= active_max; l++)
