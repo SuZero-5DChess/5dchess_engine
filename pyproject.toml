@@ -1,0 +1,69 @@
+# pyproject.toml
+# 这是现代Python项目的标准配置文件，请将其放置在您项目的根目录下。
+
+[build-system]
+# 定义构建项目所需的依赖
+requires = [
+    "scikit-build-core>=0.8", # 用于处理CMake项目的构建工具
+    "pybind11>=2.12",         # 用于C++和Python绑定的头文件库
+    "cmake>=3.20"             # 确保构建环境中包含CMake
+]
+# 指定用于执行构建的后端
+build-backend = "scikit_build_core.build"
+
+[project]
+# 项目的基本元数据
+name = "5dchess_engine"
+version = "1.0.0" # 您可以在发布新版本时更新此版本号
+description = "A 5D Chess engine written in C++ with Python bindings"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "SuZero-5DChess" } # 您可以替换为实际的作者信息
+]
+requires-python = ">=3.8"
+
+# PyPI分类，用于帮助用户发现您的项目
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Games/Entertainment :: Board Games",
+]
+
+[project.urls]
+Homepage = "https://github.com/SuZero-5DChess/5dchess_engine"
+Repository = "https://github.com/SuZero-5DChess/5dchess_engine"
+
+[tool.scikit-build]
+# scikit-build-core的配置
+cmake.minimum-version = "3.20"
+cmake.build-type = "Release"
+
+# 定义wheel包的元数据
+wheel.packages = ["src/engine"]
+
+[tool.cibuildwheel]
+# cibuildwheel的配置，用于在CI中构建多个平台的wheels
+# 指定要构建的Python版本
+build = "cp38-* cp39-* cp310-* cp311-* cp312-*"
+# 跳过32位Windows构建
+skip = "*-win32 *-i686"
+
+# 在不同操作系统上构建前需要执行的命令
+[tool.cibuildwheel.linux]
+before-build = "apt-get update && apt-get install -y gcc-13 g++-13 cmake"
+environment = { CC="gcc-13", CXX="g++-13", CXXFLAGS="-std=c++23" }
+
+[tool.cibuildwheel.macos]
+before-build = "brew install cmake"
+environment = { CXXFLAGS="-std=c++23" }
+
+[tool.cibuildwheel.windows]
+before-build = "choco install cmake -y"
+environment = { CXXFLAGS="/std:c++latest" }
