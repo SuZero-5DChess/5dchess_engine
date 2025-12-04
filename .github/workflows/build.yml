@@ -1,0 +1,134 @@
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Ubuntu with GCC 13 (supports C++23 and std::ranges::contains)
+          - os: ubuntu-22.04
+            compiler: gcc-13
+            cxx: g++-13
+            python-version: '3.11'
+          
+          # Ubuntu with Clang 17 (supports C++23 and std::ranges::contains)
+          - os: ubuntu-22.04
+            compiler: clang-17
+            cxx: clang++-17
+            python-version: '3.11'
+          
+          # macOS with latest Xcode (Apple Clang 15+)
+          - os: macos-12
+            compiler: clang
+            cxx: clang++
+            python-version: '3.11'
+          
+          # Windows with MSVC 2022 (supports C++23)
+          - os: windows-2022
+            compiler: msvc
+            cxx: msvc
+            python-version: '3.11'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Linux: Install GCC 13 or Clang 17
+      - name: Install GCC 13 (Ubuntu)
+        if: runner.os == 'Linux' && matrix.compiler == 'gcc-13'
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt-get update
+          sudo apt-get install -y gcc-13 g++-13 cmake
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+          pip install --upgrade pip setuptools wheel pybind11
+
+      - name: Install Clang 17 (Ubuntu)
+        if: runner.os == 'Linux' && matrix.compiler == 'clang-17'
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" -y
+          sudo apt-get update
+          sudo apt-get install -y clang-17 lld-17 cmake
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 100
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-17 100
+          pip install --upgrade pip setuptools wheel pybind11
+
+      # macOS: Update Xcode and install dependencies
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake
+          pip install --upgrade pip setuptools wheel pybind11
+
+      # Windows: Install dependencies
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install cmake -y
+          pip install --upgrade pip setuptools wheel pybind11
+
+      # Build wheel with appropriate compiler
+      - name: Build wheel (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          pip install build
+          CC=${{ matrix.compiler }} CXX=${{ matrix.cxx }} python -m build --wheel
+        env:
+          CFLAGS: "-std=c++23"
+          CXXFLAGS: "-std=c++23"
+
+      - name: Build wheel (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pip install build
+          python -m build --wheel
+
+      - name: Upload wheels as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.compiler }}-py${{ matrix.python-version }}
+          path: dist/*.whl
+
+  publish-release:
+    name: Create GitHub Release
+    needs: build-wheels
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all wheels
+        uses: actions/download-artifact@v3
+        with:
+          path: dist
+
+      - name: Flatten directory structure
+        run: |
+          mkdir -p final_dist
+          find dist -name "*.whl" -exec cp {} final_dist/ \;
+          ls -la final_dist/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: final_dist/*.whl
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
