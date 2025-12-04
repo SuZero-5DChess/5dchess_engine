@@ -148,10 +148,10 @@ state::state(const pgnparser_ast::game &g)
     }
     std::tie(present, player) = m->get_present();
     // parse moves
-    std::reference_wrapper<const pgnparser_ast::gametree> gt = g.gt;
-    while(!gt.get().variations.empty())
+    const pgnparser_ast::gametree *gt = &g.gt;
+    while(!gt->variations.empty())
     {
-        const auto &[act, last_gt] = *(gt.get().variations.end() - 1);
+        const auto &[act, last_gt] = *(gt->variations.end() - 1);
         //std::cout << act;
         for(const auto& mv: act.moves)
         {
@@ -195,7 +195,7 @@ state::state(const pgnparser_ast::game &g)
                 }
             }
         }
-        if(!last_gt.variations.empty())
+        if(!last_gt->variations.empty())
         {
             bool flag = submit();
             if(!flag)
@@ -213,7 +213,7 @@ state::state(const pgnparser_ast::game &g)
                 std::cerr << "[WARNING]state(): Cannot submit after parsing these moves: " << act;
             }
         }
-        gt = last_gt;
+        gt = last_gt.get();
     }
 }
 
@@ -243,7 +243,7 @@ std::optional<state> state::can_submit() const
 std::optional<state> state::can_apply(full_move fm, piece_t promote_to) const
 {
     state new_state = *this;
-    bool flag = new_state.apply_move<false>(fm);
+    bool flag = new_state.apply_move<false>(fm, promote_to);
     if(flag)
     {
         return std::optional<state>(new_state);
