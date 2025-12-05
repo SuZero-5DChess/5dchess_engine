@@ -27,12 +27,12 @@ private:
         char piece;
         char file;
         unsigned number;
-        pgnparser_ast::turn_t turn;
+        turn_t turn;
         std::string_view comment;
     } buffer;
 public:
     
-    pgnparser(std::string msg, bool check_turn_number=true, pgnparser_ast::turn_t start_turn=std::make_pair(1,false));
+    pgnparser(std::string msg, bool check_turn_number=true, turn_t start_turn=std::make_pair(1,false));
     void next_token();
     void test_lexer();
      

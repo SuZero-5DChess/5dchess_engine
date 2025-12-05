@@ -29,7 +29,7 @@ public:
     static game from_pgn(std::string str);
     
     state get_current_state() const;
-    std::tuple<int,int> get_current_present() const;
+    std::pair<int, bool> get_current_present() const;
     std::vector<std::tuple<int,int,bool,std::string>> get_current_boards() const;
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_current_timeline_status() const;
     std::vector<vec4> gen_move_if_playable(vec4 p);
@@ -47,7 +47,7 @@ public:
     bool submit();
     bool currently_check() const;
     std::vector<std::pair<vec4,vec4>> get_current_checks() const;
-    std::tuple<int, int> get_board_size() const;
+    std::pair<int, int> get_board_size() const;
     
     bool suggest_action();
 

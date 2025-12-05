@@ -19,7 +19,8 @@ class state
      `present` is in L,T coordinate (i.e. not u,v corrdinated).
      These numbers can be inherited from copy-construction; thus they are not necessarily equal to `m.get_present()`.
     */
-    int present, player;
+    int present;
+    bool player;
     
     template<bool C>
     std::vector<vec4> gen_movable_pieces_impl(std::vector<int> lines) const;
@@ -87,7 +88,7 @@ public:
      unplayable_timelines are the timelines that current player can't place a move on
      */
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_timeline_status() const;
-    std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_timeline_status(int present_t, int present_c) const;
+    std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_timeline_status(int present_t, bool present_c) const;
     
     /*
      find_checks(): Test if that player with color `c` is able to capture an enermy royal piece.
@@ -119,18 +120,18 @@ public:
 
     // wrappers for low-level functions
     std::pair<int, int> get_board_size() const;
-    std::pair<int, int> get_present() const;
-    std::pair<int, int> apparent_present() const;
+    turn_t get_present() const;
+    turn_t apparent_present() const;
     std::pair<int, int> get_initial_lines_range() const;
     std::pair<int, int> get_lines_range() const;
     std::pair<int, int> get_active_range() const;
-    std::pair<int, int> get_timeline_start(int l) const;
-    std::pair<int, int> get_timeline_end(int l) const;
-    piece_t get_piece(vec4 p, int color) const;
-    std::shared_ptr<board> get_board(int l, int t, int c) const;
+    turn_t get_timeline_start(int l) const;
+    turn_t get_timeline_end(int l) const;
+    piece_t get_piece(vec4 p, bool color) const;
+    std::shared_ptr<board> get_board(int l, int t, bool c) const;
     std::vector<std::tuple<int,int,bool,std::string>> get_boards() const;
     generator<vec4> gen_piece_move(vec4 p) const;
-    generator<vec4> gen_piece_move(vec4 p, int c) const;
+    generator<vec4> gen_piece_move(vec4 p, bool c) const;
     std::string to_string() const;
     
     /*

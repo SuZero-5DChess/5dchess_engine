@@ -24,9 +24,9 @@ constexpr static int l_to_u(int l)
         return ~(l << 1);
 }
 
-constexpr static int tc_to_v(int t, int c)
+constexpr static int tc_to_v(int t, bool c)
 {
-    return t << 1 | c;
+    return t << 1 | static_cast<int>(c);
 }
 
 constexpr static int u_to_l(int u)
@@ -37,13 +37,13 @@ constexpr static int u_to_l(int u)
         return u >> 1;
 }
 
-constexpr static std::pair<int, int> v_to_tc(int v)
+constexpr static std::pair<int, bool> v_to_tc(int v)
 {
-    return std::pair<int, int>(v >> 1, v & 1);
+    return {v >> 1, static_cast<bool>(v & 1)};
 }
 
-multiverse::multiverse(std::vector<std::tuple<int, int, bool, std::string>> bds, int size_x, int size_y, int l0_min, int l0_max)
-: size_x(size_x), size_y(size_y), l0_min(l0_min), l0_max(l0_max), l_min(l0_min), l_max(l0_max)
+multiverse::multiverse(std::vector<std::tuple<int, int, bool, std::string>> bds, int size_x, int size_y)
+: size_x(size_x), size_y(size_y), l_min(0), l_max(0)
 {
     if(bds.empty())
         throw std::runtime_error("multiverse(): Empty input");
@@ -67,60 +67,7 @@ multiverse::multiverse(std::vector<std::tuple<int, int, bool, std::string>> bds,
     }
 }
 
-multiverse::multiverse(const std::string &input, int size_x, int size_y, int l0_min, int l0_max)
-: size_x(size_x), size_y(size_y), l0_min(l0_min), l0_max(l0_max), l_min(l0_min), l_max(l0_max)
-{
-    const static std::regex comment_pattern(R"(\{.*?\})");
-    const static std::regex block_pattern(R"(\[[^\[\]]*\])");
-    const static std::regex board_pattern(R"(\[(.+?):([+-]?\d+):([+-]?\d+):([a-zA-Z])\])");
-
-    std::string clean_input = std::regex_replace(input, comment_pattern, "");
-    std::smatch block_match;
-    while(std::regex_search(clean_input, block_match, block_pattern))
-    {
-        std::smatch sm;
-        std::string str = block_match.str();
-        
-        if(std::regex_search(str, sm, board_pattern))
-        {
-            int l = std::stoi(sm[2]);
-            int t = std::stoi(sm[3]);
-            int c = 0;
-            switch(sm[4].str()[0])
-            {
-            case 'w':
-            case 'W':
-                c = 0;
-                break;
-            case 'b':
-            case 'B':
-                c = 1;
-                break;
-            default:
-                throw std::runtime_error("Unknown color:" + sm[4].str() + " in " + str);
-                break;
-            }
-            insert_board_impl(l, t, c, std::make_shared<board>(sm[1], size_x, size_y));
-        }
-        clean_input = block_match.suffix(); //all it to search the remaining parts
-    }
-    for(int l = l_min; l <= l_max; l++)
-    {
-        int u = l_to_u(l);
-        if(boards[u].empty())
-            throw std::runtime_error("Error: There is a gap between timelines.");
-        for(int v = timeline_start[u]; v <= timeline_end[u]; v++)
-        {
-            if(boards[u][v] == nullptr)
-            {
-                throw std::runtime_error("Error: There is a gap between boards on timeline L"
-                    + std::to_string(u_to_l(u)) + ".");
-            }
-        }
-    }
-}
-
-std::pair<int,int> multiverse::get_present() const
+turn_t multiverse::get_present() const
 {
     int present_v = std::numeric_limits<int>::max();
     for(int l = active_min; l <= active_max; l++)
@@ -135,11 +82,6 @@ std::pair<int, int> multiverse::get_board_size() const
     return std::make_pair(size_x, size_y);
 }
 
-std::pair<int, int> multiverse::get_initial_lines_range() const
-{
-    return std::make_pair(l0_min, l0_max);
-}
-
 std::pair<int, int> multiverse::get_lines_range() const
 {
     return std::make_pair(l_min, l_max);
@@ -150,17 +92,17 @@ std::pair<int, int> multiverse::get_active_range() const
     return std::make_pair(active_min, active_max);
 }
 
-std::pair<int, int> multiverse::get_timeline_start(int l) const
+turn_t multiverse::get_timeline_start(int l) const
 {
     return v_to_tc(timeline_start[l_to_u(l)]);
 }
 
-std::pair<int, int> multiverse::get_timeline_end(int l) const
+turn_t multiverse::get_timeline_end(int l) const
 {
     return v_to_tc(timeline_end[l_to_u(l)]);
 }
 
-std::shared_ptr<board> multiverse::get_board(int l, int t, int c) const
+std::shared_ptr<board> multiverse::get_board(int l, int t, bool c) const
 {
     try
     {
@@ -222,6 +164,7 @@ void multiverse::insert_board(int l, int t, bool c, const std::shared_ptr<board>
 {
     insert_board_impl(l, t, c, b_ptr);
     // recalculate active range since there is probably a new line
+    const auto [l0_min, l0_max] = get_initial_lines_range();
     int whites_lines = l_max - l0_max;
     int blacks_lines = l0_min - l_min;
     if(l > l0_max && whites_lines <= blacks_lines + 1 && l > active_max)
@@ -292,7 +235,7 @@ std::string multiverse::to_string() const
     return sstm.str();
 }
 
-bool multiverse::inbound(vec4 a, int color) const
+bool multiverse::inbound(vec4 a, bool color) const
 {
     int l = a.l(), u = l_to_u(l), v = tc_to_v(a.t(), color);
     if(a.outbound() || l < l_min || l > l_max)
@@ -300,12 +243,12 @@ bool multiverse::inbound(vec4 a, int color) const
     return timeline_start[u] <= v && v <= timeline_end[u];
 }
 
-piece_t multiverse::get_piece(vec4 a, int color) const
+piece_t multiverse::get_piece(vec4 a, bool color) const
 {
     return boards[l_to_u(a.l())][tc_to_v(a.t(), color)]->get_piece(a.xy());
 }
 
-bool multiverse::get_umove_flag(vec4 a, int color) const
+bool multiverse::get_umove_flag(vec4 a, bool color) const
 {
     return boards[l_to_u(a.l())][tc_to_v(a.t(), color)]->umove() & pmask(ppos(a.x(),a.y()));
 }
@@ -475,7 +418,7 @@ movegen_t multiverse::gen_moves(vec4 p) const
     }
 }
 
-generator<vec4> multiverse::gen_piece_move(vec4 p, int board_color) const
+generator<vec4> multiverse::gen_piece_move(vec4 p, bool board_color) const
 {
     movegen_t gen = board_color ? gen_moves<true>(p) : gen_moves<false>(p);
     for (const auto& [r, bb] : gen)
@@ -516,7 +459,7 @@ constexpr std::initializer_list<vec4> double_dtls = {
     vec4(0, 0, 0, -2),
     vec4(0, 0, -2, 0)
 };
-// TODO: continue from here
+
 template<bool C>
 std::vector<std::pair<vec4, bitboard_t>> multiverse::gen_purely_sp_rook_moves(vec4 p0) const
 {
@@ -585,7 +528,6 @@ std::vector<std::pair<vec4, bitboard_t>> multiverse::gen_purely_sp_knight_moves(
             remaining &= ~b1_ptr->friendly<C>();
             if(remaining)
             {
-                //result[p1.tl()] |= remaining;
                 result.push_back(std::make_pair(p1.tl(), remaining));
             }
         }
@@ -597,7 +539,6 @@ std::vector<std::pair<vec4, bitboard_t>> multiverse::gen_purely_sp_knight_moves(
 template<piece_t P, bool C>
 bitboard_t multiverse::gen_physical_moves_impl(vec4 p) const
 {
-	//int u = l_to_u(p.l()), v = tc_to_v(p.t(), board_color);
 	std::shared_ptr<board> b_ptr = get_board(p.l(), p.t(), C);
     bitboard_t friendly = b_ptr->friendly<C>();
     bitboard_t hostile = b_ptr->hostile<C>();
@@ -790,7 +731,6 @@ void multiverse::gen_compound_moves(vec4 p, std::map<vec4, bitboard_t>& result) 
 template<piece_t P, bool C, bool ONLY_SP>
 movegen_t multiverse::gen_moves_impl(vec4 p) const
 {
-    //int pos = p.xy();
     if constexpr (!ONLY_SP)
     {
         bitboard_t bb = gen_physical_moves_impl<P, C>(p);
@@ -1115,7 +1055,7 @@ generator<vec4> multiverse::gen_board_move_impl(vec4 p0) const
     {
         vec4 p = vec4(pos, p0.tl());
         // TODO: optimize code below
-        // note: gen_purely_sp_*_moves for *=rook,bishop,knight are fixed for the whole board
+        // note: gen_purely_sp_*_moves for *=rxook,bishop,knight are fixed for the whole board
         // but we are calling them for each piece here
         movegen_t gen = C ? gen_moves<true>(p) : gen_moves<false>(p);
         for (const auto& [r, bb] : gen)

@@ -114,7 +114,7 @@ std::string generate_random_fen(std::mt19937& gen)
     
     // Distributions
     std::uniform_int_distribution<> empty_dist(0, 99);  // For empty squares
-    std::uniform_int_distribution<> piece_dist(0, pieces.size() - 1);  // For piece selection
+    std::uniform_int_distribution<> piece_dist(0, static_cast<int>(pieces.size() - 1));  // For piece selection
     std::bernoulli_distribution empty_prob(0.6);  // 60% chance of empty square
     
     std::string fen;

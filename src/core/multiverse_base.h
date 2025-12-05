@@ -14,6 +14,7 @@
 #include <utility>
 #include <map>
 #include <memory>
+#include "turn.h"
 #include "board.h"
 #include "vec4.h"
 #include "generator.h"
@@ -32,7 +33,7 @@ class multiverse
 {
 private:
     const int size_x, size_y; // board size
-    const int l0_min, l0_max; // initial timeline range
+    //const int l0_min, l0_max; // initial timeline range
     std::vector<std::vector<std::shared_ptr<board>>> boards;
     // the following data are derivated from boards:
     int l_min, l_max, active_min, active_max;
@@ -79,8 +80,7 @@ protected:
     void update_active_range(); // for initialization of derived classes only
 public:
     // constructor
-    multiverse(std::vector<boards_info_t> boards, int size_x, int size_y, int l0_min, int l0_max);
-    multiverse(const std::string& input, int size_x, int size_y, int l0_min, int l0_max);
+    multiverse(std::vector<boards_info_t> boards, int size_x, int size_y);
     
     // modifiers
     void insert_board(int l, int t, bool c, const std::shared_ptr<board>& b_ptr);
@@ -88,32 +88,32 @@ public:
 
     // getters
     std::pair<int, int> get_board_size() const;
-    std::pair<int, int> get_initial_lines_range() const;
+    virtual std::pair<int, int> get_initial_lines_range() const = 0;
     std::pair<int, int> get_lines_range() const;
     std::pair<int, int> get_active_range() const;
-    std::pair<int, int> get_timeline_start(int l) const;
-    std::pair<int, int> get_timeline_end(int l) const;
-    std::shared_ptr<board> get_board(int l, int t, int c) const;
+    turn_t get_timeline_start(int l) const;
+    turn_t get_timeline_end(int l) const;
+    std::shared_ptr<board> get_board(int l, int t, bool c) const;
     std::vector<boards_info_t> get_boards() const;
     std::string to_string() const;
-    piece_t get_piece(vec4 a, int color) const;
-    bool get_umove_flag(vec4 a, int color) const;
+    piece_t get_piece(vec4 a, bool color) const;
+    bool get_umove_flag(vec4 a, bool color) const;
     
     /*
      This helper function returns (present_t, present_c)
      where: present_t is the time of present in L,T coordinate
-            present_c is either 0 (for white) or 1 (for black)
+            present_c is either false (for white) or true (for black)
      */
-    std::tuple<int,int> get_present() const;
+    turn_t get_present() const;
     
     // move generation
     template<bool C> bitboard_t gen_physical_moves(vec4 p) const;
     template<bool C> movegen_t gen_superphysical_moves(vec4 p) const;
     template<bool C> movegen_t gen_moves(vec4 p) const;
-    generator<vec4> gen_piece_move(vec4 p, int board_color) const;
+    generator<vec4> gen_piece_move(vec4 p, bool board_color) const;
     
     // help functions
-    bool inbound(vec4 a, int color) const;
+    bool inbound(vec4 a, bool color) const;
     virtual std::unique_ptr<multiverse> clone() const = 0;
     virtual std::string pretty_lt(vec4 p0) const = 0;
     virtual ~multiverse() = default;

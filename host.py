@@ -53,6 +53,7 @@ def handle_click(data):
     global qs, p0, g
     pos = engine.vec4(x,y,t,l)
     present_t, present_c = g.get_current_present()
+    print(f"present: t={present_t}, c={present_c}")
     print(pos, qs, pos in qs)
     if pos in qs:
         fm = engine.ext_move(p0, pos)
