@@ -1,8 +1,9 @@
 on:
   push:
-  pull_request:
-  workflow_dispatch:
-
+    tags:
+      - 'v*'
+  release:
+    types: [published]
 jobs:
   build-wheels:
     name: Build wheels on ${{ matrix.os }}
