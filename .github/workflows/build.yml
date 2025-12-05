@@ -23,7 +23,7 @@ jobs:
             python-version: '3.12'
           
           # macOS with latest Xcode (Apple Clang 15+)
-          - os: macos-12
+          - os: macos-15
             compiler: clang
             cxx: clang++
             python-version: '3.12'
