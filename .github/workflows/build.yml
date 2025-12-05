@@ -1,3 +1,5 @@
+name: Build and Release Wheels
+
 on:
   push:
   pull_request:
@@ -10,29 +12,29 @@ jobs:
     strategy:
       matrix:
         include:
-          # Ubuntu with GCC 13 (supports C++23 and std::ranges::contains)
+          # Ubuntu with GCC 15
           - os: ubuntu-22.04
-            compiler: gcc-13
-            cxx: g++-13
-            python-version: '3.11'
-          
-          # Ubuntu with Clang 17 (supports C++23 and std::ranges::contains)
+            compiler: gcc-15
+            cxx: g++-15
+            python-version: '3.12'
+
+          # Ubuntu with Clang 17
           - os: ubuntu-22.04
             compiler: clang-17
             cxx: clang++-17
-            python-version: '3.11'
-          
-          # macOS with latest Xcode (Apple Clang 15+)
-          - os: macos-12
+            python-version: '3.12'
+
+          # macOS with Xcode 15
+          - os: macos-15
             compiler: clang
             cxx: clang++
-            python-version: '3.11'
-          
-          # Windows with MSVC 2022 (supports C++23)
+            python-version: '3.12'
+
+          # Windows with MSVC 2022
           - os: windows-2022
             compiler: msvc
             cxx: msvc
-            python-version: '3.11'
+            python-version: '3.12'
 
     steps:
       - uses: actions/checkout@v4
@@ -44,58 +46,62 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Linux: Install GCC 13 or Clang 17
-      - name: Install GCC 13 (Ubuntu)
-        if: runner.os == 'Linux' && matrix.compiler == 'gcc-13'
+      # Linux: Install GCC 15
+      - name: Install GCC 15 (Ubuntu)
+        if: runner.os == 'Linux' && matrix.compiler == 'gcc-15'
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt-get update
-          sudo apt-get install -y gcc-13 g++-13 cmake
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
-          pip install --upgrade pip setuptools wheel pybind11
+          sudo apt-get install -y gcc-15 g++-15 cmake
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100
+          python -m pip install --upgrade pip setuptools wheel pybind11
 
+      # Linux: Install Clang 17
       - name: Install Clang 17 (Ubuntu)
         if: runner.os == 'Linux' && matrix.compiler == 'clang-17'
         run: |
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" -y
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" | sudo tee /etc/apt/sources.list.d/llvm-17.list
           sudo apt-get update
           sudo apt-get install -y clang-17 clang-tools-17 lld-17 cmake
           sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 100
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-17 100
-          pip install --upgrade pip setuptools wheel pybind11
+          python -m pip install --upgrade pip setuptools wheel pybind11
 
-      # macOS: Update Xcode and install dependencies
+      # macOS dependencies
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
           brew install cmake
-          pip install --upgrade pip setuptools wheel pybind11
+          python -m pip install --upgrade pip setuptools wheel pybind11
 
-      # Windows: Install dependencies
+      # Windows dependencies
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
           choco install cmake -y
-          pip install --upgrade pip setuptools wheel pybind11
+          python -m pip install --upgrade pip setuptools wheel pybind11
 
-      # Build wheel with appropriate compiler
+      # Build wheel (Linux/macOS)
       - name: Build wheel (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
-          pip install build
-          CC=${{ matrix.compiler }} CXX=${{ matrix.cxx }} python -m build --wheel
-        env:
-          CFLAGS: "-std=c++23"
-          CXXFLAGS: "-std=c++23"
+          export CC=${{ matrix.compiler }}
+          export CXX=${{ matrix.cxx }}
+          export CFLAGS="-std=c++23"
+          export CXXFLAGS="-std=c++23"
+          python -m pip install --upgrade build
+          python -m build --wheel --verbose
 
+      # Build wheel (Windows)
       - name: Build wheel (Windows)
         if: runner.os == 'Windows'
         run: |
-          pip install build
-          python -m build --wheel
+          python -m pip install --upgrade build
+          python -m build --wheel --verbose
 
+      # Upload wheels as artifacts
       - name: Upload wheels as artifacts
         uses: actions/upload-artifact@v4
         with:
