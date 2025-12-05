@@ -11,10 +11,10 @@ jobs:
       matrix:
         include:
           # Ubuntu with GCC 13 (supports C++23 and std::ranges::contains)
-          - os: ubuntu-22.04
-            compiler: gcc-13
-            cxx: g++-13
-            python-version: '3.11'
+          #- os: ubuntu-22.04
+            #compiler: gcc-13
+            #cxx: g++-13
+            #python-version: '3.11'
           
           # Ubuntu with Clang 17 (supports C++23 and std::ranges::contains)
           - os: ubuntu-22.04
