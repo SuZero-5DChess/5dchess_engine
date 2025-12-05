@@ -105,7 +105,7 @@ void game::fresh()
     now_moves = cached_moves.begin();
 }
 
-std::tuple<int,int> game::get_current_present() const
+std::pair<int,bool> game::get_current_present() const
 {
     return get_current_state().get_present();
 }
@@ -259,10 +259,9 @@ std::vector<std::pair<vec4, vec4>> game::get_current_checks() const
     return result;
 }
 
-std::tuple<int, int> game::get_board_size() const
+std::pair<int, int> game::get_board_size() const
 {
-    const auto [size_x, size_y] = get_current_state().get_board_size();
-    return std::make_tuple(size_x, size_y);
+    return get_current_state().get_board_size();
 }
 
 bool game::suggest_action()

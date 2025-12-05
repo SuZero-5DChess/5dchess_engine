@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
-project(5dchess_engine VERSION 1.0.0 LANGUAGES CXX)
+project(5dchess_engine VERSION 1.0.1 LANGUAGES CXX)
+
+# Make all targets PIC by default (needed for Python .so on github actions)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Set C++23 standard
 set(CMAKE_CXX_STANDARD 23)

@@ -10,8 +10,11 @@ class multiverse_odd : public multiverse
     std::pair<int,int> calculate_active_range() const override;
 public:
     using multiverse::multiverse;
-    multiverse_odd(std::string input, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
     multiverse_odd(std::vector<boards_info_t> boards, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
+    std::pair<int, int> get_initial_lines_range() const override
+    {
+        return std::make_pair(0,0);
+    }
     std::unique_ptr<multiverse> clone() const override
     {
         return std::make_unique<multiverse_odd>(*this);
@@ -27,8 +30,11 @@ class multiverse_even : public multiverse
     std::pair<int,int> calculate_active_range() const override;
 public:
     using multiverse::multiverse;
-    multiverse_even(std::string input, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
     multiverse_even(std::vector<boards_info_t> boards, int size_x = BOARD_LENGTH, int size_y = BOARD_LENGTH);
+    std::pair<int, int> get_initial_lines_range() const override
+    {
+        return std::make_pair(-1,0);
+    }
     std::unique_ptr<multiverse> clone() const override
     {
         return std::make_unique<multiverse_even>(*this);

@@ -16,19 +16,6 @@ bool match_opt(const std::optional<T> &simple, const std::optional<T> &full)
 
 using namespace pgnparser_ast;
 
-inline turn_t next_turn(turn_t t)
-{
-    auto [n,c] = t;
-    int v = (n<<1 | c) + 1;
-    return std::make_pair(v>>1, v&1);
-}
-
-inline turn_t previous_turn(turn_t t)
-{
-    auto [n,c] = t;
-    int v = (n<<1 | c) - 1;
-    return std::make_pair(v>>1, v&1);
-}
 
 std::vector<std::string> views_to_strings(const std::vector<std::string_view>& views)
 {
@@ -151,7 +138,7 @@ void pgnparser::next_token()
             {
                 bool c = *buffer.current == 'b';
                 buffer.current++;
-                auto newturn = std::make_pair(buffer.number, c);
+                turn_t newturn = std::make_pair(buffer.number, c);
                 if(check_turn_number && newturn != next_turn(buffer.turn))
                 {
                     std::ostringstream oss;
@@ -169,7 +156,7 @@ void pgnparser::next_token()
             else if(buffer.current!=input.end() && *buffer.current == '.')
             {
                  const bool c = false;
-                 auto newturn = std::make_pair(buffer.number, c);
+                 turn_t newturn = {static_cast<int>(buffer.number), c};
                  if(check_turn_number && newturn != next_turn(buffer.turn))
                  {
                      std::ostringstream oss;

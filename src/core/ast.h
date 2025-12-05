@@ -9,7 +9,9 @@
 #include <string>
 #include <string_view>
 #include <map>
-#include "vec4.h"
+#include "turn.h"
+
+
 
 namespace pgnparser_ast {
 typedef enum {
@@ -27,8 +29,6 @@ typedef enum {
     LEFT_PAREN, RIGHT_PAREN,
     END
 } token_t;
-
-using turn_t = std::pair<int,bool>;
 
 struct relative_board {
    std::optional<int> line_difference;

@@ -381,7 +381,7 @@ bool state::apply_move(full_move fm, piece_t promote_to)
         const piece_t& pic = static_cast<piece_t>(piece_name(b_ptr->get_piece(p.xy())));
         m->append_board(p.l(), b_ptr->replace_piece(p.xy(), NO_PIECE));
         const std::shared_ptr<board>& x_ptr = m->get_board(q.l(), q.t(), player);
-        auto [t, c] = next_tc(q.t(), player);
+        auto [t, c] = next_turn({q.t(), player});
         
         bitboard_t z = pmask(p.xy());
         const auto &[size_x, size_y] = m->get_board_size();
@@ -412,16 +412,16 @@ bool state::apply_move(full_move fm, piece_t promote_to)
 template <bool UNSAFE>
 bool state::submit()
 {
-    auto [present_t, present_c] = m->get_present();
+    auto [t, c] = m->get_present();
     if constexpr (!UNSAFE)
     {
-        if(player == present_c)
+        if(player == c)
         {
             return false;
         }
     }
-    present = present_t;
-    player  = present_c;
+    present = t;
+    player  = c;
     return true;
 }
 
@@ -440,38 +440,27 @@ state state::phantom() const
     return s;
 }
 
-//
-//void state::set_promotion_piece(piece_t pt)
-//{
-//    dprint("setting promotion piece to:", pt);
-//    assert(to_white(pt) == pt && pt != KING_W && pt != ROYAL_QUEEN_W);
-//    promote_to = pt;
-//}
-
-
-
 std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_timeline_status() const
 {
     return get_timeline_status(present, player);
 }
 
-std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_timeline_status(int present_t, int present_c) const
+std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> state::get_timeline_status(int present_t, bool present_c) const
 {
     auto [l_min, l_max] = m->get_lines_range();
     auto [active_min, active_max] = m->get_active_range();
-    auto present_v = std::make_pair(present_t, present_c);
+    turn_t present_tc = std::make_pair(present_t, present_c);
     std::vector<int> mandatory_timelines, optional_timelines, unplayable_timelines;
     for(int l = l_min; l <= l_max; l++)
     {
-        auto v = m->get_timeline_end(l);
-        //int v = m->timeline_end[multiverse::l_to_u(l)];
-        if (active_min <= l && active_max >= l && v == present_v)
+        turn_t tc = m->get_timeline_end(l);
+        if (active_min <= l && active_max >= l && tc == present_tc)
         {
             mandatory_timelines.push_back(l);
         }
         else
         {
-            auto [t, c] = v;
+            auto [t, c] = tc;
             if(present_c==c)
             {
                 optional_timelines.push_back(l);
@@ -618,12 +607,12 @@ std::pair<int, int> state::get_board_size() const
 }
 
 
-std::pair<int, int> state::get_present() const
+turn_t state::get_present() const
 {
     return std::make_pair(present, player);
 }
 
-std::pair<int, int> state::apparent_present() const
+turn_t state::apparent_present() const
 {
     return m->get_present();
 }
@@ -643,22 +632,22 @@ std::pair<int, int> state::get_active_range() const
     return m->get_active_range();
 }
 
-std::pair<int, int> state::get_timeline_start(int l) const
+turn_t state::get_timeline_start(int l) const
 {
     return m->get_timeline_start(l);
 }
 
-std::pair<int, int> state::get_timeline_end(int l) const
+turn_t state::get_timeline_end(int l) const
 {
     return m->get_timeline_end(l);
 }
 
-piece_t state::get_piece(vec4 p, int color) const
+piece_t state::get_piece(vec4 p, bool color) const
 {
     return m->get_piece(p, color);
 }
 
-std::shared_ptr<board> state::get_board(int l, int t, int c) const
+std::shared_ptr<board> state::get_board(int l, int t, bool c) const
 {
     return m->get_board(l, t, c);
 }
@@ -673,7 +662,7 @@ generator<vec4> state::gen_piece_move(vec4 p) const
     return m->gen_piece_move(p, player);
 }
 
-generator<vec4> state::gen_piece_move(vec4 p, int c) const
+generator<vec4> state::gen_piece_move(vec4 p, bool c) const
 {
     return m->gen_piece_move(p, c);
 }

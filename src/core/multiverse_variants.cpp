@@ -1,13 +1,8 @@
 #include "multiverse_variants.h"
 
-multiverse_odd::multiverse_odd(std::string input, int size_x, int size_y)
-    : multiverse(std::move(input), size_x, size_y, 0, 0)
-{
-    update_active_range();
-}
 
 multiverse_odd::multiverse_odd(std::vector<boards_info_t> boards, int size_x, int size_y)
-    : multiverse(boards, size_x, size_y, 0, 0)
+    : multiverse(boards, size_x, size_y)
 {
     update_active_range();
 }
@@ -24,14 +19,9 @@ std::pair<int, int> multiverse_odd::calculate_active_range() const
 
 
 
-multiverse_even::multiverse_even(std::string input, int size_x, int size_y)
-    : multiverse(std::move(input), size_x, size_y, -1, 0)
-{
-    update_active_range();
-}
 
 multiverse_even::multiverse_even(std::vector<boards_info_t> boards, int size_x, int size_y)
-    : multiverse(boards, size_x, size_y, -1, 0)
+    : multiverse(boards, size_x, size_y)
 {
     update_active_range();
 }

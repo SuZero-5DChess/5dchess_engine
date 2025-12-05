@@ -78,31 +78,5 @@ constexpr static int ppos(int x, int y)
     return x|(y<<BOARD_BITS);
 }
 
-enum class match_status_t {PLAYING, WHITE_WINS, BLACK_WINS, STALEMATE};
-
-//put it here temporarily...
-#include <iostream>
-
-[[maybe_unused]]
-static std::ostream& operator<<(std::ostream& os, const match_status_t& status)
-{
-   switch (status)
-   {
-       case match_status_t::PLAYING:
-           os << "PLAYING";
-           break;
-       case match_status_t::WHITE_WINS:
-           os << "WHITE_WINS";
-           break;
-       case match_status_t::BLACK_WINS:
-           os << "BLACK_WINS";
-           break;
-       case match_status_t::STALEMATE:
-           os << "STALEMATE";
-           break;
-   }
-   return os;
-}
-
 
 #endif //PIECE_H
