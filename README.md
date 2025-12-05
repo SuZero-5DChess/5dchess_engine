@@ -84,19 +84,3 @@ The command line tool will be built as `build/cli`. To use it, type `cli <option
 ### Documentation
 
 For more detail, please read [this page](docs/index.md).
-
-### TODOs
-
-- &#9745; use generators to unify code that code that produces one incidence or more 
-- &#9745; hide UV coordinate details, deprecate numbers_activated 
-- &#9745; support even timeline game
-- &#9745; 5dpgn reader for simplified moves
-- &#9745; ~~method~~ function to get check path
-- &#9745; test hypercuboid algorithm
-- &#9745; promotion
-- &#9745; integrate the function of reading simplified: implement an additional `parse_game` function for parser class
-- &#9745; refactor the `action` class as a sequence of moves sorted by the line of the destination board
-- &#9745; refactor the `game` class and correspondig python interface
-- &#9744; document for notation of 5dLAN and simplified 5dpgn
-
-this line is of no use, for CI test
