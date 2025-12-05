@@ -10,13 +10,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # compiler-specific options for magic.cpp
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -pedantic -Wextra -Wpedantic)
     add_compile_options(-fconstexpr-steps=100000000)
+
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-Wall -pedantic -Wextra -Wpedantic)
+    # GCC equivalent settings
+    add_compile_options(
+        -fconstexpr-depth=1000000
+        -fconstexpr-ops-limit=100000000
+    )
+
 elseif(MSVC)
     add_compile_options(/W4 /permissive-)
     add_compile_options(/constexpr:steps100000000)
 endif()
+
 
 
 # Option for building tests
