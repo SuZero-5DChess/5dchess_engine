@@ -709,7 +709,6 @@ std::optional<actions> pgnparser::parse_actions()
 {
     PARSE_START;
     if(buffer.token != TURN) PARSE_FAIL;
-    turn_t turn = buffer.turn;
     next_token();
     while(buffer.token == WHITE_SPACE || buffer.token == COMMENT)
     {
@@ -846,7 +845,7 @@ std::optional<game> pgnparser::parse_game()
                     throw parse_error("parse_game(): Expect time in board string:" + s);
                 t = stoi(std::string(s.begin() + prev, s.begin() + now));
             }
-            catch(std::invalid_argument e)
+            catch(std::invalid_argument &e)
             {
                 throw parse_error("parse_game(): Expect number after ':': " + s + "\n" + e.what());
             }
