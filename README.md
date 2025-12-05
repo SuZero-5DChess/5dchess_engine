@@ -98,3 +98,5 @@ For more detail, please read [this page](docs/index.md).
 - &#9745; refactor the `action` class as a sequence of moves sorted by the line of the destination board
 - &#9745; refactor the `game` class and correspondig python interface
 - &#9744; document for notation of 5dLAN and simplified 5dpgn
+
+this line is of no use, for CI test
