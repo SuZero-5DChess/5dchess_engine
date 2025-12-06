@@ -204,7 +204,7 @@ bool game::undo()
 
 bool game::redo()
 {
-    bool flag = can_undo();
+    bool flag = can_redo();
     if(flag)
     {
         now++;
