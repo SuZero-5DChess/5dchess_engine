@@ -98,7 +98,10 @@ void action::sort(std::vector<ext_move> &mvs, const state &s)
             moved_lines.insert(q.l());
         }
     }
-    std::reverse(mvs.begin()+branching_index+1, mvs.end());
+    if(branching_index < mvs.size())
+    {
+        std::reverse(mvs.begin()+branching_index+1, mvs.end());
+    }
 }
 
 action action::from_vector(const std::vector<ext_move> &mvs, const state &s)
