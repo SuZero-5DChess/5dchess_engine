@@ -62,6 +62,8 @@ public:
     returns true if the child exists; false if a new child is created
     */
     bool visit_child(action act, comments_t comments = {}, std::optional<state> newstate = std::nullopt);
+    
+    std::string show_pgn();
 };
 
 

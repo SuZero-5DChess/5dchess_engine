@@ -3,8 +3,10 @@
 
 #include <functional>
 #include <optional>
+#include <sstream>
 #include "action.h"
 #include "state.h"
+#include "turn.h"
 
 template<typename T>
 class gnode {
@@ -67,6 +69,47 @@ public:
             }
         }
         return nullptr;
+    }
+    std::string to_string(std::function<std::string(T)> show = [](T){return "";}, turn_t start_turn = {1,false}, bool full_turn_display=true)
+    {
+        std::ostringstream oss;
+        size_t num_children = children.size();
+        if(parent) // non-root
+        {
+            auto [t, c] = start_turn;
+            if(full_turn_display)
+            {
+                oss << t << (c?'b':'w')  << ". ";
+            }
+            else if(c)
+            {
+                oss << "/ ";
+            }
+            else
+            {
+                oss << t << ". ";
+            }
+            oss << parent->get_state().pretty_action(act) << " ";
+            oss << show(info);
+            start_turn = next_turn(start_turn);
+            if(c && num_children > 0)
+            {
+                oss << '\n';
+            }
+        }
+        if(num_children > 1)
+        {
+            for(auto it = children.begin(); it+1 != children.end(); it++)
+            {
+                oss << "(" << (**it).to_string(show, start_turn, true) << ")\n";
+            }
+        }
+        if(num_children > 0)
+        {
+            auto it = (children.end() - 1);
+            oss << (**it).to_string(show, start_turn, num_children > 1);
+        }
+        return oss.str();
     }
 };
 

@@ -103,6 +103,8 @@ public:
     std::shared_ptr<board> move_piece(int from, int to) const;
     array_board to_array_board() const;
     std::string to_string() const;
+    
+    template<bool SHOW_UMOVE=false>
     std::string get_fen() const;
 
     // all the pieces (both white and black) that attacks a given square
@@ -130,6 +132,7 @@ public:
     std::shared_ptr<array_board> move_piece(int from, int to) const;
 
     std::string to_string() const;
+    
     std::string get_fen() const;
 #ifdef SHOW_BOARD_DESTRUCTION
     ~board()

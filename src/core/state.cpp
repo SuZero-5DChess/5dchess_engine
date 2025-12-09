@@ -674,6 +674,17 @@ std::string state::to_string() const
     return ss.str() + m->to_string();
 }
 
+std::string state::show_fen() const
+{
+    std::ostringstream oss;
+    for(const auto &[l,t,c,s] : m->get_boards<true>())
+    {
+        oss << "[" << s << ":" << m->pretty_l(l);
+        oss << ":" << t << ":" << (c?"b":"w") << "]\n";
+    }
+    return oss.str();
+}
+
 state::parse_pgn_res state::parse_move(const pgnparser_ast::move &move) const
 {
     std::vector<full_move> matched;

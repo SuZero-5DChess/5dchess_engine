@@ -133,6 +133,7 @@ public:
     generator<vec4> gen_piece_move(vec4 p) const;
     generator<vec4> gen_piece_move(vec4 p, bool c) const;
     std::string to_string() const;
+    std::string show_fen() const;
     
     /*
     parse_move: Given a state `s` and a move in string format `move`, try to parse the move and match it to a unique full_move in the context of state `s`.

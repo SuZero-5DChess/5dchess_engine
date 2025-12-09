@@ -123,6 +123,7 @@ void board::set_piece(int pos, piece_t p)
         {
             case KING_W:
                 bbs[board::ROYAL] |= z;
+                [[fallthrough]];
             case COMMON_KING_W:
                 bbs[board::LKING] |= z;
                 break;
@@ -140,6 +141,7 @@ void board::set_piece(int pos, piece_t p)
                 break;
             case ROYAL_QUEEN_W:
                 bbs[board::ROYAL] |= z;
+                [[fallthrough]];
             case QUEEN_W:
                 bbs[board::LROOK] |= z;
                 bbs[board::LBISHOP] |= z;
@@ -155,6 +157,7 @@ void board::set_piece(int pos, piece_t p)
                 break;
             case BRAWN_W:
                 bbs[board::LRAWN] |= z;
+                [[fallthrough]];
             case PAWN_W:
                 bbs[board::LPAWN] |= z;
                 break;
@@ -197,9 +200,48 @@ std::string board::to_string() const
     return to_array_board().to_string();
 }
 
+template<bool SHOW_UMOVE>
 std::string board::get_fen() const
 {
-    return to_array_board().get_fen();
+    std::string result = "/";
+    for (int y = BOARD_LENGTH - 1; y >= 0; y--)
+    {
+        for (int x = 0; x < BOARD_LENGTH; x++)
+        {
+            switch(this->get_piece(ppos(x,y)))
+            {
+                case NO_PIECE:
+                    if(isdigit(result.back()))
+                    {
+                        result.back() += 1;
+                    }
+                    else
+                    {
+                        result += '1';
+                    }
+                    break;
+                case WALL_PIECE:
+                    continue;
+                default:
+                    result += get_piece(ppos(x,y));
+                    if constexpr (SHOW_UMOVE)
+                    {
+                        if(umove() & pmask(ppos(x, y)))
+                        {
+                            result += "*";
+                        }
+                    }
+                    break;
+            }
+        }
+        if(result.back() != '/')
+        {
+            result += "/";
+        }
+    }
+    result.erase(result.begin());
+    result.pop_back(); // remove the extra '/'
+    return result;
 }
 
 bitboard_t board::attacks_to(int pos) const
@@ -313,22 +355,31 @@ array_board::array_board(std::string fen, const int x_size, const int y_size)
             {
                 case '9':
                     this->set_piece(ppos(x,y), NO_PIECE); x++;
+                    [[fallthrough]];
                 case '8':
                     this->set_piece(ppos(x,y), NO_PIECE); x++;
+                    [[fallthrough]];
                 case '7':
                     this->set_piece(ppos(x,y), NO_PIECE); x++;
+                    [[fallthrough]];
                 case '6':
                     this->set_piece(ppos(x,y), NO_PIECE); x++;
+                    [[fallthrough]];
                 case '5':
                     this->set_piece(ppos(x,y), NO_PIECE); x++;
+                    [[fallthrough]];
                 case '4':
                     this->set_piece(ppos(x,y), NO_PIECE); x++;
+                    [[fallthrough]];
                 case '3':
                     this->set_piece(ppos(x,y), NO_PIECE); x++;
+                    [[fallthrough]];
                 case '2':
                     this->set_piece(ppos(x,y), NO_PIECE); x++;
+                    [[fallthrough]];
                 case '1':
                     this->set_piece(ppos(x,y), NO_PIECE); x++;
+                    [[fallthrough]];
                 case '0':
                     break;
                 case 'K':
@@ -482,3 +533,6 @@ std::string array_board::get_fen() const
     result.pop_back(); // remove the extra '/'
     return result;
 }
+
+template std::string board::get_fen<true>() const;
+template std::string board::get_fen<false>() const;

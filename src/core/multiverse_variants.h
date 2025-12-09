@@ -19,6 +19,10 @@ public:
     {
         return std::make_unique<multiverse_odd>(*this);
     }
+    std::string pretty_l(int l) const override
+    {
+        return std::to_string(l);
+    }
     std::string pretty_lt(vec4 p0) const override
     {
         return "(" + std::to_string(p0.l()) + "T" + std::to_string(p0.t()) + ")";
@@ -38,6 +42,12 @@ public:
     std::unique_ptr<multiverse> clone() const override
     {
         return std::make_unique<multiverse_even>(*this);
+    }
+    std::string pretty_l(int l) const override
+    {
+        std::string sign = l >= 0 ? "+" : "-";
+        int l_abs = l >= 0 ? l : ~l;
+        return sign + std::to_string(l_abs);
     }
     std::string pretty_lt(vec4 p0) const override
     {

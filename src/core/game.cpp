@@ -8,6 +8,20 @@
 #include "pgnparser.h"
 #include "hypercuboid.h"
 
+
+std::string show_comments(std::vector<std::string> const& comments)
+{
+    std::string result;
+    bool first = true;
+    for (auto const& c : comments)
+    {
+        if (!first) result += ' ';
+        result += '{' + c + '}';
+        first = false;
+    }
+    return result;
+}
+
 game::game(std::unique_ptr<gnode<comments_t>> gt)
 : gametree{std::move(gt)}, current_node{gametree.get()}, cached_states{}, cached_moves{}
 {
@@ -341,4 +355,21 @@ bool game::visit_child(action act, comments_t comments, std::optional<state> new
     current_node = current_node->add_child(std::move(new_child));
     fresh();
     return false;
+}
+
+std::string game::show_pgn()
+{
+    std::ostringstream oss;
+    for(const auto &[k, v] : metadata)
+    {
+        std::string key = k;
+        if(!key.empty())
+        {
+            key[0] = toupper(key[0]);
+        }
+        oss << "[" << key << " \"" << v << "\"]\n";
+    }
+    oss << gametree->get_state().show_fen() << "\n";
+    oss << gametree->to_string(show_comments);
+    return oss.str();
 }

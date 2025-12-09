@@ -93,8 +93,12 @@ public:
     std::pair<int, int> get_active_range() const;
     turn_t get_timeline_start(int l) const;
     turn_t get_timeline_end(int l) const;
+    
     std::shared_ptr<board> get_board(int l, int t, bool c) const;
+    
+    template<bool SHOW_UMOVE=false>
     std::vector<boards_info_t> get_boards() const;
+    
     std::string to_string() const;
     piece_t get_piece(vec4 a, bool color) const;
     bool get_umove_flag(vec4 a, bool color) const;
@@ -115,6 +119,7 @@ public:
     // help functions
     bool inbound(vec4 a, bool color) const;
     virtual std::unique_ptr<multiverse> clone() const = 0;
+    virtual std::string pretty_l(int l) const = 0;
     virtual std::string pretty_lt(vec4 p0) const = 0;
     virtual ~multiverse() = default;
 };

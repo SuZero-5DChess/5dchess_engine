@@ -992,7 +992,7 @@ std::optional<slice> HC_info::find_checks(const point &p, const HC& hc) const
 moveseq HC_info::to_action(const point &p) const
 {
     std::vector<full_move> mvs;
-    for(const auto [l,i] : line_to_axis)
+    for(const auto &[l,i] : line_to_axis)
     {
         semimove loc = axis_coords[i][p[i]];
         if(std::holds_alternative<physical_move>(loc))

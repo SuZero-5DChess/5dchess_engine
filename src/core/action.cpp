@@ -98,6 +98,13 @@ void action::sort(std::vector<ext_move> &mvs, const state &s)
             moved_lines.insert(q.l());
         }
     }
+    if(branching_index > 0)
+    {
+        int sign = player ? -1 : 1;
+        std::sort(mvs.begin(), mvs.begin()+branching_index, [sign](ext_move m1, ext_move m2){
+            return sign*m1.get_to().l() < sign*m2.get_to().l();
+        });
+    }
     if(branching_index < mvs.size())
     {
         std::reverse(mvs.begin()+branching_index+1, mvs.end());
@@ -114,4 +121,13 @@ action action::from_vector(const std::vector<ext_move> &mvs, const state &s)
 std::vector<ext_move> action::get_moves() const
 {
     return mvs;
+}
+
+std::ostream& operator<<(std::ostream &os, const action &act)
+{
+    for(const auto &mv : act.mvs)
+    {
+        os << mv.to_string() << " ";
+    }
+    return os;
 }

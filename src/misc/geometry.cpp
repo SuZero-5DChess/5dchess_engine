@@ -115,7 +115,10 @@ std::string search_space::to_string() const
         result += hc.to_string(false);
         result += "&\n";
     }
-    result.pop_back();
-    result.pop_back();
+    if(hcs.size()>0)
+    {
+        result.pop_back();
+        result.pop_back();
+    }
     return result;
 }

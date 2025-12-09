@@ -53,8 +53,8 @@ def handle_click(data):
     global qs, p0, g
     pos = engine.vec4(x,y,t,l)
     present_t, present_c = g.get_current_present()
-    print(f"present: t={present_t}, c={present_c}")
-    print(pos, qs, pos in qs)
+    # print(f"present: t={present_t}, c={present_c}")
+    # print(pos, qs, pos in qs)
     if pos in qs:
         fm = engine.ext_move(p0, pos)
         print("applying", fm)
@@ -242,6 +242,12 @@ def display(hl=[]):
 @socketio.on('request_data')
 def handle_request(data):
     display()
+
+@socketio.on('request_pgn')
+def handle_undo():
+    print('client requests pgn')
+    pgn = g.show_pgn()
+    emit('response_pgn', pgn)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

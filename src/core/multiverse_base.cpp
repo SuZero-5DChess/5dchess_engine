@@ -191,6 +191,7 @@ void multiverse::update_active_range()
     std::tie(active_min, active_max) = calculate_active_range();
 }
 
+template<bool SHOW_UMOVE>
 std::vector<std::tuple<int,int,bool,std::string>> multiverse::get_boards() const
 {
     std::vector<std::tuple<int,int,bool,std::string>> result;
@@ -203,7 +204,7 @@ std::vector<std::tuple<int,int,bool,std::string>> multiverse::get_boards() const
             const auto [t, c] = v_to_tc(v);
             if(timeline[v] != nullptr)
             {
-                result.push_back(std::make_tuple(l,t,c,timeline[v]->get_fen()));
+                result.push_back(std::make_tuple(l,t,c,timeline[v]->get_fen<SHOW_UMOVE>()));
             }
         }
     }
@@ -412,6 +413,9 @@ movegen_t multiverse::gen_moves(vec4 p) const
         GENERATE_MOVES_CASE(DRAGON_W)
         GENERATE_MOVES_CASE(DRAGON_B)
 #undef GENERATE_MOVES_CASE
+    case NO_PIECE:
+        throw std::runtime_error("gen_moves: applied on NO_PIECE\n");
+        break;
     default:
         throw std::runtime_error("gen_moves: Unknown piece " + std::string({ (char)piece_name(p_piece) }) + (p_piece & 0x80 ? "*" : "") + "\n");
         break;
@@ -1133,3 +1137,7 @@ template movegen_t multiverse::gen_superphysical_moves<false>(vec4 p) const;
 
 template movegen_t multiverse::gen_moves<true>(vec4 p) const;
 template movegen_t multiverse::gen_moves<false>(vec4 p) const;
+
+template std::vector<std::tuple<int,int,bool,std::string>> multiverse::get_boards<true>() const;
+template std::vector<std::tuple<int,int,bool,std::string>> multiverse::get_boards<false>() const;
+

@@ -175,5 +175,6 @@ PYBIND11_MODULE(engine, m) {
                  return g.visit_child(a); 
              },
              py::arg("action")
-        );
+        )
+        .def("show_pgn", &game::show_pgn);
 }

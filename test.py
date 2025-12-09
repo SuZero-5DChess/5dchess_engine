@@ -20,7 +20,8 @@ print(g.get_current_boards())
 fm = engine.ext_move(engine.vec4(0,1,1,0),engine.vec4(0,2,1,0))
 
 print(g.apply_move(fm))
+print(g.submit())
 
 print(g.get_current_boards())
-
+print(g.show_pgn())
 

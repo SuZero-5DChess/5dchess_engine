@@ -15,6 +15,7 @@ int main()
     std::cout << g.get_current_state().to_string();
     ext_move m(vec4(0,1,1,0), vec4(0,2,1,0));
     g.apply_move(m);
+    g.submit();
     g.suggest_action();
     g.suggest_action();
     bool flag = g.suggest_action();
@@ -24,5 +25,6 @@ int main()
         std::cout << txt << "\n";
         std::cout << g.get_current_state().pretty_action(act) << "\n";
     }
+    std::cout << g.show_pgn() << "\n";
     return 0;
 }

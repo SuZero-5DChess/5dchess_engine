@@ -58,6 +58,7 @@ public:
     static action from_vector(const std::vector<ext_move>& mvs, const state &s);
     std::vector<ext_move> get_moves() const;
     bool operator ==(const action &other) const = default;
+    friend std::ostream& operator<<(std::ostream &os, const action &act);
 };
 
 #endif // ACTION_H
