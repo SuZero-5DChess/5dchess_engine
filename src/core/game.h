@@ -16,10 +16,9 @@ class game
     using comments_t = std::vector<std::string>;
     std::unique_ptr<gnode<comments_t>> gametree;
     gnode<comments_t> *current_node;
-    std::vector<state> cached_states;
-    std::vector<state>::iterator now;
-    std::vector<ext_move> cached_moves;
-    std::vector<ext_move>::iterator now_moves;
+    using cache_t = std::pair<state,std::optional<ext_move>>;
+    std::vector<cache_t> cached;
+    std::vector<cache_t>::iterator now;
     
     game(std::unique_ptr<gnode<comments_t>> gt);
     void fresh();

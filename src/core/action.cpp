@@ -77,6 +77,12 @@ std::ostream &operator<<(std::ostream &os, const full_move &fm)
 
 void action::sort(std::vector<ext_move> &mvs, const state &s)
 {
+//    std::cerr << "sorting:";
+//    for(auto m : mvs)
+//    {
+//        std::cerr << m.to_string() << " ";
+//    }
+//    std::cout << "\n";
     auto branching_index = mvs.size();
     auto [present, player] = s.get_present();
     std::set<int> moved_lines;

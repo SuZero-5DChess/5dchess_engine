@@ -23,11 +23,10 @@ std::string show_comments(std::vector<std::string> const& comments)
 }
 
 game::game(std::unique_ptr<gnode<comments_t>> gt)
-: gametree{std::move(gt)}, current_node{gametree.get()}, cached_states{}, cached_moves{}
+: gametree{std::move(gt)}, current_node{gametree.get()}, cached{}
 {
-    cached_states.push_back(current_node->get_state());
-    now = cached_states.begin();
-    now_moves = cached_moves.begin();
+    cached.push_back(std::make_pair(current_node->get_state(), std::nullopt));
+    now = cached.begin();
 }
 
 game game::from_pgn(std::string input)
@@ -112,11 +111,9 @@ game game::from_pgn(std::string input)
 
 void game::fresh()
 {
-    cached_states.clear();
-    cached_moves.clear();
-    cached_states.push_back(current_node->get_state());
-    now = cached_states.begin();
-    now_moves = cached_moves.begin();
+    cached.clear();
+    cached.push_back(std::make_pair(current_node->get_state(), std::nullopt));
+    now = cached.begin();
 }
 
 std::pair<int,bool> game::get_current_present() const
@@ -126,7 +123,7 @@ std::pair<int,bool> game::get_current_present() const
 
 state game::get_current_state() const
 {
-    return *now;
+    return now->first;
 }
 
 std::vector<std::tuple<int, int, bool, std::string>> game::get_current_boards() const
@@ -192,12 +189,12 @@ bool game::is_playable(vec4 p) const
 
 bool game::can_undo() const
 {
-    return now != cached_states.begin();
+    return now != cached.begin();
 }
 
 bool game::can_redo() const
 {
-    return now+1 != cached_states.end();
+    return now+1 != cached.end();
 }
 
 bool game::can_submit() const
@@ -211,7 +208,6 @@ bool game::undo()
     if(flag)
     {
         now--;
-        now_moves--;
     }
     return flag;
 }
@@ -222,24 +218,19 @@ bool game::redo()
     if(flag)
     {
         now++;
-        now_moves++;
     }
     return flag;
 }
 
 bool game::apply_move(ext_move m)
 {
-    std::optional<state> ans = now->can_apply(m.fm, m.promote_to);
+    std::optional<state> ans = now->first.can_apply(m.fm, m.promote_to);
     if(ans)
     {
         state new_state = std::move(ans.value());
-        cached_states.erase(now + 1, cached_states.end());
-        cached_states.push_back(new_state);
-        now = cached_states.end() - 1;
-        if(now_moves < cached_moves.end())
-            cached_moves.erase(now_moves + 1, cached_moves.end());
-        cached_moves.push_back(m);
-        now_moves = cached_moves.end() - 1;
+        cached.erase(now + 1, cached.end());
+        cached.push_back(std::make_pair(new_state, std::make_optional(m)));
+        now = cached.end() - 1;
         return true;
     }
     return false;
@@ -247,10 +238,18 @@ bool game::apply_move(ext_move m)
 
 bool game::submit()
 {
-    std::optional<state> ans = now->can_submit();
+    std::optional<state> ans = now->first.can_submit();
     if(ans)
     {
-        visit_child(action::from_vector(cached_moves, *now));
+        std::vector<ext_move> mvs;
+        for(const auto &[s,m] : cached)
+        {
+            if(m)
+            {
+                mvs.push_back(*m);
+            }
+        }
+        visit_child(action::from_vector(mvs, cached.begin()->first));
         return true;
     }
     return false;
@@ -318,9 +317,7 @@ void game::visit_parent()
     if(!has_parent())
         return;
     current_node = current_node->get_parent();
-    cached_states.clear();
-    cached_states.push_back(current_node->get_state());
-    now = cached_states.begin();
+    fresh();
 }
 
 std::vector<std::tuple<action, std::string>> game::get_child_moves() const
