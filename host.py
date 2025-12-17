@@ -36,6 +36,7 @@ def index():
 
 qs = []
 p0 = engine.vec4(0,0,0,0)
+no_more_hint = False
 
 @socketio.on('click')
 def handle_click(data):
@@ -115,14 +116,16 @@ def handle_click(data):
 @socketio.on('request_prev')
 def handle_prev():
     print('load previous move')
+    global no_more_hint
+    no_more_hint = False
     g.visit_parent()
     display()
 
 @socketio.on('request_next')
 def handle_next(data):
     print('load next move')
-    global next_options
-    print(next_options)
+    global next_options, no_more_hint
+    no_more_hint = False
     g.visit_child(next_options[data])
     display()
 
@@ -144,6 +147,8 @@ def handle_redo():
 def handle_submit():
     print('received submition request', end='')
     flag = g.submit()
+    global no_more_hint
+    no_more_hint = False
     print(' ---', 'success' if flag else 'failed')
     display()
 
@@ -151,6 +156,8 @@ def handle_submit():
 def suggest_action():
     print('received hint request', end='')
     flag = g.suggest_action()
+    global no_more_hint
+    no_more_hint = not flag
     print(' ---', 'success' if flag else 'failed')
     display()
 
@@ -184,21 +191,36 @@ def display(hl=[]):
         emit('response_text', "no comments")
     size_x, size_y = g.get_board_size()
     children = list(enumerate(g.get_child_moves()))
-    global next_options
+    global next_options, no_more_hint
     select_values = {str(n):s for (n,(_,s)) in children}
     next_options = {str(n):a for (n,(a,_)) in children}
-    new_data = {
+    def show_status(ms):
+        if ms == engine.match_status_t.PLAYING:
+            if present_c:
+                return "Black's move"
+            else:
+                return "White's move"
+        elif ms == engine.match_status_t.WHITE_WINS:
+            return "White wins"
+        elif ms == engine.match_status_t.BLACK_WINS:
+            return "Black wins"
+        elif ms == engine.match_status_t.STALEMATE:
+            return "Stalemate"
+        else:
+            return str(ms)
 
+    new_data = {
         'submit-button': 'enabled' if g.can_submit() else 'disabled',
         'prev-button': 'enabled' if g.has_parent() else 'disabled',
         'next-button': 'enabled' if select_values else 'disabled',
         'undo-button': 'enabled' if g.can_undo() else 'disabled',
         'redo-button': 'enabled' if g.can_redo() else 'disabled',
-        'hint-button': 'enabled',
+        'hint-button': 'enabled' if not no_more_hint else 'disabled',
         'next-options': select_values,
         'metadata': {
             "mode" : "odd"
         },
+        'match-status': show_status(match_status),
         'size': {
             'x':size_x,
             'y':size_y

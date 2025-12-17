@@ -84,3 +84,15 @@ The command line tool will be built as `build/cli`. To use it, type `cli <option
 ### Documentation
 
 For more detail, please read [this page](docs/index.md).
+
+### TODOs
+- [x] checkmate display
+- [x] merge pixels
+- [ ] ~~flask static path~~
+- [ ] embind
+- [x] debug nonstandard pieces
+- [ ] editing comments
+- [ ] L/T numbers
+- [ ] documentation
+- [ ] variants loading
+

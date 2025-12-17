@@ -1,6 +1,5 @@
 #include "game.h"
 #include <tuple>
-#include <ranges>
 
 std::string very_small_open =
 R"(

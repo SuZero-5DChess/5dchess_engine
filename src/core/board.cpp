@@ -308,6 +308,9 @@ array_board::array_board(std::string fen, const int x_size, const int y_size)
                 case 'P':
                     this->set_piece(ppos(x,y), PAWN_UW);
                     break;
+                case 'W':
+                    this->set_piece(ppos(x, y), BRAWN_UW);
+                    break;
                 case 'k':
                     this->set_piece(ppos(x,y), KING_UB);
                     break;
@@ -316,6 +319,9 @@ array_board::array_board(std::string fen, const int x_size, const int y_size)
                     break;
                 case 'p':
                     this->set_piece(ppos(x,y), PAWN_UB);
+                    break;
+                case 'w':
+                    this->set_piece(ppos(x, y), BRAWN_UB);
                     break;
                 default:
                     std::stringstream sstm;

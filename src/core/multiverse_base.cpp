@@ -345,6 +345,8 @@ movegen_t multiverse::gen_superphysical_moves(vec4 p) const
         GENERATE_MOVES_CASE(BISHOP_B)
         GENERATE_MOVES_CASE(QUEEN_W)
         GENERATE_MOVES_CASE(QUEEN_B)
+        GENERATE_MOVES_CASE(ROYAL_QUEEN_W)
+        GENERATE_MOVES_CASE(ROYAL_QUEEN_B)
         GENERATE_MOVES_CASE(PRINCESS_W)
         GENERATE_MOVES_CASE(PRINCESS_B)
         GENERATE_MOVES_CASE(PAWN_W)
@@ -396,6 +398,8 @@ movegen_t multiverse::gen_moves(vec4 p) const
         GENERATE_MOVES_CASE(BISHOP_B)
         GENERATE_MOVES_CASE(QUEEN_W)
         GENERATE_MOVES_CASE(QUEEN_B)
+        GENERATE_MOVES_CASE(ROYAL_QUEEN_W)
+        GENERATE_MOVES_CASE(ROYAL_QUEEN_B)
         GENERATE_MOVES_CASE(PRINCESS_W)
         GENERATE_MOVES_CASE(PRINCESS_B)
         GENERATE_MOVES_CASE(PAWN_W)
@@ -600,7 +604,8 @@ bitboard_t multiverse::gen_physical_moves_impl(vec4 p) const
     {
 		a = bishop_attack(p.xy(), b_ptr->occupied()) & ~friendly;
     }
-    else if constexpr (P == QUEEN_W || P == QUEEN_B || P == PRINCESS_W || P == PRINCESS_B)
+    else if constexpr (P == QUEEN_W || P == QUEEN_B || P == PRINCESS_W || P == PRINCESS_B
+                       || P == ROYAL_QUEEN_W || P == ROYAL_QUEEN_B)
     {
         a = queen_attack(p.xy(), b_ptr->occupied()) & ~friendly;
 	}
@@ -676,7 +681,7 @@ void multiverse::gen_compound_moves(vec4 p, std::map<vec4, bitboard_t>& result) 
     
     constexpr auto deltas = (TL==multiverse::axesmode::ORTHOGONAL) ? orthogonal_dtls : (TL==multiverse::axesmode::DIAGONAL) ? diagonal_dtls : both_dtls;
     
-    constexpr auto copy_mask_fn = (TL==multiverse::axesmode::ORTHOGONAL) ? rook_copy_mask : (TL==multiverse::axesmode::DIAGONAL) ? bishop_copy_mask : queen_copy_mask;
+    constexpr auto copy_mask_fn = (XY==multiverse::axesmode::ORTHOGONAL) ? rook_copy_mask : (XY==multiverse::axesmode::DIAGONAL) ? bishop_copy_mask : queen_copy_mask;
 
     for(vec4 d : deltas)
     {
@@ -816,7 +821,7 @@ movegen_t multiverse::gen_moves_impl(vec4 p) const
             co_yield x;
         }
     }
-    else if constexpr (P == QUEEN_W || P == QUEEN_B)
+    else if constexpr (P == QUEEN_W || P == QUEEN_B || P == ROYAL_QUEEN_W || P == ROYAL_QUEEN_B)
     {
         bitboard_t z = pmask(p.xy());
         std::map<vec4, bitboard_t> result;
@@ -1096,6 +1101,8 @@ INIT_TEMPLATE(BISHOP_W)
 INIT_TEMPLATE(BISHOP_B)
 INIT_TEMPLATE(QUEEN_W)
 INIT_TEMPLATE(QUEEN_B)
+INIT_TEMPLATE(ROYAL_QUEEN_W)
+INIT_TEMPLATE(ROYAL_QUEEN_B)
 INIT_TEMPLATE(PRINCESS_W)
 INIT_TEMPLATE(PRINCESS_B)
 INIT_TEMPLATE(PAWN_W)

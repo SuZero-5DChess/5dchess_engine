@@ -156,7 +156,21 @@ std::vector<vec4> game::gen_move_if_playable(vec4 p)
 
 match_status_t game::get_match_status() const
 {
-    return match_status_t();
+    const state &s = current_node->get_state();
+    auto [w, ss] = HC_info::build_HC(s);
+    if(w.search(ss).first().has_value())
+    {
+        return match_status_t::PLAYING;
+    }
+    auto [t, c] = s.get_present();
+    if(s.phantom().find_checks(!c).first().has_value())
+    {
+        return c ? match_status_t::WHITE_WINS : match_status_t::BLACK_WINS;
+    }
+    else
+    {
+        return match_status_t::STALEMATE;
+    }
 }
 
 std::vector<vec4> game::get_movable_pieces() const

@@ -8,14 +8,14 @@ using turn_t = std::pair<int,bool>;
 inline turn_t next_turn(turn_t t)
 {
     auto [n,c] = t;
-    int v = (n<<1 | c) + 1;
+    int v = (n<<1 | static_cast<int>(c)) + 1;
     return std::make_pair(v>>1, v&1);
 }
 
 inline turn_t previous_turn(turn_t t)
 {
     auto [n,c] = t;
-    int v = (n<<1 | c) - 1;
+    int v = (n<<1 | static_cast<int>(c)) - 1;
     return std::make_pair(v>>1, v&1);
 }
 
@@ -44,4 +44,4 @@ static std::ostream& operator<<(std::ostream& os, const match_status_t& status)
 }
 
 
-#endif
+#endif /* TURN_H */
