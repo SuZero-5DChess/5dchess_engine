@@ -30,7 +30,8 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         uses: aminya/setup-cpp@v1
         with:
-          compiler: gcc-14    # Updated to version 14
+          compiler: gcc
+          version: 14.x   # or 14.2.0 if you want a specific release
           cmake: true
 
       # macOS 15 already provides Clang with C++23
