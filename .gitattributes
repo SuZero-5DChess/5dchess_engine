@@ -1,0 +1,3 @@
+# Force GitHub to treat all pgn files as text/plain
+*.pgn linguist-language=Text
+*.5dpgn linguist-language=Text

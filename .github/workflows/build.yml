@@ -3,7 +3,7 @@ name: Build Wheels
 on:
   push:
     tags:
-      - "v*.*.*"     # build when you push a version tag
+      - "v*"     # build when a version tag is pushed
   workflow_dispatch:
 
 jobs:
@@ -26,14 +26,12 @@ jobs:
       # Install compilers
       # -----------------------
 
-      - name: Install compiler (Linux)
+      - name: Setup C++ (Linux)
         if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-          sudo apt-get update
-          sudo apt-get install -y gcc-13 g++-13 cmake
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+        uses: aminya/setup-cpp@v1
+        with:
+          compiler: gcc-14    # Updated to version 14
+          cmake: true
 
       # macOS 15 already provides Clang with C++23
 
