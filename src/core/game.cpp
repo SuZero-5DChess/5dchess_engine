@@ -121,7 +121,7 @@ std::pair<int,bool> game::get_current_present() const
     return get_current_state().get_present();
 }
 
-state game::get_current_state() const
+const state &game::get_current_state() const
 {
     return now->first;
 }
