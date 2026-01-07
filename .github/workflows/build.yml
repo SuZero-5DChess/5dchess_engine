@@ -22,6 +22,7 @@ jobs:
             compiler: gcc
             cc: gcc-14
             cxx: g++-14
+            gcc_version: 14
 
           # -----------------------
           # macOS / Apple Clang
@@ -53,7 +54,9 @@ jobs:
         uses: aminya/setup-cpp@v1
         with:
           compiler: ${{ matrix.compiler }}
+          gcc: ${{ matrix.gcc_version }}
           cmake: true
+          ninja: latest
 
       - name: Setup MSVC (Windows)
         if: matrix.compiler == 'msvc'
