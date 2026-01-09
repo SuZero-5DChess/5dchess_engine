@@ -54,7 +54,6 @@ jobs:
         with:
           compiler: ${{ matrix.compiler }}
           cmake: true
-          ninja: latest
 
       - name: Setup MSVC (Windows)
         if: matrix.compiler == 'msvc'
