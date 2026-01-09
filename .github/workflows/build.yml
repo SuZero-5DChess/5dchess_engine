@@ -22,7 +22,6 @@ jobs:
             compiler: gcc
             cc: gcc-14
             cxx: g++-14
-            gcc_version: 14
 
           # -----------------------
           # macOS / Apple Clang
@@ -54,7 +53,6 @@ jobs:
         uses: aminya/setup-cpp@v1
         with:
           compiler: ${{ matrix.compiler }}
-          gcc: ${{ matrix.gcc_version }}
           cmake: true
           ninja: latest
 
@@ -74,8 +72,8 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.compiler }}" != "msvc" ]; then
-            export CC=${{ matrix.cc }}
-            export CXX=${{ matrix.cxx }}
+            export CC=$(which ${{ matrix.cc }})
+            export CXX=$(which ${{ matrix.cxx }})
           fi
 
           cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
